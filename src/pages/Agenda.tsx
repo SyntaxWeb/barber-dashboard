@@ -1,18 +1,17 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon } from 'lucide-react';
-import { format, addDays, subDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Layout } from '@/components/layout/Layout';
-import { AgendaItem } from '@/components/agenda/AgendaItem';
-import { AppointmentModal } from '@/components/agenda/AppointmentModal';
-import { Agendamento } from '@/data/mockData';
-import { fetchAgendamentosPorData } from '@/services/agendaService';
-import { cn } from '@/lib/utils';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon } from "lucide-react";
+import { format, addDays, subDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Layout } from "@/components/layout/Layout";
+import { AgendaItem } from "@/components/agenda/AgendaItem";
+import { AppointmentModal } from "@/components/agenda/AppointmentModal";
+import { Agendamento } from "@/data/mockData";
+import { fetchAgendamentosPorData } from "@/services/agendaService";
 
 export default function Agenda() {
   const [dataSelecionada, setDataSelecionada] = useState(new Date());
@@ -21,7 +20,7 @@ export default function Agenda() {
   const [agendamentoSelecionado, setAgendamentoSelecionado] = useState<Agendamento | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const dataStr = format(dataSelecionada, 'yyyy-MM-dd');
+  const dataStr = format(dataSelecionada, "yyyy-MM-dd");
 
   const loadAgendamentos = async () => {
     setLoading(true);
@@ -46,10 +45,10 @@ export default function Agenda() {
     setModalOpen(true);
   };
 
-  const isToday = format(dataSelecionada, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+  const isToday = format(dataSelecionada, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
 
-  const agendamentosAtivos = agendamentos.filter(a => a.status !== 'cancelado');
-  const agendamentosCancelados = agendamentos.filter(a => a.status === 'cancelado');
+  const agendamentosAtivos = agendamentos.filter((a) => a.status !== "cancelado");
+  const agendamentosCancelados = agendamentos.filter((a) => a.status === "cancelado");
 
   return (
     <Layout>
@@ -58,9 +57,7 @@ export default function Agenda() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Agenda</h1>
-            <p className="text-muted-foreground">
-              Gerencie seus agendamentos do dia
-            </p>
+            <p className="text-muted-foreground">Gerencie seus agendamentos do dia</p>
           </div>
           <Button asChild className="shadow-gold">
             <Link to="/novo-agendamento">
@@ -77,7 +74,7 @@ export default function Agenda() {
               <Button variant="outline" size="icon" onClick={handlePrevDay}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              
+
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="min-w-[200px] justify-start">
@@ -108,7 +105,7 @@ export default function Agenda() {
                 </Button>
               )}
               <div className="text-sm text-muted-foreground">
-                {agendamentosAtivos.length} agendamento{agendamentosAtivos.length !== 1 ? 's' : ''}
+                {agendamentosAtivos.length} agendamento{agendamentosAtivos.length !== 1 ? "s" : ""}
               </div>
             </div>
           </div>
@@ -133,9 +130,7 @@ export default function Agenda() {
           <Card className="p-12 text-center">
             <CalendarIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Nenhum agendamento</h3>
-            <p className="text-muted-foreground mb-4">
-              Não há agendamentos para esta data.
-            </p>
+            <p className="text-muted-foreground mb-4">Não há agendamentos para esta data.</p>
             <Button asChild>
               <Link to="/novo-agendamento">
                 <Plus className="h-4 w-4 mr-2" />
@@ -161,9 +156,7 @@ export default function Agenda() {
             {/* Cancelled Appointments */}
             {agendamentosCancelados.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  Cancelados
-                </h3>
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Cancelados</h3>
                 {agendamentosCancelados.map((agendamento) => (
                   <AgendaItem
                     key={agendamento.id}

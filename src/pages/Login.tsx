@@ -1,18 +1,17 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Scissors, Mail, Lock, LogIn } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useToast } from '@/hooks/use-toast';
-import { Moon, Sun } from 'lucide-react';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Scissors, Mail, Lock, LogIn, Moon, Sun } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -21,31 +20,31 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !senha) {
       toast({
-        title: 'Campos obrigatórios',
-        description: 'Por favor, preencha todos os campos.',
-        variant: 'destructive'
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos.",
+        variant: "destructive",
       });
       return;
     }
 
     setLoading(true);
-    
+
     try {
       const success = await login(email, senha);
       if (success) {
         toast({
-          title: 'Bem-vindo!',
-          description: 'Login realizado com sucesso.'
+          title: "Bem-vindo!",
+          description: "Login realizado com sucesso.",
         });
-        navigate('/dashboard');
+        navigate("/dashboard");
       } else {
         toast({
-          title: 'Erro no login',
-          description: 'Email ou senha inválidos.',
-          variant: 'destructive'
+          title: "Erro no login",
+          description: "Email ou senha inválidos.",
+          variant: "destructive",
         });
       }
     } finally {
@@ -55,13 +54,8 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={toggleTheme}
-        className="absolute top-4 right-4"
-      >
-        {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+      <Button variant="ghost" size="icon" onClick={toggleTheme} className="absolute top-4 right-4">
+        {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
       </Button>
 
       <Card className="w-full max-w-md border-border shadow-gold">
@@ -71,9 +65,7 @@ export default function Login() {
           </div>
           <div>
             <CardTitle className="text-2xl font-bold">Barbearia Vintage</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Entre no painel do barbeiro
-            </CardDescription>
+            <CardDescription className="text-muted-foreground">Entre no painel do barbeiro</CardDescription>
           </div>
         </CardHeader>
 
@@ -109,11 +101,7 @@ export default function Login() {
               </div>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full shadow-gold"
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full shadow-gold" disabled={loading}>
               {loading ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />

@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { X, Phone, Calendar, Clock, Scissors, FileText, Check, Trash2, Edit } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Agendamento } from '@/data/mockData';
-import { formatarData, formatarPreco, cancelarAgendamento, concluirAgendamento } from '@/services/agendaService';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from "react";
+import { X, Phone, Calendar, Clock, Scissors, FileText, Check, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Agendamento } from "@/data/mockData";
+import { formatarData, formatarPreco, cancelarAgendamento, concluirAgendamento } from "@/services/agendaService";
+import { useToast } from "@/hooks/use-toast";
 
 interface AppointmentModalProps {
   agendamento: Agendamento | null;
@@ -21,9 +21,9 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
   if (!agendamento) return null;
 
   const statusConfig = {
-    confirmado: { label: 'Confirmado', variant: 'default' as const, className: 'bg-primary text-primary-foreground' },
-    concluido: { label: 'Concluído', variant: 'secondary' as const, className: 'bg-success text-success-foreground' },
-    cancelado: { label: 'Cancelado', variant: 'destructive' as const, className: 'bg-destructive text-destructive-foreground' }
+    confirmado: { label: "Confirmado", className: "bg-primary text-primary-foreground" },
+    concluido: { label: "Concluído", className: "bg-success text-success-foreground" },
+    cancelado: { label: "Cancelado", className: "bg-destructive text-destructive-foreground" },
   };
 
   const status = statusConfig[agendamento.status];
@@ -33,16 +33,16 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
     try {
       await concluirAgendamento(agendamento.id);
       toast({
-        title: 'Agendamento concluído',
-        description: `Atendimento de ${agendamento.cliente} marcado como concluído.`
+        title: "Agendamento concluído",
+        description: `Atendimento de ${agendamento.cliente} marcado como concluído.`,
       });
       onUpdate();
       onOpenChange(false);
     } catch {
       toast({
-        title: 'Erro',
-        description: 'Não foi possível concluir o agendamento.',
-        variant: 'destructive'
+        title: "Erro",
+        description: "Não foi possível concluir o agendamento.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -54,16 +54,16 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
     try {
       await cancelarAgendamento(agendamento.id);
       toast({
-        title: 'Agendamento cancelado',
-        description: `Agendamento de ${agendamento.cliente} foi cancelado.`
+        title: "Agendamento cancelado",
+        description: `Agendamento de ${agendamento.cliente} foi cancelado.`,
       });
       onUpdate();
       onOpenChange(false);
     } catch {
       toast({
-        title: 'Erro',
-        description: 'Não foi possível cancelar o agendamento.',
-        variant: 'destructive'
+        title: "Erro",
+        description: "Não foi possível cancelar o agendamento.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -84,9 +84,7 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
           <div className="space-y-3">
             <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20">
-                <span className="text-lg font-bold text-primary">
-                  {agendamento.cliente.charAt(0)}
-                </span>
+                <span className="text-lg font-bold text-primary">{agendamento.cliente.charAt(0)}</span>
               </div>
               <div>
                 <p className="font-semibold">{agendamento.cliente}</p>
@@ -120,9 +118,7 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
                 <p className="text-xs text-muted-foreground">Serviço</p>
                 <p className="font-medium">{agendamento.servico}</p>
               </div>
-              <span className="font-bold text-primary">
-                {formatarPreco(agendamento.preco)}
-              </span>
+              <span className="font-bold text-primary">{formatarPreco(agendamento.preco)}</span>
             </div>
 
             {agendamento.observacoes && (
@@ -136,22 +132,13 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
             )}
           </div>
 
-          {agendamento.status === 'confirmado' && (
+          {agendamento.status === "confirmado" && (
             <div className="flex gap-2 pt-2">
-              <Button
-                className="flex-1"
-                onClick={handleConcluir}
-                disabled={loading}
-              >
+              <Button className="flex-1" onClick={handleConcluir} disabled={loading}>
                 <Check className="h-4 w-4 mr-2" />
                 Concluir
               </Button>
-              <Button
-                variant="destructive"
-                className="flex-1"
-                onClick={handleCancelar}
-                disabled={loading}
-              >
+              <Button variant="destructive" className="flex-1" onClick={handleCancelar} disabled={loading}>
                 <Trash2 className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>

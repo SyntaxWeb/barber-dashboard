@@ -1,9 +1,9 @@
-import { Clock, User, Scissors } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Agendamento } from '@/data/mockData';
-import { formatarPreco } from '@/services/agendaService';
-import { cn } from '@/lib/utils';
+import { Clock, User, Scissors } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Agendamento } from "@/data/mockData";
+import { formatarPreco } from "@/services/agendaService";
+import { cn } from "@/lib/utils";
 
 interface AgendaItemProps {
   agendamento: Agendamento;
@@ -12,32 +12,32 @@ interface AgendaItemProps {
 
 export function AgendaItem({ agendamento, onClick }: AgendaItemProps) {
   const statusConfig = {
-    confirmado: { 
-      label: 'Confirmado', 
-      className: 'bg-primary/20 text-primary border-primary/30',
-      cardBorder: 'border-l-primary'
+    confirmado: {
+      label: "Confirmado",
+      className: "bg-primary/20 text-primary border-primary/30",
+      cardBorder: "border-l-primary",
     },
-    concluido: { 
-      label: 'Concluído', 
-      className: 'bg-success/20 text-success border-success/30',
-      cardBorder: 'border-l-success'
+    concluido: {
+      label: "Concluído",
+      className: "bg-success/20 text-success border-success/30",
+      cardBorder: "border-l-success",
     },
-    cancelado: { 
-      label: 'Cancelado', 
-      className: 'bg-destructive/20 text-destructive border-destructive/30',
-      cardBorder: 'border-l-destructive'
-    }
+    cancelado: {
+      label: "Cancelado",
+      className: "bg-destructive/20 text-destructive border-destructive/30",
+      cardBorder: "border-l-destructive",
+    },
   };
 
   const status = statusConfig[agendamento.status];
 
   return (
-    <Card 
+    <Card
       className={cn(
         "group cursor-pointer transition-all duration-200 hover:shadow-gold hover:scale-[1.01]",
         "border-l-4",
         status.cardBorder,
-        agendamento.status === 'cancelado' && "opacity-60"
+        agendamento.status === "cancelado" && "opacity-60",
       )}
       onClick={onClick}
     >
@@ -56,9 +56,7 @@ export function AgendaItem({ agendamento, onClick }: AgendaItemProps) {
           </div>
 
           <div className="text-right">
-            <p className="text-lg font-bold text-primary">
-              {formatarPreco(agendamento.preco)}
-            </p>
+            <p className="text-lg font-bold text-primary">{formatarPreco(agendamento.preco)}</p>
           </div>
         </div>
 

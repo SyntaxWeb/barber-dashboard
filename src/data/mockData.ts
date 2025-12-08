@@ -6,7 +6,7 @@ export interface Agendamento {
   horario: string;
   servico: string;
   preco: number;
-  status: 'confirmado' | 'concluido' | 'cancelado';
+  status: "confirmado" | "concluido" | "cancelado";
   observacoes?: string;
 }
 
@@ -34,7 +34,7 @@ export const agendamentosMock: Agendamento[] = [
     servico: "Corte Máquina",
     preco: 35,
     status: "concluido",
-    observacoes: "Cliente preferencial"
+    observacoes: "Cliente preferencial",
   },
   {
     id: 2,
@@ -44,7 +44,7 @@ export const agendamentosMock: Agendamento[] = [
     horario: "10:00",
     servico: "Barba Completa",
     preco: 30,
-    status: "confirmado"
+    status: "confirmado",
   },
   {
     id: 3,
@@ -54,8 +54,8 @@ export const agendamentosMock: Agendamento[] = [
     horario: "11:00",
     servico: "Combo Corte + Barba",
     preco: 55,
-    status: "confirmado",
-    observacoes: "Primeira vez na barbearia"
+    status: "concluido",
+    observacoes: "Primeira vez na barbearia",
   },
   {
     id: 4,
@@ -65,7 +65,7 @@ export const agendamentosMock: Agendamento[] = [
     horario: "14:00",
     servico: "Corte Tesoura",
     preco: 45,
-    status: "confirmado"
+    status: "confirmado",
   },
   {
     id: 5,
@@ -75,7 +75,7 @@ export const agendamentosMock: Agendamento[] = [
     horario: "15:00",
     servico: "Corte Degradê",
     preco: 40,
-    status: "confirmado"
+    status: "confirmado",
   },
   {
     id: 6,
@@ -85,7 +85,7 @@ export const agendamentosMock: Agendamento[] = [
     horario: "09:30",
     servico: "Barba Completa",
     preco: 30,
-    status: "confirmado"
+    status: "confirmado",
   },
   {
     id: 7,
@@ -95,7 +95,7 @@ export const agendamentosMock: Agendamento[] = [
     horario: "11:00",
     servico: "Combo Corte + Barba",
     preco: 55,
-    status: "confirmado"
+    status: "confirmado",
   },
   {
     id: 8,
@@ -106,8 +106,8 @@ export const agendamentosMock: Agendamento[] = [
     servico: "Corte Máquina",
     preco: 35,
     status: "cancelado",
-    observacoes: "Cancelou por motivo pessoal"
-  }
+    observacoes: "Cancelou por motivo pessoal",
+  },
 ];
 
 export const servicosMock: Servico[] = [
@@ -117,17 +117,17 @@ export const servicosMock: Servico[] = [
   { id: 4, nome: "Barba Completa", preco: 30, duracao: 30 },
   { id: 5, nome: "Combo Corte + Barba", preco: 55, duracao: 60 },
   { id: 6, nome: "Sobrancelha", preco: 15, duracao: 15 },
-  { id: 7, nome: "Hidratação Capilar", preco: 25, duracao: 20 }
+  { id: 7, nome: "Hidratação Capilar", preco: 25, duracao: 20 },
 ];
 
 export const configuracoesMock: ConfiguracoesBarbearia = {
   horarioInicio: "09:00",
   horarioFim: "19:00",
   intervaloMinutos: 30,
-  diasBloqueados: ["2025-12-25", "2025-12-31", "2026-01-01"]
+  diasBloqueados: ["2025-12-25", "2025-12-31", "2026-01-01"],
 };
 
 export const barbeiroMock = {
   nome: "Carlos Vintage",
-  email: "carlos@barbeariavintage.com"
+  email: "carlos@barbeariavintage.com",
 };

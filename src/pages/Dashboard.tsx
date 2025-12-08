@@ -1,17 +1,18 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Calendar, Clock, Users, TrendingUp, Plus, ArrowRight } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Layout } from '@/components/layout/Layout';
-import { Agendamento } from '@/data/mockData';
-import { fetchAgendamentosPorData, formatarPreco } from '@/services/agendaService';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { format } from "date-fns";
+import { Calendar, Clock, Users, TrendingUp, Plus, ArrowRight } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Layout } from "@/components/layout/Layout";
+import { Agendamento } from "@/data/mockData";
+import { fetchAgendamentosPorData, formatarPreco } from "@/services/agendaService";
 
 export default function Dashboard() {
   const [agendamentosHoje, setAgendamentosHoje] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const hoje = new Date().toISOString().split('T')[0];
+  const hoje = format(new Date(), "yyyy-MM-dd");
 
   useEffect(() => {
     async function loadData() {

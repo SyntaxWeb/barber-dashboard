@@ -1,27 +1,27 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Calendar, Scissors, Plus, Trash2, Save } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Layout } from '@/components/layout/Layout';
-import { Servico, ConfiguracoesBarbearia } from '@/data/mockData';
-import { 
-  fetchServicos, 
-  fetchConfiguracoes, 
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Clock, Calendar, Scissors, Plus, Trash2, Save } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Layout } from "@/components/layout/Layout";
+import { Servico, ConfiguracoesBarbearia } from "@/data/mockData";
+import {
+  fetchServicos,
+  fetchConfiguracoes,
   updateConfiguracoes,
   createServico,
   deleteServico,
-  formatarPreco 
-} from '@/services/agendaService';
-import { useToast } from '@/hooks/use-toast';
+  formatarPreco,
+} from "@/services/agendaService";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Configuracoes() {
   const navigate = useNavigate();
@@ -33,29 +33,26 @@ export default function Configuracoes() {
   const [saving, setSaving] = useState(false);
 
   // Form states
-  const [horarioInicio, setHorarioInicio] = useState('09:00');
-  const [horarioFim, setHorarioFim] = useState('19:00');
-  const [intervalo, setIntervalo] = useState('30');
+  const [horarioInicio, setHorarioInicio] = useState("09:00");
+  const [horarioFim, setHorarioFim] = useState("19:00");
+  const [intervalo, setIntervalo] = useState("30");
   const [diasBloqueados, setDiasBloqueados] = useState<Date[]>([]);
 
   // Novo serviço
-  const [novoServicoNome, setNovoServicoNome] = useState('');
-  const [novoServicoPreco, setNovoServicoPreco] = useState('');
-  const [novoServicoDuracao, setNovoServicoDuracao] = useState('30');
+  const [novoServicoNome, setNovoServicoNome] = useState("");
+  const [novoServicoPreco, setNovoServicoPreco] = useState("");
+  const [novoServicoDuracao, setNovoServicoDuracao] = useState("30");
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [servicosData, configData] = await Promise.all([
-          fetchServicos(),
-          fetchConfiguracoes()
-        ]);
+        const [servicosData, configData] = await Promise.all([fetchServicos(), fetchConfiguracoes()]);
         setServicos(servicosData);
         setConfiguracoes(configData);
         setHorarioInicio(configData.horarioInicio);
         setHorarioFim(configData.horarioFim);
         setIntervalo(configData.intervaloMinutos.toString());
-        setDiasBloqueados(configData.diasBloqueados.map(d => new Date(d + 'T12:00:00')));
+        setDiasBloqueados(configData.diasBloqueados.map((d) => new Date(d + "T12:00:00")));
       } finally {
         setLoading(false);
       }
@@ -70,17 +67,17 @@ export default function Configuracoes() {
         horarioInicio,
         horarioFim,
         intervaloMinutos: parseInt(intervalo),
-        diasBloqueados: diasBloqueados.map(d => format(d, 'yyyy-MM-dd'))
+        diasBloqueados: diasBloqueados.map((d) => format(d, "yyyy-MM-dd")),
       });
       toast({
-        title: 'Configurações salvas',
-        description: 'Os horários de trabalho foram atualizados.'
+        title: "Configurações salvas",
+        description: "Os horários de trabalho foram atualizados.",
       });
     } catch {
       toast({
-        title: 'Erro',
-        description: 'Não foi possível salvar as configurações.',
-        variant: 'destructive'
+        title: "Erro",
+        description: "Não foi possível salvar as configurações.",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -90,9 +87,9 @@ export default function Configuracoes() {
   const handleAddServico = async () => {
     if (!novoServicoNome.trim() || !novoServicoPreco) {
       toast({
-        title: 'Campos obrigatórios',
-        description: 'Preencha o nome e preço do serviço.',
-        variant: 'destructive'
+        title: "Campos obrigatórios",
+        description: "Preencha o nome e preço do serviço.",
+        variant: "destructive",
       });
       return;
     }
@@ -101,21 +98,21 @@ export default function Configuracoes() {
       const novoServico = await createServico({
         nome: novoServicoNome.trim(),
         preco: parseFloat(novoServicoPreco),
-        duracao: parseInt(novoServicoDuracao)
+        duracao: parseInt(novoServicoDuracao),
       });
       setServicos([...servicos, novoServico]);
-      setNovoServicoNome('');
-      setNovoServicoPreco('');
-      setNovoServicoDuracao('30');
+      setNovoServicoNome("");
+      setNovoServicoPreco("");
+      setNovoServicoDuracao("30");
       toast({
-        title: 'Serviço adicionado',
-        description: `${novoServico.nome} foi adicionado à lista.`
+        title: "Serviço adicionado",
+        description: `${novoServico.nome} foi adicionado à lista.`,
       });
     } catch {
       toast({
-        title: 'Erro',
-        description: 'Não foi possível adicionar o serviço.',
-        variant: 'destructive'
+        title: "Erro",
+        description: "Não foi possível adicionar o serviço.",
+        variant: "destructive",
       });
     }
   };
@@ -123,23 +120,21 @@ export default function Configuracoes() {
   const handleDeleteServico = async (id: number) => {
     try {
       await deleteServico(id);
-      setServicos(servicos.filter(s => s.id !== id));
+      setServicos(servicos.filter((s) => s.id !== id));
       toast({
-        title: 'Serviço removido',
-        description: 'O serviço foi removido da lista.'
+        title: "Serviço removido",
+        description: "O serviço foi removido da lista.",
       });
     } catch {
       toast({
-        title: 'Erro',
-        description: 'Não foi possível remover o serviço.',
-        variant: 'destructive'
+        title: "Erro",
+        description: "Não foi possível remover o serviço.",
+        variant: "destructive",
       });
     }
   };
 
-  const horarios = Array.from({ length: 24 }, (_, i) => 
-    `${i.toString().padStart(2, '0')}:00`
-  );
+  const horarios = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, "0")}:00`);
 
   if (loading) {
     return (
@@ -161,9 +156,7 @@ export default function Configuracoes() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">Configurações</h1>
-            <p className="text-muted-foreground">
-              Gerencie horários e serviços
-            </p>
+            <p className="text-muted-foreground">Gerencie horários e serviços</p>
           </div>
         </div>
 
@@ -175,9 +168,7 @@ export default function Configuracoes() {
                 <Clock className="h-5 w-5 text-primary" />
                 Horários de Trabalho
               </CardTitle>
-              <CardDescription>
-                Defina o horário de funcionamento
-              </CardDescription>
+              <CardDescription>Defina o horário de funcionamento</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -188,8 +179,10 @@ export default function Configuracoes() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {horarios.map(h => (
-                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                      {horarios.map((h) => (
+                        <SelectItem key={h} value={h}>
+                          {h}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -201,8 +194,10 @@ export default function Configuracoes() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {horarios.map(h => (
-                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                      {horarios.map((h) => (
+                        <SelectItem key={h} value={h}>
+                          {h}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -224,13 +219,9 @@ export default function Configuracoes() {
                 </Select>
               </div>
 
-              <Button 
-                onClick={handleSaveHorarios} 
-                className="w-full"
-                disabled={saving}
-              >
+              <Button onClick={handleSaveHorarios} className="w-full" disabled={saving}>
                 <Save className="h-4 w-4 mr-2" />
-                {saving ? 'Salvando...' : 'Salvar Horários'}
+                {saving ? "Salvando..." : "Salvar Horários"}
               </Button>
             </CardContent>
           </Card>
@@ -242,9 +233,7 @@ export default function Configuracoes() {
                 <Calendar className="h-5 w-5 text-primary" />
                 Dias Bloqueados
               </CardTitle>
-              <CardDescription>
-                Férias, folgas e feriados
-              </CardDescription>
+              <CardDescription>Férias, folgas e feriados</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Popover>
@@ -267,13 +256,11 @@ export default function Configuracoes() {
 
               <div className="flex flex-wrap gap-2">
                 {diasBloqueados.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Nenhum dia bloqueado
-                  </p>
+                  <p className="text-sm text-muted-foreground">Nenhum dia bloqueado</p>
                 ) : (
                   diasBloqueados.map((dia, index) => (
-                    <Badge 
-                      key={index} 
+                    <Badge
+                      key={index}
                       variant="secondary"
                       className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
                       onClick={() => setDiasBloqueados(diasBloqueados.filter((_, i) => i !== index))}
@@ -295,9 +282,7 @@ export default function Configuracoes() {
               <Scissors className="h-5 w-5 text-primary" />
               Serviços
             </CardTitle>
-            <CardDescription>
-              Gerencie os serviços oferecidos
-            </CardDescription>
+            <CardDescription>Gerencie os serviços oferecidos</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Adicionar Serviço */}
@@ -339,7 +324,7 @@ export default function Configuracoes() {
             {/* Lista de Serviços */}
             <div className="space-y-2">
               {servicos.map((servico) => (
-                <div 
+                <div
                   key={servico.id}
                   className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                 >
@@ -349,17 +334,13 @@ export default function Configuracoes() {
                     </div>
                     <div>
                       <p className="font-medium">{servico.nome}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {servico.duracao} minutos
-                      </p>
+                      <p className="text-sm text-muted-foreground">{servico.duracao} minutos</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="font-bold text-primary">
-                      {formatarPreco(servico.preco)}
-                    </span>
-                    <Button 
-                      variant="ghost" 
+                    <span className="font-bold text-primary">{formatarPreco(servico.preco)}</span>
+                    <Button
+                      variant="ghost"
                       size="icon"
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={() => handleDeleteServico(servico.id)}

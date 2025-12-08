@@ -1,8 +1,8 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { Moon, Sun, Settings, LogOut, Scissors } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { Link, useNavigate } from "react-router-dom";
+import { Moon, Sun, Settings, LogOut, Scissors } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Header() {
   const { theme, toggleTheme } = useTheme();
@@ -11,7 +11,7 @@ export function Header() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   return (
@@ -33,27 +33,13 @@ export function Header() {
               Olá, <span className="text-foreground font-medium">{user.nome}</span>
             </span>
           )}
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            className="h-9 w-9"
-          >
-            {theme === 'dark' ? (
-              <Sun className="h-4 w-4" />
-            ) : (
-              <Moon className="h-4 w-4" />
-            )}
+
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9">
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             <span className="sr-only">Alternar tema</span>
           </Button>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            asChild
-            className="h-9 w-9"
-          >
+          <Button variant="ghost" size="icon" asChild className="h-9 w-9">
             <Link to="/configuracoes">
               <Settings className="h-4 w-4" />
               <span className="sr-only">Configurações</span>
