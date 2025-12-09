@@ -159,16 +159,16 @@ export default function Dashboard() {
           </Card>
 
           <Card className="group cursor-pointer transition-all hover:shadow-gold hover:border-primary/50">
-            <Link to="/novo-agendamento">
+            <Link to="/clientes">
               <CardContent className="flex items-center justify-between p-6">
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                    <Plus className="h-6 w-6 text-primary" />
+                    <Users className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold">Criar Agendamento</h3>
+                    <h3 className="font-semibold">Cadastrar cliente</h3>
                     <p className="text-sm text-muted-foreground">
-                      Adicionar novo cliente
+                      Centralize dados e contatos
                     </p>
                   </div>
                 </div>

@@ -22,6 +22,7 @@ import {
 } from "@/services/agendaService";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { fetchClientes, type Cliente as ClienteInfo } from "@/services/clientesService";
 
 export default function NovoAgendamento() {
   const navigate = useNavigate();
@@ -34,6 +35,9 @@ export default function NovoAgendamento() {
 
   const [cliente, setCliente] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [clienteSugestoes, setClienteSugestoes] = useState<ClienteInfo[]>([]);
+  const [buscandoClientes, setBuscandoClientes] = useState(false);
+  const [clienteSelecionado, setClienteSelecionado] = useState<ClienteInfo | null>(null);
   const [servicoId, setServicoId] = useState("");
   const [data, setData] = useState<Date | undefined>(new Date());
   const [horario, setHorario] = useState("");
@@ -71,6 +75,60 @@ export default function NovoAgendamento() {
 
   const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTelefone(formatarTelefone(e.target.value));
+  };
+
+  useEffect(() => {
+    const termo = cliente.trim();
+    if (termo.length < 2) {
+      setClienteSugestoes([]);
+      setBuscandoClientes(false);
+      return;
+    }
+
+    if (clienteSelecionado && clienteSelecionado.nome === termo) {
+      setClienteSugestoes([]);
+      setBuscandoClientes(false);
+      return;
+    }
+
+    let ignore = false;
+    setBuscandoClientes(true);
+    fetchClientes(termo)
+      .then((lista) => {
+        if (!ignore) {
+          setClienteSugestoes(lista);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setClienteSugestoes([]);
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setBuscandoClientes(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [cliente, clienteSelecionado]);
+
+  const handleClienteChange = (value: string) => {
+    setCliente(value);
+    if (clienteSelecionado && clienteSelecionado.nome !== value.trim()) {
+      setClienteSelecionado(null);
+    }
+  };
+
+  const handleSelectCliente = (registro: ClienteInfo) => {
+    setCliente(registro.nome);
+    if (registro.telefone) {
+      setTelefone(formatarTelefone(registro.telefone));
+    }
+    setClienteSelecionado(registro);
+    setClienteSugestoes([]);
   };
 
   const servicoSelecionado = servicos.find((s) => s.id.toString() === servicoId);
@@ -159,10 +217,40 @@ export default function NovoAgendamento() {
                     id="cliente"
                     placeholder="João Silva"
                     value={cliente}
-                    onChange={(e) => setCliente(e.target.value)}
+                    onChange={(e) => handleClienteChange(e.target.value)}
                     className="pl-10"
                   />
+                  {(buscandoClientes || clienteSugestoes.length > 0) && cliente.trim().length >= 2 && (
+                    <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-md border border-border bg-card shadow-lg">
+                      {buscandoClientes ? (
+                        <div className="p-3 text-sm text-muted-foreground">Buscando clientes...</div>
+                      ) : clienteSugestoes.length === 0 ? (
+                        <div className="p-3 text-sm text-muted-foreground">Nenhum cliente encontrado</div>
+                      ) : (
+                        clienteSugestoes.map((item) => (
+                          <button
+                            type="button"
+                            key={item.id}
+                            className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-muted"
+                            onClick={() => handleSelectCliente(item)}
+                          >
+                            <div>
+                              <p className="font-medium leading-tight">{item.nome}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {item.telefone || "Sem telefone"} • {item.email}
+                              </p>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
+                {clienteSelecionado && (
+                  <p className="text-xs text-muted-foreground">
+                    Cliente selecionado • {clienteSelecionado.email}
+                  </p>
+                )}
               </div>
 
               {/* Telefone */}

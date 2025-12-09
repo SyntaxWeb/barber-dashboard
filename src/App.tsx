@@ -18,6 +18,7 @@ import ClienteLogin from "./pages/ClienteLogin";
 import ClienteAgendamento from "./pages/ClienteAgendamento";
 import PublicAgendamento from "./pages/PublicAgendamento";
 import Landing from "./pages/Landing";
+import Clientes from "./pages/Clientes";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <Configuracoes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/clientes"
+                  element={
+                    <ProtectedRoute>
+                      <Clientes />
                     </ProtectedRoute>
                   }
                 />

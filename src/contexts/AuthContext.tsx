@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from "react";
+import { resolveMediaUrl } from "@/lib/media";
 
 interface CompanyInfo {
   id?: number;
@@ -28,12 +29,30 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
+const normalizeCompany = (company?: CompanyInfo | null): CompanyInfo | null => {
+  if (!company) return null;
+  return {
+    ...company,
+    icon_url: resolveMediaUrl(company.icon_url),
+  };
+};
+
+const getStoredUser = (): User | null => {
+  const stored = localStorage.getItem("barbeiro-user");
+  if (!stored) return null;
+  try {
+    const parsed = JSON.parse(stored) as User;
+    return {
+      ...parsed,
+      company: normalizeCompany(parsed.company ?? null),
+    };
+  } catch {
+    return null;
+  }
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem("barbeiro-user");
-    return stored ? JSON.parse(stored) : null;
-  });
+  const [user, setUser] = useState<User | null>(() => getStoredUser());
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("barbeiro-token"));
 
   const login = async (email: string, _senha: string): Promise<boolean> => {
@@ -56,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         nome: data.user.nome ?? data.user.name ?? "",
         email: data.user.email ?? "",
         companyId: data.user.company_id ?? data.user.companyId,
-        company: data.user.company ?? null,
+        company: normalizeCompany(data.user.company ?? null),
       };
 
       setUser(normalizedUser);
@@ -77,9 +96,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateCompany = (company: CompanyInfo | null) => {
+    const normalized = normalizeCompany(company);
     setUser((prev) => {
       if (!prev) return prev;
-      const updated = { ...prev, company };
+      const updated = { ...prev, company: normalized };
       localStorage.setItem("barbeiro-user", JSON.stringify(updated));
       return updated;
     });

@@ -14,6 +14,9 @@ export default function ClienteRegistro() {
   const [searchParams] = useSearchParams();
   const { register, companySlug, setCompanySlug } = useClientAuth();
   const companyFromUrl = searchParams.get("company");
+  const prefillName = searchParams.get("nome");
+  const prefillEmail = searchParams.get("email");
+  const prefillPhone = searchParams.get("telefone");
   const targetCompany = companyFromUrl ?? companySlug;
   const companyQuery = targetCompany ? `?company=${targetCompany}` : "";
 
@@ -29,6 +32,24 @@ export default function ClienteRegistro() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (prefillName) {
+      setName(prefillName);
+    }
+  }, [prefillName]);
+
+  useEffect(() => {
+    if (prefillEmail) {
+      setEmail(prefillEmail);
+    }
+  }, [prefillEmail]);
+
+  useEffect(() => {
+    if (prefillPhone) {
+      setTelefone(prefillPhone);
+    }
+  }, [prefillPhone]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();

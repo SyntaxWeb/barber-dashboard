@@ -1,3 +1,5 @@
+import { resolveMediaUrl } from "@/lib/media";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
 
 const authHeaders = () => {
@@ -22,6 +24,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
+const normalizeEmpresa = (empresa: EmpresaInfo): EmpresaInfo => ({
+  ...empresa,
+  icon_url: resolveMediaUrl(empresa.icon_url),
+});
+
 export async function fetchEmpresa(): Promise<EmpresaInfo> {
   const response = await fetch(`${API_URL}/api/company`, {
     headers: {
@@ -30,7 +37,8 @@ export async function fetchEmpresa(): Promise<EmpresaInfo> {
     },
   });
 
-  return handleResponse<EmpresaInfo>(response);
+  const data = await handleResponse<EmpresaInfo>(response);
+  return normalizeEmpresa(data);
 }
 
 export async function fetchEmpresaPublic(slug: string): Promise<EmpresaInfo> {
@@ -44,7 +52,8 @@ export async function fetchEmpresaPublic(slug: string): Promise<EmpresaInfo> {
     },
   });
 
-  return handleResponse<EmpresaInfo>(response);
+  const data = await handleResponse<EmpresaInfo>(response);
+  return normalizeEmpresa(data);
 }
 
 interface UpdateEmpresaPayload {
@@ -71,5 +80,6 @@ export async function updateEmpresa(payload: UpdateEmpresaPayload): Promise<Empr
     body: formData,
   });
 
-  return handleResponse<EmpresaInfo>(response);
+  const data = await handleResponse<EmpresaInfo>(response);
+  return normalizeEmpresa(data);
 }

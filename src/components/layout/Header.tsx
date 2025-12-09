@@ -16,6 +16,7 @@ export function Header() {
 
   const companyName = user?.company?.nome ?? "SyntaxAtendimento";
   const companyIcon = user?.company?.icon_url;
+  console.log(companyIcon)
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
