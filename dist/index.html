@@ -1,24 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>Lovable App</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
-
-    <!-- TODO: Update og:title to match your application name -->
-    <meta property="og:title" content="Lovable App" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <title>SyntaxAtendimento</title>
+    <meta name="description" content="Painel inteligente para barbearias gerenciarem agendas e clientes." />
+    <meta name="author" content="SyntaxAtendimento" />
+    <meta property="og:title" content="SyntaxAtendimento" />
+    <meta property="og:description" content="Organize atendimentos, agenda e clientes em um único painel." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-
+    <meta property="og:image" content="/placeholder.svg" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-    <script type="module" crossorigin src="/assets/index-CbebRMx6.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-B1ZGwNpT.css">
+    <meta name="twitter:site" content="@syntaxatendimento" />
+    <meta name="twitter:image" content="/placeholder.svg" />
+    <script>
+      (function () {
+        var key = "syntax-dashboard-redirect";
+        try {
+          if (window.sessionStorage && sessionStorage.getItem(key)) {
+            var redirectPath = sessionStorage.getItem(key);
+            sessionStorage.removeItem(key);
+            if (redirectPath && redirectPath !== window.location.pathname) {
+              window.history.replaceState(null, "", redirectPath);
+            }
+          }
+        } catch (err) {
+          console.warn("Não foi possível restaurar rota após o 404:", err);
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-CLsZlLST.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DHAui4UQ.css">
   </head>
 
   <body>

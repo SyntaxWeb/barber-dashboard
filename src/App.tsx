@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ClientAuthProvider, useClientAuth } from "@/contexts/ClientAuthContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -28,6 +28,19 @@ const ClienteProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
+const HomeRedirect = () => {
+  const { isAuthenticated } = useAuth();
+  return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -38,13 +51,41 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <Routes>
-                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="/" element={<HomeRedirect />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/registro" element={<Registro />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/agenda" element={<Agenda />} />
-                <Route path="/novo-agendamento" element={<NovoAgendamento />} />
-                <Route path="/configuracoes" element={<Configuracoes />} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/agenda"
+                  element={
+                    <ProtectedRoute>
+                      <Agenda />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/novo-agendamento"
+                  element={
+                    <ProtectedRoute>
+                      <NovoAgendamento />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/configuracoes"
+                  element={
+                    <ProtectedRoute>
+                      <Configuracoes />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/cliente/registro" element={<ClienteRegistro />} />
                 <Route path="/cliente/login" element={<ClienteLogin />} />
                 <Route path="/e/:slug/agendar" element={<PublicAgendamento />} />
