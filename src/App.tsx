@@ -17,6 +17,7 @@ import ClienteRegistro from "./pages/ClienteRegistro";
 import ClienteLogin from "./pages/ClienteLogin";
 import ClienteAgendamento from "./pages/ClienteAgendamento";
 import PublicAgendamento from "./pages/PublicAgendamento";
+import Landing from "./pages/Landing";
 
 const queryClient = new QueryClient();
 
@@ -36,11 +37,6 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
-const HomeRedirect = () => {
-  const { isAuthenticated } = useAuth();
-  return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />;
-};
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -51,7 +47,7 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <Routes>
-                <Route path="/" element={<HomeRedirect />} />
+                <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/registro" element={<Registro />} />
                 <Route
