@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, Calendar, Scissors, Plus, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Clock, Calendar, Scissors, Plus, Trash2, Save, Building2, Upload, Link2, Download } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -21,11 +22,14 @@ import {
   deleteServico,
   formatarPreco,
 } from "@/services/agendaService";
+import { fetchEmpresa, updateEmpresa, type EmpresaInfo } from "@/services/companyService";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Configuracoes() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { updateCompany } = useAuth();
 
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [configuracoes, setConfiguracoes] = useState<ConfiguracoesBarbearia | null>(null);
@@ -43,22 +47,147 @@ export default function Configuracoes() {
   const [novoServicoPreco, setNovoServicoPreco] = useState("");
   const [novoServicoDuracao, setNovoServicoDuracao] = useState("30");
 
+  // Empresa
+  const [empresa, setEmpresa] = useState<EmpresaInfo | null>(null);
+  const [empresaNome, setEmpresaNome] = useState("");
+  const [empresaDescricao, setEmpresaDescricao] = useState("");
+  const [iconePreview, setIconePreview] = useState<string | null>(null);
+  const [iconeFile, setIconeFile] = useState<File | null>(null);
+  const [iconeTempUrl, setIconeTempUrl] = useState<string | null>(null);
+  const [salvandoEmpresa, setSalvandoEmpresa] = useState(false);
+
   useEffect(() => {
     async function loadData() {
       try {
-        const [servicosData, configData] = await Promise.all([fetchServicos(), fetchConfiguracoes()]);
+        const [servicosData, configData, empresaData] = await Promise.all([
+          fetchServicos(),
+          fetchConfiguracoes(),
+          fetchEmpresa(),
+        ]);
         setServicos(servicosData);
         setConfiguracoes(configData);
         setHorarioInicio(configData.horarioInicio);
         setHorarioFim(configData.horarioFim);
         setIntervalo(configData.intervaloMinutos.toString());
         setDiasBloqueados(configData.diasBloqueados.map((d) => new Date(d + "T12:00:00")));
+        setEmpresa(empresaData);
+        setEmpresaNome(empresaData.nome);
+        setEmpresaDescricao(empresaData.descricao ?? "");
+        setIconePreview(empresaData.icon_url ?? null);
       } finally {
         setLoading(false);
       }
     }
     loadData();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (iconeTempUrl) {
+        URL.revokeObjectURL(iconeTempUrl);
+      }
+    };
+  }, [iconeTempUrl]);
+
+  const handleIconChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setIconeFile(file);
+    if (iconeTempUrl) {
+      URL.revokeObjectURL(iconeTempUrl);
+      setIconeTempUrl(null);
+    }
+
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setIconeTempUrl(previewUrl);
+      setIconePreview(previewUrl);
+    } else {
+      setIconePreview(empresa?.icon_url ?? null);
+    }
+  };
+
+  const handleSaveEmpresa = async () => {
+    if (!empresaNome.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Informe o nome que será exibido para os clientes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSalvandoEmpresa(true);
+    try {
+      const atualizada = await updateEmpresa({
+        nome: empresaNome.trim(),
+        descricao: empresaDescricao.trim(),
+        icone: iconeFile ?? undefined,
+      });
+      setEmpresa(atualizada);
+      setIconePreview(atualizada.icon_url ?? null);
+      if (iconeTempUrl) {
+        URL.revokeObjectURL(iconeTempUrl);
+        setIconeTempUrl(null);
+      }
+      setIconeFile(null);
+      updateCompany(atualizada);
+      toast({
+        title: "Empresa atualizada",
+        description: "Os dados públicos foram salvos.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao salvar empresa",
+        description: error instanceof Error ? error.message : "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSalvandoEmpresa(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!empresa?.agendamento_url) return;
+    try {
+      await navigator.clipboard.writeText(empresa.agendamento_url);
+      toast({
+        title: "Link copiado",
+        description: "Compartilhe com clientes para que agendem online.",
+      });
+    } catch {
+      toast({
+        title: "Não foi possível copiar",
+        description: "Copie manualmente o link abaixo.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const qrCodeUrl = empresa?.agendamento_url
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(empresa.agendamento_url)}`
+    : null;
+
+  const handleDownloadQrCode = async () => {
+    if (!qrCodeUrl) return;
+    try {
+      const response = await fetch(qrCodeUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `qrcode-${empresa?.slug ?? "empresa"}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({
+        title: "Não foi possível baixar",
+        description: "Abra o QR Code em outra aba para salvar manualmente.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSaveHorarios = async () => {
     setSaving(true);
@@ -159,6 +288,104 @@ export default function Configuracoes() {
             <p className="text-muted-foreground">Gerencie horários e serviços</p>
           </div>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              Identidade da empresa
+            </CardTitle>
+            <CardDescription>Atualize o que seus clientes veem ao acessar o link público.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="relative h-20 w-20 rounded-full border border-dashed border-border bg-muted flex items-center justify-center overflow-hidden">
+                {iconePreview ? (
+                  <img src={iconePreview} alt="Ícone da empresa" className="h-full w-full object-cover" />
+                ) : (
+                  <Scissors className="h-6 w-6 text-muted-foreground" />
+                )}
+              </div>
+              <div className="space-y-2">
+                <input id="iconeUpload" type="file" accept="image/*" className="hidden" onChange={handleIconChange} />
+                <Label
+                  htmlFor="iconeUpload"
+                  className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-primary"
+                >
+                  <Upload className="h-4 w-4" />
+                  {iconePreview ? "Trocar ícone" : "Adicionar ícone"}
+                </Label>
+                <p className="text-xs text-muted-foreground">PNG ou JPG até 2MB.</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nome da empresa</Label>
+              <Input value={empresaNome} onChange={(e) => setEmpresaNome(e.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Descrição curta</Label>
+              <Textarea
+                value={empresaDescricao}
+                onChange={(e) => setEmpresaDescricao(e.target.value)}
+                placeholder="Conte rapidamente o que torna seu atendimento especial."
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Link público de agendamento</Label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input readOnly value={empresa?.agendamento_url ?? "Link indisponível"} className="sm:flex-1" />
+                <div className="flex gap-2 sm:w-auto">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCopyLink}
+                    disabled={!empresa?.agendamento_url}
+                  >
+                    <Link2 className="h-4 w-4 mr-2" />
+                    Copiar
+                  </Button>
+                  <Button type="button" variant="outline" onClick={handleDownloadQrCode} disabled={!qrCodeUrl}>
+                    <Download className="h-4 w-4 mr-2" />
+                    QR Code
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Use este link nas redes sociais, WhatsApp ou imprima o QR Code no seu estabelecimento.
+              </p>
+            </div>
+
+            {qrCodeUrl && (
+              <div className="mt-4 flex flex-col items-center gap-3 rounded-lg border border-dashed border-border p-4">
+                <div className="text-sm font-semibold text-muted-foreground">QR Code da empresa</div>
+                <div className="rounded-lg bg-white p-4">
+                  <img src={qrCodeUrl} alt="QR Code da empresa" className="h-48 w-48" />
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Imprima e deixe no balcão ou compartilhe digitalmente para seus clientes acessarem a agenda.
+                </p>
+              </div>
+            )}
+
+            <Button type="button" className="shadow-gold" onClick={handleSaveEmpresa} disabled={salvandoEmpresa}>
+              {salvandoEmpresa ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Salvando...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Save className="h-4 w-4" />
+                  Salvar informações
+                </span>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Horários de Trabalho */}

@@ -1,8 +1,19 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 
+interface CompanyInfo {
+  id?: number;
+  nome?: string;
+  slug?: string;
+  agendamento_url?: string;
+  descricao?: string | null;
+  icon_url?: string | null;
+}
+
 interface User {
   nome: string;
   email: string;
+  companyId?: number;
+  company?: CompanyInfo | null;
 }
 
 interface AuthContextType {
@@ -11,6 +22,7 @@ interface AuthContextType {
   token: string | null;
   login: (email: string, senha: string) => Promise<boolean>;
   logout: () => void;
+  updateCompany: (company: CompanyInfo | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,9 +52,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!data.token || !data.user) return false;
 
-      setUser(data.user);
+      const normalizedUser: User = {
+        nome: data.user.nome ?? data.user.name ?? "",
+        email: data.user.email ?? "",
+        companyId: data.user.company_id ?? data.user.companyId,
+        company: data.user.company ?? null,
+      };
+
+      setUser(normalizedUser);
       setToken(data.token);
-      localStorage.setItem("barbeiro-user", JSON.stringify(data.user));
+      localStorage.setItem("barbeiro-user", JSON.stringify(normalizedUser));
       localStorage.setItem("barbeiro-token", data.token);
       return true;
     } catch {
@@ -57,6 +76,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("barbeiro-token");
   };
 
+  const updateCompany = (company: CompanyInfo | null) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, company };
+      localStorage.setItem("barbeiro-user", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -65,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         token,
         login,
         logout,
+        updateCompany,
       }}
     >
       {children}

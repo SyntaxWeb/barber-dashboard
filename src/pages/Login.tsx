@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Scissors, Mail, Lock, LogIn, Moon, Sun } from "lucide-react";
+import { CalendarCheck, Mail, Lock, LogIn, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,11 +61,13 @@ export default function Login() {
       <Card className="w-full max-w-md border-border shadow-gold">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary shadow-gold">
-            <Scissors className="h-8 w-8 text-primary-foreground" />
+            <CalendarCheck className="h-8 w-8 text-primary-foreground" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold">Barbearia Vintage</CardTitle>
-            <CardDescription className="text-muted-foreground">Entre no painel do barbeiro</CardDescription>
+            <CardTitle className="text-2xl font-bold">SyntaxAtendimento</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Entre no painel para profissionais e negócios de serviços
+            </CardDescription>
           </div>
         </CardHeader>
 
@@ -118,6 +120,16 @@ export default function Login() {
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Dica: Use qualquer email válido e senha para entrar
+          </p>
+          <p className="mt-3 text-center text-sm text-muted-foreground">
+            Ainda não tem acesso?{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/registro")}
+              className="font-semibold text-primary underline-offset-4 hover:underline"
+            >
+              Crie sua conta gratuita
+            </button>
           </p>
         </CardContent>
       </Card>

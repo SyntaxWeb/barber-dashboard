@@ -59,7 +59,7 @@ type AppointmentPayload = {
   data: string;
   horario: string;
   service_id: number;
-  preco: number;
+  preco?: number;
   observacoes?: string;
 };
 
@@ -102,14 +102,23 @@ export async function fetchServicos(): Promise<Servico[]> {
 export async function createServico(servico: Omit<Servico, "id">): Promise<Servico> {
   return api<Servico>("/api/services", {
     method: "POST",
-    body: JSON.stringify(servico),
+    body: JSON.stringify({
+      nome: servico.nome,
+      preco: servico.preco,
+      duracao_minutos: servico.duracao,
+    }),
   });
 }
 
 export async function updateServico(id: number, dados: Partial<Servico>): Promise<Servico> {
+  const payload: Record<string, unknown> = {};
+  if (dados.nome !== undefined) payload.nome = dados.nome;
+  if (dados.preco !== undefined) payload.preco = dados.preco;
+  if (dados.duracao !== undefined) payload.duracao_minutos = dados.duracao;
+
   return api<Servico>(`/api/services/${id}`, {
     method: "PUT",
-    body: JSON.stringify(dados),
+    body: JSON.stringify(payload),
   });
 }
 
