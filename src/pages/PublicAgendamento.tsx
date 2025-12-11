@@ -225,7 +225,7 @@ export default function PublicAgendamento() {
               <div className="space-y-3 text-sm text-muted-foreground">
                 <Separator />
                 <p>Escaneie o cÇ?digo para abrir este portal direto do celular.</p>
-                <p>Ideal para WhatsApp, Instagram, cartÇëes de visita e materiais impressos.</p>
+                <p>Ideal para Telegram, Instagram, cartÇëes de visita e materiais impressos.</p>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={handleDownloadQr}>
                     <QrCode className="mr-2 h-4 w-4" />

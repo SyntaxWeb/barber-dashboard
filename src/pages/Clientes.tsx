@@ -61,16 +61,6 @@ export default function Clientes() {
     setObservacoes("");
   };
 
-  const formatPhoneForWhatsApp = (phone: string): string | null => {
-    const digits = phone.replace(/\D/g, "");
-    if (!digits) return null;
-    if (digits.startsWith("55")) return digits;
-    if (digits.length === 10 || digits.length === 11) {
-      return `55${digits}`;
-    }
-    return digits;
-  };
-
   const buildSignupLink = (cliente: Cliente): string | null => {
     if (typeof window === "undefined") return null;
     const url = new URL("/cliente/registro", window.location.origin);
@@ -86,43 +76,24 @@ export default function Clientes() {
   };
 
   const triggerOnboardingMessage = (cliente: Cliente) => {
-    if (!cliente.telefone) {
-      toast({
-        title: "Número ausente",
-        description: "Informe o WhatsApp para enviar o convite automaticamente.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const signupLink = buildSignupLink(cliente);
     if (!signupLink) return;
 
-    const formattedPhone = formatPhoneForWhatsApp(cliente.telefone);
-    if (!formattedPhone) {
-      toast({
-        title: "WhatsApp inválido",
-        description: "Revise o número cadastrado para reenviar o convite.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const message = `Olá ${cliente.nome}! Você já está cadastrado na ${companyName}. Defina sua senha e confirme seus dados neste link: ${signupLink}`;
-    const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
-    setLastInvite({ nome: cliente.nome, url: whatsappUrl });
+    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(signupLink)}&text=${encodeURIComponent(message)}`;
+    setLastInvite({ nome: cliente.nome, url: telegramUrl });
 
     if (typeof window !== "undefined") {
-      const opened = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+      const opened = window.open(telegramUrl, "_blank", "noopener,noreferrer");
       if (!opened) {
         toast({
-          title: "Autorize o WhatsApp",
+          title: "Autorize o Telegram",
           description: "Clique no botão para reenviar manualmente o convite.",
         });
       } else {
         toast({
           title: "Convite preparado",
-          description: "O WhatsApp foi aberto com a mensagem pronta para envio.",
+          description: "O Telegram foi aberto com a mensagem pronta para envio.",
         });
       }
     }
@@ -139,7 +110,7 @@ export default function Clientes() {
     if (!nome.trim() || !email.trim() || !telefone.trim()) {
       toast({
         title: "Preencha os dados obrigatórios",
-        description: "Nome, email e WhatsApp são necessários para enviar o convite.",
+        description: "Nome, email e telefone são necessários para enviar o convite.",
         variant: "destructive",
       });
       return;
@@ -240,7 +211,7 @@ export default function Clientes() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cliente-telefone">Telefone / WhatsApp</Label>
+                    <Label htmlFor="cliente-telefone">Telefone / Telegram</Label>
                     <Input
                       id="cliente-telefone"
                       placeholder="(11) 99999-0000"
@@ -273,12 +244,12 @@ export default function Clientes() {
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
               Convite pronto para{" "}
-              <span className="font-semibold text-foreground">{lastInvite.nome}</span>. Caso o WhatsApp não abra
+              <span className="font-semibold text-foreground">{lastInvite.nome}</span>. Caso o Telegram não abra
               automaticamente, clique abaixo.
             </p>
             <Button variant="outline" className="gap-2" onClick={handleManualInvite}>
               <MessageSquare className="h-4 w-4" />
-              Reenviar via WhatsApp
+              Reenviar via Telegram
             </Button>
           </div>
         )}

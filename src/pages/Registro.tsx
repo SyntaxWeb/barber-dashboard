@@ -48,7 +48,7 @@ export default function Registro() {
     if (!nome || !email || !empresa || !telefone || !senha || !confirmarSenha) {
       toast({
         title: "Campos obrigatórios",
-        description: "Preencha nome, e-mail, empresa, WhatsApp e senha para avançar.",
+        description: "Preencha nome, e-mail, empresa, Telegram e senha para avançar.",
         variant: "destructive",
       });
       return;
@@ -185,7 +185,7 @@ export default function Registro() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="telefone">WhatsApp</Label>
+                  <Label htmlFor="telefone">Telegram / Telefone</Label>
                   <Input
                     id="telefone"
                     type="tel"

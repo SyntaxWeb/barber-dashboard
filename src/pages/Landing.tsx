@@ -43,8 +43,8 @@ const featureCards = [
 
 const roadmapCards = [
   {
-    title: "Integração com WhatsApp",
-    description: "Envio automático de confirmações e lembretes usando o número oficial da barbearia.",
+    title: "Integração com Telegram",
+    description: "Envio automático de confirmações e lembretes usando o canal oficial da barbearia.",
     icon: MessageCircle,
   },
   {

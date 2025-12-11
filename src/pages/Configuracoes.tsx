@@ -12,6 +12,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Layout } from "@/components/layout/Layout";
 import { Servico, ConfiguracoesBarbearia } from "@/data/mockData";
 import {
@@ -22,7 +23,13 @@ import {
   deleteServico,
   formatarPreco,
 } from "@/services/agendaService";
-import { fetchEmpresa, updateEmpresa, type EmpresaInfo } from "@/services/companyService";
+import {
+  fetchEmpresa,
+  updateEmpresa,
+  requestTelegramLink,
+  verifyTelegramLink,
+  type EmpresaInfo,
+} from "@/services/companyService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -55,6 +62,13 @@ export default function Configuracoes() {
   const [iconeFile, setIconeFile] = useState<File | null>(null);
   const [iconeTempUrl, setIconeTempUrl] = useState<string | null>(null);
   const [salvandoEmpresa, setSalvandoEmpresa] = useState(false);
+  const [notifyEmail, setNotifyEmail] = useState("");
+  const [notifyTelegram, setNotifyTelegram] = useState("");
+  const [notifyViaEmail, setNotifyViaEmail] = useState(false);
+  const [notifyViaTelegram, setNotifyViaTelegram] = useState(false);
+  const [telegramLink, setTelegramLink] = useState<string | null>(null);
+  const [telegramLinkLoading, setTelegramLinkLoading] = useState(false);
+  const [telegramVerifyLoading, setTelegramVerifyLoading] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -74,6 +88,10 @@ export default function Configuracoes() {
         setEmpresaNome(empresaData.nome);
         setEmpresaDescricao(empresaData.descricao ?? "");
         setIconePreview(empresaData.icon_url ?? null);
+        setNotifyEmail(empresaData.notify_email ?? "");
+        setNotifyTelegram(empresaData.notify_telegram ?? "");
+        setNotifyViaEmail(Boolean(empresaData.notify_via_email));
+        setNotifyViaTelegram(Boolean(empresaData.notify_via_telegram));
       } finally {
         setLoading(false);
       }
@@ -122,9 +140,17 @@ export default function Configuracoes() {
         nome: empresaNome.trim(),
         descricao: empresaDescricao.trim(),
         icone: iconeFile ?? undefined,
+        notify_email: notifyEmail.trim() || null,
+        notify_telegram: notifyTelegram.trim() || null,
+        notify_via_email: notifyViaEmail,
+        notify_via_telegram: notifyViaTelegram,
       });
       setEmpresa(atualizada);
       setIconePreview(atualizada.icon_url ?? null);
+      setNotifyEmail(atualizada.notify_email ?? "");
+      setNotifyTelegram(atualizada.notify_telegram ?? "");
+      setNotifyViaEmail(Boolean(atualizada.notify_via_email));
+      setNotifyViaTelegram(Boolean(atualizada.notify_via_telegram));
       if (iconeTempUrl) {
         URL.revokeObjectURL(iconeTempUrl);
         setIconeTempUrl(null);
@@ -186,6 +212,47 @@ export default function Configuracoes() {
         description: "Abra o QR Code em outra aba para salvar manualmente.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleGenerateTelegramLink = async () => {
+    setTelegramLinkLoading(true);
+    try {
+      const { link } = await requestTelegramLink();
+      setTelegramLink(link);
+      toast({
+        title: "Link gerado",
+        description: "Abra o link, envie /start ao bot e depois clique em verificar.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao gerar link",
+        description: error instanceof Error ? error.message : "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setTelegramLinkLoading(false);
+    }
+  };
+
+  const handleVerifyTelegramLink = async () => {
+    setTelegramVerifyLoading(true);
+    try {
+      const { chat_id } = await verifyTelegramLink();
+      setNotifyTelegram(chat_id);
+      setNotifyViaTelegram(true);
+      toast({
+        title: "Chat identificado",
+        description: `Receberemos alertas no chat ${chat_id}.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Não encontramos o chat",
+        description: error instanceof Error ? error.message : "Envie /start ao bot e tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setTelegramVerifyLoading(false);
     }
   };
 
@@ -355,7 +422,7 @@ export default function Configuracoes() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Use este link nas redes sociais, WhatsApp ou imprima o QR Code no seu estabelecimento.
+                Use este link nas redes sociais, Telegram ou imprima o QR Code no seu estabelecimento.
               </p>
             </div>
 
@@ -370,6 +437,73 @@ export default function Configuracoes() {
                 </p>
               </div>
             )}
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Email para alertas</Label>
+                  <Input
+                    type="email"
+                    placeholder="contato@suaempresa.com"
+                    value={notifyEmail}
+                    onChange={(e) => setNotifyEmail(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium">Receber por email</p>
+                    <p className="text-xs text-muted-foreground">Enviaremos um aviso a cada novo agendamento.</p>
+                  </div>
+                  <Switch checked={notifyViaEmail} onCheckedChange={(checked) => setNotifyViaEmail(Boolean(checked))} />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Chat ID do Telegram</Label>
+                  <Input type="text" placeholder="123456789" value={notifyTelegram} readOnly disabled />
+                  <p className="text-xs text-muted-foreground">
+                    Capturaremos automaticamente o chat ao conectar com o bot @syntax_atendimento_bot.
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button type="button" variant="outline" onClick={handleGenerateTelegramLink} disabled={telegramLinkLoading}>
+                      {telegramLinkLoading ? "Gerando..." : "Capturar automaticamente"}
+                    </Button>
+                    {telegramLink && (
+                      <>
+                        <Button type="button" variant="secondary" onClick={() => window.open(telegramLink, "_blank")}>
+                          Abrir bot
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={handleVerifyTelegramLink}
+                          disabled={telegramVerifyLoading}
+                          className="bg-emerald-600 hover:bg-emerald-500"
+                        >
+                          {telegramVerifyLoading ? "Verificando..." : "Confirmar captura"}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  {telegramLink && (
+                    <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+                      <p>Envie /start no bot usando o link acima e clique em confirmar captura.</p>
+                      <p className="mt-1 break-all">{telegramLink}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium">Receber via Telegram</p>
+                    <p className="text-xs text-muted-foreground">Um job será disparado para seu integrador.</p>
+                  </div>
+                  <Switch
+                    checked={notifyViaTelegram}
+                    onCheckedChange={(checked) => setNotifyViaTelegram(Boolean(checked))}
+                  />
+                </div>
+              </div>
+            </div>
 
             <Button type="button" className="shadow-gold" onClick={handleSaveEmpresa} disabled={salvandoEmpresa}>
               {salvandoEmpresa ? (

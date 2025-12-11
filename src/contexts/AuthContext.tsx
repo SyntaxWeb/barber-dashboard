@@ -8,6 +8,10 @@ interface CompanyInfo {
   agendamento_url?: string;
   descricao?: string | null;
   icon_url?: string | null;
+  notify_email?: string | null;
+  notify_telegram?: string | null;
+  notify_via_email?: boolean;
+  notify_via_telegram?: boolean;
 }
 
 interface User {

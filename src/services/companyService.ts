@@ -14,6 +14,10 @@ export interface EmpresaInfo {
   slug: string;
   agendamento_url: string;
   icon_url?: string | null;
+  notify_email?: string | null;
+  notify_telegram?: string | null;
+  notify_via_email?: boolean;
+  notify_via_telegram?: boolean;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -60,6 +64,10 @@ interface UpdateEmpresaPayload {
   nome: string;
   descricao?: string;
   icone?: File | null;
+  notify_email?: string | null;
+  notify_telegram?: string | null;
+  notify_via_email?: boolean;
+  notify_via_telegram?: boolean;
 }
 
 export async function updateEmpresa(payload: UpdateEmpresaPayload): Promise<EmpresaInfo> {
@@ -70,6 +78,18 @@ export async function updateEmpresa(payload: UpdateEmpresaPayload): Promise<Empr
   }
   if (payload.icone) {
     formData.append("icone", payload.icone);
+  }
+  if (payload.notify_email !== undefined) {
+    formData.append("notify_email", payload.notify_email ?? "");
+  }
+  if (payload.notify_telegram !== undefined) {
+    formData.append("notify_telegram", payload.notify_telegram ?? "");
+  }
+  if (payload.notify_via_email !== undefined) {
+    formData.append("notify_via_email", String(payload.notify_via_email));
+  }
+  if (payload.notify_via_telegram !== undefined) {
+    formData.append("notify_via_telegram", String(payload.notify_via_telegram));
   }
 
   const response = await fetch(`${API_URL}/api/company`, {
@@ -82,4 +102,28 @@ export async function updateEmpresa(payload: UpdateEmpresaPayload): Promise<Empr
 
   const data = await handleResponse<EmpresaInfo>(response);
   return normalizeEmpresa(data);
+}
+
+export async function requestTelegramLink(): Promise<{ link: string }> {
+  const response = await fetch(`${API_URL}/api/company/telegram/link`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  return handleResponse<{ link: string }>(response);
+}
+
+export async function verifyTelegramLink(): Promise<{ chat_id: string }> {
+  const response = await fetch(`${API_URL}/api/company/telegram/link/verify`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  return handleResponse<{ chat_id: string }>(response);
 }

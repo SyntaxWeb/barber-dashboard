@@ -3,6 +3,7 @@ import { Moon, Sun, Settings, LogOut, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export function Header() {
   const { theme, toggleTheme } = useTheme();
@@ -16,7 +17,6 @@ export function Header() {
 
   const companyName = user?.company?.nome ?? "SyntaxAtendimento";
   const companyIcon = user?.company?.icon_url;
-  console.log(companyIcon)
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
@@ -41,6 +41,8 @@ export function Header() {
               Olá, <span className="text-foreground font-medium">{user.nome}</span>
             </span>
           )}
+
+          <NotificationBell />
 
           <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9">
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

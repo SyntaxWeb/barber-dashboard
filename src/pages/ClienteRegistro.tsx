@@ -148,7 +148,7 @@ export default function ClienteRegistro() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="telefone">WhatsApp</Label>
+              <Label htmlFor="telefone">Telegram / Telefone</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
