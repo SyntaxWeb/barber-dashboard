@@ -23,6 +23,9 @@ import Perfil from "./pages/Perfil";
 import ClientePerfil from "./pages/ClientePerfil";
 import Assinatura from "./pages/Assinatura";
 import AdminUsuarios from "./pages/AdminUsuarios";
+import AssinaturaSucesso from "./pages/AssinaturaSucesso";
+import AssinaturaPendente from "./pages/AssinaturaPendente";
+import AssinaturaErro from "./pages/AssinaturaErro";
 
 const queryClient = new QueryClient();
 
@@ -131,6 +134,30 @@ const App = () => (
                   element={
                     <ProviderRoute>
                       <Assinatura />
+                    </ProviderRoute>
+                  }
+                />
+                <Route
+                  path="/assinatura/sucesso"
+                  element={
+                    <ProviderRoute>
+                      <AssinaturaSucesso />
+                    </ProviderRoute>
+                  }
+                />
+                <Route
+                  path="/assinatura/pendente"
+                  element={
+                    <ProviderRoute>
+                      <AssinaturaPendente />
+                    </ProviderRoute>
+                  }
+                />
+                <Route
+                  path="/assinatura/erro"
+                  element={
+                    <ProviderRoute>
+                      <AssinaturaErro />
                     </ProviderRoute>
                   }
                 />

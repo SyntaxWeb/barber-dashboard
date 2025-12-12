@@ -25,6 +25,11 @@ interface SubscriptionSummary {
     months: number;
     key: string;
   }>;
+  latest_order?: {
+    status: string;
+    checkout_url: string | null;
+    created_at: string;
+  } | null;
 }
 
 export default function Assinatura() {
@@ -63,7 +68,7 @@ export default function Assinatura() {
     );
   }
 
-  const { company, plan, available_plans: availablePlans } = summary;
+  const { company, plan, available_plans: availablePlans, latest_order: latestOrder } = summary;
   const renewsAt = company.subscription_renews_at
     ? format(parseISO(company.subscription_renews_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
     : "Nao definida";
@@ -74,7 +79,7 @@ export default function Assinatura() {
     setError(null);
     try {
       const response = await requestSubscriptionCheckout(planKey);
-      const url = response.checkout_url || response.subscription?.init_point || response.subscription?.sandbox_init_point;
+      const url = response.checkout_url;
       if (url) {
         window.location.href = url;
       } else {
@@ -123,6 +128,11 @@ export default function Assinatura() {
               <p className="text-sm text-muted-foreground">
                 Escolha um dos planos abaixo para atualizar ou reativar sua assinatura automaticamente.
               </p>
+              {latestOrder && latestOrder.status === "pendente" && (
+                <p className="mt-3 text-sm text-amber-600">
+                  Temos um pagamento pendente. Abra o link gerado anteriormente ou gere um novo plano abaixo.
+                </p>
+              )}
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
           </CardContent>

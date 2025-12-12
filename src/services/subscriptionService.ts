@@ -42,6 +42,11 @@ export async function fetchSubscriptionSummary() {
       price: number;
       months: number;
     }>;
+    latest_order?: {
+      status: string;
+      checkout_url: string | null;
+      created_at: string;
+    } | null;
   }>(response);
 }
 
@@ -57,6 +62,6 @@ export async function requestSubscriptionCheckout(plan: string) {
 
   return handleResponse<{
     checkout_url: string | null;
-    subscription: Record<string, any>;
+    order_id: number;
   }>(response);
 }
