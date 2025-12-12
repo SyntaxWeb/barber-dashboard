@@ -7,12 +7,15 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { fetchEmpresaPublic, type EmpresaInfo } from "@/services/companyService";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export default function PublicAgendamento() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAuthenticated, setCompanySlug } = useClientAuth();
+  const { palettes } = useTheme();
+  const clientTheme = palettes.client;
 
   const [empresa, setEmpresa] = useState<EmpresaInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -23,7 +26,7 @@ export default function PublicAgendamento() {
     fetchEmpresaPublic(slug)
       .then((data) => {
         setEmpresa(data);
-        setCompanySlug(slug);
+        setCompanySlug(slug, data);
       })
       .catch(() => {
         toast({
@@ -116,7 +119,12 @@ export default function PublicAgendamento() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 py-10 px-4">
+    <div
+      className="min-h-screen py-10 px-4"
+      style={{
+        background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 60%, #ffffff 100%)`,
+      }}
+    >
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <Button variant="ghost" className="w-fit -ml-2" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" />

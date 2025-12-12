@@ -19,6 +19,10 @@ import ClienteAgendamento from "./pages/ClienteAgendamento";
 import PublicAgendamento from "./pages/PublicAgendamento";
 import Landing from "./pages/Landing";
 import Clientes from "./pages/Clientes";
+import Perfil from "./pages/Perfil";
+import ClientePerfil from "./pages/ClientePerfil";
+import Assinatura from "./pages/Assinatura";
+import AdminUsuarios from "./pages/AdminUsuarios";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +38,29 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
+const ProviderRoute = ({ children }: { children: JSX.Element }) => {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  if (user?.role !== "provider") {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
+
+const SuperAdminRoute = ({ children }: { children: JSX.Element }) => {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  console.log(user)
+  if (user?.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
   }
   return children;
 };
@@ -84,11 +111,35 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/perfil"
+                  element={
+                    <ProtectedRoute>
+                      <Perfil />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/clientes"
                   element={
                     <ProtectedRoute>
                       <Clientes />
                     </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/assinatura"
+                  element={
+                    <ProviderRoute>
+                      <Assinatura />
+                    </ProviderRoute>
+                  }
+                />
+                <Route
+                  path="/admin/usuarios"
+                  element={
+                    <SuperAdminRoute>
+                      <AdminUsuarios />
+                    </SuperAdminRoute>
                   }
                 />
                 <Route path="/cliente/registro" element={<ClienteRegistro />} />
@@ -99,6 +150,14 @@ const App = () => (
                   element={
                     <ClienteProtectedRoute>
                       <ClienteAgendamento />
+                    </ClienteProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/cliente/perfil"
+                  element={
+                    <ClienteProtectedRoute>
+                      <ClientePerfil />
                     </ClienteProtectedRoute>
                   }
                 />

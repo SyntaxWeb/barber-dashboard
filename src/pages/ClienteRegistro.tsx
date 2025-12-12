@@ -7,12 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export default function ClienteRegistro() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { register, companySlug, setCompanySlug } = useClientAuth();
+  const { register, companySlug, setCompanySlug, companyInfo } = useClientAuth();
+  const { palettes } = useTheme();
+  const clientTheme = palettes.client;
   const companyFromUrl = searchParams.get("company");
   const prefillName = searchParams.get("nome");
   const prefillEmail = searchParams.get("email");
@@ -99,7 +102,10 @@ export default function ClienteRegistro() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/50 flex items-center justify-center px-4 py-10">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-10"
+      style={{ background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 70%, #ffffff 100%)` }}
+    >
       <Card className="w-full max-w-lg border-border shadow-gold">
         <CardHeader className="space-y-3 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -111,7 +117,7 @@ export default function ClienteRegistro() {
             {targetCompany && (
               <p className="mt-2 text-sm text-muted-foreground">
                 Conectado ao link da empresa{" "}
-                <span className="font-semibold text-foreground">{targetCompany}</span>.
+                <span className="font-semibold text-foreground">{companyInfo?.nome ?? targetCompany}</span>.
               </p>
             )}
           </div>

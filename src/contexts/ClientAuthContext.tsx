@@ -1,9 +1,15 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { EmpresaInfo, fetchEmpresaPublic } from "@/services/companyService";
+import { DEFAULT_CLIENT_THEME } from "@/lib/theme";
+import { useTheme } from "./ThemeContext";
+import { resolveMediaUrl } from "@/lib/media";
 
 interface ClientUser {
+  id?: number;
   name: string;
   email: string;
-  telefone?: string;
+  telefone?: string | null;
+  avatar_url?: string | null;
 }
 
 interface ClientAuthContextType {
@@ -11,10 +17,12 @@ interface ClientAuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   companySlug: string | null;
+  companyInfo: EmpresaInfo | null;
   register: (payload: ClientRegisterPayload) => Promise<boolean>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  setCompanySlug: (slug: string | null) => void;
+  setCompanySlug: (slug: string | null, company?: EmpresaInfo | null) => void;
+  updateClient: (payload: any) => void;
 }
 
 interface ClientRegisterPayload {
@@ -32,27 +40,53 @@ const STORAGE_USER = "cliente-user";
 const STORAGE_TOKEN = "cliente-token";
 const STORAGE_COMPANY = "cliente-company";
 
+const normalizeClientUser = (data: any): ClientUser => ({
+  id: data?.id,
+  name: data?.name ?? "",
+  email: data?.email ?? "",
+  telefone: data?.telefone ?? null,
+  avatar_url: resolveMediaUrl(data?.avatar_url),
+});
+
 export function ClientAuthProvider({ children }: { children: ReactNode }) {
   const [client, setClient] = useState<ClientUser | null>(() => {
     const stored = localStorage.getItem(STORAGE_USER);
-    return stored ? JSON.parse(stored) : null;
+    return stored ? normalizeClientUser(JSON.parse(stored)) : null;
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(STORAGE_TOKEN));
   const [companySlug, setCompanySlugState] = useState<string | null>(() => localStorage.getItem(STORAGE_COMPANY));
+  const [companyInfo, setCompanyInfo] = useState<EmpresaInfo | null>(null);
+  const { setPalette, activatePalette } = useTheme();
 
-  const persistSession = (user: ClientUser, jwt: string) => {
-    setClient(user);
+  const persistSession = (userPayload: any, jwt: string) => {
+    const normalized = normalizeClientUser(userPayload);
+    setClient(normalized);
     setToken(jwt);
-    localStorage.setItem(STORAGE_USER, JSON.stringify(user));
+    localStorage.setItem(STORAGE_USER, JSON.stringify(normalized));
     localStorage.setItem(STORAGE_TOKEN, jwt);
   };
 
-  const persistCompanySlug = (slug: string | null) => {
+  const applyClientUpdate = (payload: any) => {
+    const normalized = normalizeClientUser(payload);
+    setClient(normalized);
+    localStorage.setItem(STORAGE_USER, JSON.stringify(normalized));
+  };
+
+  const persistCompanySlug = (slug: string | null, info?: EmpresaInfo | null) => {
     setCompanySlugState(slug);
     if (slug) {
       localStorage.setItem(STORAGE_COMPANY, slug);
     } else {
       localStorage.removeItem(STORAGE_COMPANY);
+    }
+    if (info) {
+      setCompanyInfo(info);
+      setPalette("client", info.client_theme);
+      activatePalette("client");
+    } else if (!slug) {
+      setCompanyInfo(null);
+      setPalette("client", DEFAULT_CLIENT_THEME);
+      activatePalette("dashboard");
     }
   };
 
@@ -99,6 +133,37 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_TOKEN);
   };
 
+  useEffect(() => {
+    if (!companySlug) {
+      setCompanyInfo(null);
+      setPalette("client", DEFAULT_CLIENT_THEME);
+      activatePalette("dashboard");
+      return;
+    }
+
+    if (companyInfo?.slug === companySlug) {
+      activatePalette("client");
+      return;
+    }
+
+    let cancelled = false;
+    fetchEmpresaPublic(companySlug)
+      .then((info) => {
+        if (cancelled) return;
+        setCompanyInfo(info);
+        setPalette("client", info.client_theme);
+        activatePalette("client");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCompanyInfo(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [companySlug, companyInfo?.slug, setPalette, activatePalette]);
+
   return (
     <ClientAuthContext.Provider
       value={{
@@ -106,10 +171,12 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
         token,
         isAuthenticated: !!client && !!token,
         companySlug,
+        companyInfo,
         register,
         login,
         logout,
         setCompanySlug: persistCompanySlug,
+        updateClient: applyClientUpdate,
       }}
     >
       {children}

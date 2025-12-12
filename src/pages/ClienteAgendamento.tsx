@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   LogOut,
   ArrowRight,
+  UserRound,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   clientCreateAgendamento,
   clientFetchHorarios,
@@ -29,7 +31,9 @@ import { Servico } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 
 export default function ClienteAgendamento() {
-  const { client, token, logout, companySlug, setCompanySlug } = useClientAuth();
+  const { client, token, logout, companySlug, setCompanySlug, companyInfo } = useClientAuth();
+  const { palettes } = useTheme();
+  const clientPalette = palettes.client;
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -154,7 +158,12 @@ export default function ClienteAgendamento() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 py-10 px-4">
+    <div
+      className="min-h-screen py-10 px-4"
+      style={{
+        background: `linear-gradient(180deg, ${clientPalette.background} 0%, ${clientPalette.surface} 60%, #ffffff 100%)`,
+      }}
+    >
       <div className="mx-auto max-w-3xl space-y-6">
         <Card className="border-border shadow-gold/50">
           <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -162,13 +171,22 @@ export default function ClienteAgendamento() {
               <CardTitle>Olá, {client?.name}</CardTitle>
               <CardDescription>
                 Escolha o serviço e confirme seu horário disponível na empresa{" "}
-                <span className="font-semibold text-foreground">{activeCompany}</span>.
+                <span className="font-semibold text-foreground">
+                  {companyInfo?.nome ?? activeCompany}
+                </span>
+                .
               </CardDescription>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => logout()}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => navigate("/cliente/perfil")}>
+                <UserRound className="mr-2 h-4 w-4" />
+                Meu perfil
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => logout()}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </Button>
+            </div>
           </CardHeader>
         </Card>
 

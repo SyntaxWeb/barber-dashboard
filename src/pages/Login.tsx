@@ -13,16 +13,20 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login, isAuthenticated } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { login, isAuthenticated, user } = useAuth();
+  const { mode, toggleMode } = useTheme();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/dashboard", { replace: true });
+      if (user?.role === "admin") {
+        navigate("/admin/usuarios", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user?.role, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +49,6 @@ export default function Login() {
           title: "Bem-vindo!",
           description: "Login realizado com sucesso.",
         });
-        navigate("/dashboard");
       } else {
         toast({
           title: "Erro no login",
@@ -60,8 +63,8 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Button variant="ghost" size="icon" onClick={toggleTheme} className="absolute top-4 right-4">
-        {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+      <Button variant="ghost" size="icon" onClick={toggleMode} className="absolute top-4 right-4">
+        {mode === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
       </Button>
 
       <Card className="w-full max-w-md border-border shadow-gold">

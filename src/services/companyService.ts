@@ -1,4 +1,5 @@
 import { resolveMediaUrl } from "@/lib/media";
+import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME, sanitizeTheme } from "@/lib/theme";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
 
@@ -18,6 +19,8 @@ export interface EmpresaInfo {
   notify_telegram?: string | null;
   notify_via_email?: boolean;
   notify_via_telegram?: boolean;
+  dashboard_theme: BrandTheme;
+  client_theme: BrandTheme;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -31,6 +34,8 @@ async function handleResponse<T>(response: Response): Promise<T> {
 const normalizeEmpresa = (empresa: EmpresaInfo): EmpresaInfo => ({
   ...empresa,
   icon_url: resolveMediaUrl(empresa.icon_url),
+  dashboard_theme: sanitizeTheme(empresa.dashboard_theme, DEFAULT_DASHBOARD_THEME),
+  client_theme: sanitizeTheme(empresa.client_theme, DEFAULT_CLIENT_THEME),
 });
 
 export async function fetchEmpresa(): Promise<EmpresaInfo> {
@@ -68,6 +73,8 @@ interface UpdateEmpresaPayload {
   notify_telegram?: string | null;
   notify_via_email?: boolean;
   notify_via_telegram?: boolean;
+  dashboard_theme?: BrandTheme;
+  client_theme?: BrandTheme;
 }
 
 export async function updateEmpresa(payload: UpdateEmpresaPayload): Promise<EmpresaInfo> {
@@ -90,6 +97,16 @@ export async function updateEmpresa(payload: UpdateEmpresaPayload): Promise<Empr
   }
   if (payload.notify_via_telegram !== undefined) {
     formData.append("notify_via_telegram", String(payload.notify_via_telegram));
+  }
+  if (payload.dashboard_theme) {
+    Object.entries(payload.dashboard_theme).forEach(([key, value]) => {
+      formData.append(`dashboard_theme[${key}]`, value);
+    });
+  }
+  if (payload.client_theme) {
+    Object.entries(payload.client_theme).forEach(([key, value]) => {
+      formData.append(`client_theme[${key}]`, value);
+    });
   }
 
   const response = await fetch(`${API_URL}/api/company`, {

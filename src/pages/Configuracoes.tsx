@@ -1,6 +1,20 @@
 import { useEffect, useState, ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, Calendar, Scissors, Plus, Trash2, Save, Building2, Upload, Link2, Download } from "lucide-react";
+import {
+  ArrowLeft,
+  Clock,
+  Calendar,
+  Scissors,
+  Plus,
+  Trash2,
+  Save,
+  Building2,
+  Upload,
+  Link2,
+  Download,
+  Palette,
+  Sparkles,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -32,11 +46,14 @@ import {
 } from "@/services/companyService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME, sanitizeTheme, isValidHexColor } from "@/lib/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export default function Configuracoes() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateCompany } = useAuth();
+  const { setPalette } = useTheme();
 
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [configuracoes, setConfiguracoes] = useState<ConfiguracoesBarbearia | null>(null);
@@ -69,6 +86,73 @@ export default function Configuracoes() {
   const [telegramLink, setTelegramLink] = useState<string | null>(null);
   const [telegramLinkLoading, setTelegramLinkLoading] = useState(false);
   const [telegramVerifyLoading, setTelegramVerifyLoading] = useState(false);
+  const [dashboardThemeState, setDashboardThemeState] = useState<BrandTheme>(DEFAULT_DASHBOARD_THEME);
+  const [clientThemeState, setClientThemeState] = useState<BrandTheme>(DEFAULT_CLIENT_THEME);
+
+  const themeFields: Array<{ key: keyof BrandTheme; label: string; description: string }> = [
+    { key: "primary", label: "Cor primária", description: "Botões, links e destaques" },
+    { key: "secondary", label: "Cor secundária", description: "Elementos de apoio e estados" },
+    { key: "background", label: "Fundo", description: "Plano de fundo principal" },
+    { key: "surface", label: "Cartões e superfícies", description: "Cards, modais e listas" },
+    { key: "text", label: "Texto", description: "Cor predominante de textos" },
+    { key: "accent", label: "Realces", description: "Bordas, badges e indicadores" },
+  ];
+
+  const applyThemePreview = (type: "dashboard" | "client", theme: BrandTheme) => {
+    setPalette(type, theme);
+  };
+
+  const renderThemeGrid = (type: "dashboard" | "client", theme: BrandTheme) => (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {themeFields.map((field) => (
+        <div key={`${type}-${field.key}`} className="space-y-2">
+          <Label>{field.label}</Label>
+          <div className="flex items-center gap-3">
+            <Input
+              type="color"
+              value={theme[field.key]}
+              onChange={(event) => handleThemeColorChange(type, field.key, event.target.value)}
+              className="h-10 w-16 cursor-pointer rounded-md border p-1"
+            />
+            <Input
+              value={theme[field.key]}
+              onChange={(event) => handleThemeTextChange(type, field.key, event.target.value)}
+              placeholder="#000000"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">{field.description}</p>
+        </div>
+      ))}
+    </div>
+  );
+
+  const handleThemeColorChange = (type: "dashboard" | "client", key: keyof BrandTheme, value: string) => {
+    const normalized = value.toUpperCase();
+    if (type === "dashboard") {
+      const updated = { ...dashboardThemeState, [key]: normalized };
+      setDashboardThemeState(updated);
+      applyThemePreview("dashboard", updated);
+    } else {
+      const updated = { ...clientThemeState, [key]: normalized };
+      setClientThemeState(updated);
+      applyThemePreview("client", updated);
+    }
+  };
+
+  const handleThemeTextChange = (type: "dashboard" | "client", key: keyof BrandTheme, value: string) => {
+    const hex = value.startsWith("#") ? value.toUpperCase() : `#${value.toUpperCase()}`;
+    if (type === "dashboard") {
+      setDashboardThemeState((prev) => ({ ...prev, [key]: hex }));
+      if (isValidHexColor(hex)) {
+        applyThemePreview("dashboard", { ...dashboardThemeState, [key]: hex });
+      }
+    } else {
+      setClientThemeState((prev) => ({ ...prev, [key]: hex }));
+      if (isValidHexColor(hex)) {
+        applyThemePreview("client", { ...clientThemeState, [key]: hex });
+      }
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -92,6 +176,12 @@ export default function Configuracoes() {
         setNotifyTelegram(empresaData.notify_telegram ?? "");
         setNotifyViaEmail(Boolean(empresaData.notify_via_email));
         setNotifyViaTelegram(Boolean(empresaData.notify_via_telegram));
+        const dashboardTheme = sanitizeTheme(empresaData.dashboard_theme, DEFAULT_DASHBOARD_THEME);
+        const clientTheme = sanitizeTheme(empresaData.client_theme, DEFAULT_CLIENT_THEME);
+        setDashboardThemeState(dashboardTheme);
+        setClientThemeState(clientTheme);
+        applyThemePreview("dashboard", dashboardTheme);
+        setPalette("client", clientTheme);
       } finally {
         setLoading(false);
       }
@@ -144,6 +234,8 @@ export default function Configuracoes() {
         notify_telegram: notifyTelegram.trim() || null,
         notify_via_email: notifyViaEmail,
         notify_via_telegram: notifyViaTelegram,
+        dashboard_theme: dashboardThemeState,
+        client_theme: clientThemeState,
       });
       setEmpresa(atualizada);
       setIconePreview(atualizada.icon_url ?? null);
@@ -151,6 +243,12 @@ export default function Configuracoes() {
       setNotifyTelegram(atualizada.notify_telegram ?? "");
       setNotifyViaEmail(Boolean(atualizada.notify_via_email));
       setNotifyViaTelegram(Boolean(atualizada.notify_via_telegram));
+      const updatedDashboardTheme = sanitizeTheme(atualizada.dashboard_theme, DEFAULT_DASHBOARD_THEME);
+      const updatedClientTheme = sanitizeTheme(atualizada.client_theme, DEFAULT_CLIENT_THEME);
+      setDashboardThemeState(updatedDashboardTheme);
+      setClientThemeState(updatedClientTheme);
+      applyThemePreview("dashboard", updatedDashboardTheme);
+      setPalette("client", updatedClientTheme);
       if (iconeTempUrl) {
         URL.revokeObjectURL(iconeTempUrl);
         setIconeTempUrl(null);
@@ -518,10 +616,42 @@ export default function Configuracoes() {
                 </span>
               )}
             </Button>
-          </CardContent>
-        </Card>
+        </CardContent>
+      </Card>
 
-        <div className="grid gap-6 md:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5 text-primary" />
+            Cores do painel interno
+          </CardTitle>
+          <CardDescription>Personalize como o prestador enxerga o sistema.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {renderThemeGrid("dashboard", dashboardThemeState)}
+          <p className="text-xs text-muted-foreground">
+            Essas cores afetam exclusivamente o painel do prestador, incluindo menu, botões e componentes do backoffice.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Cores do portal do cliente
+          </CardTitle>
+          <CardDescription>Defina a experiência visual para quem agenda nos seus links públicos.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {renderThemeGrid("client", clientThemeState)}
+          <p className="text-xs text-muted-foreground">
+            Essas cores são usadas no portal público e no fluxo de agendamento do cliente autenticado.
+          </p>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 md:grid-cols-2">
           {/* Horários de Trabalho */}
           <Card>
             <CardHeader>

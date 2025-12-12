@@ -1,12 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Moon, Sun, Settings, LogOut, Scissors } from "lucide-react";
+import { Moon, Sun, Settings, LogOut, Scissors, UserRound, CreditCard, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export function Header() {
-  const { theme, toggleTheme } = useTheme();
+  const { mode, toggleMode } = useTheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -15,8 +15,13 @@ export function Header() {
     navigate("/login");
   };
 
-  const companyName = user?.company?.nome ?? "SyntaxAtendimento";
+  const isProvider = user?.role === "provider";
+  const isAdmin = user?.role === "admin";
+
+  const companyName = user?.company?.nome ?? (isAdmin ? "Painel Superadmin" : "SyntaxAtendimento");
   const companyIcon = user?.company?.icon_url;
+  const tagline = isAdmin ? "Painel Superadmin" : "Painel SyntaxAtendimento";
+  const avatar = user?.avatar_url;
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
@@ -31,22 +36,52 @@ export function Header() {
           </div>
           <div className="hidden sm:block">
             <h1 className="text-lg font-bold tracking-tight">{companyName}</h1>
-            <p className="text-xs text-muted-foreground">Painel SyntaxAtendimento</p>
+            <p className="text-xs text-muted-foreground">{tagline}</p>
           </div>
         </Link>
 
         <div className="flex items-center gap-2">
           {user && (
-            <span className="hidden md:block text-sm text-muted-foreground mr-2">
-              Olá, <span className="text-foreground font-medium">{user.nome}</span>
+            <span className="hidden md:flex items-center text-sm text-muted-foreground mr-2 gap-2">
+              {avatar ? (
+                <img src={avatar} alt={user.nome} className="h-8 w-8 rounded-full object-cover border border-border" />
+              ) : null}
+              <span>
+                Olá, <span className="text-foreground font-medium">{user.nome}</span>
+              </span>
             </span>
           )}
 
           <NotificationBell />
 
-          <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9">
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          <Button variant="ghost" size="icon" onClick={toggleMode} className="h-9 w-9">
+            {mode === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             <span className="sr-only">Alternar tema</span>
+          </Button>
+
+          {isProvider && (
+            <Button variant="ghost" size="icon" asChild className="h-9 w-9">
+              <Link to="/assinatura">
+                <CreditCard className="h-4 w-4" />
+                <span className="sr-only">Assinatura</span>
+              </Link>
+            </Button>
+          )}
+
+          {isAdmin && (
+            <Button variant="ghost" size="icon" asChild className="h-9 w-9">
+              <Link to="/admin/usuarios">
+                <Shield className="h-4 w-4" />
+                <span className="sr-only">Superadmin</span>
+              </Link>
+            </Button>
+          )}
+
+          <Button variant="ghost" size="icon" asChild className="h-9 w-9">
+            <Link to="/perfil">
+              <UserRound className="h-4 w-4" />
+              <span className="sr-only">Perfil</span>
+            </Link>
           </Button>
 
           <Button variant="ghost" size="icon" asChild className="h-9 w-9">
