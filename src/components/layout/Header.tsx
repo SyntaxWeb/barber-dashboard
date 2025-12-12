@@ -1,9 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Moon, Sun, Settings, LogOut, Scissors, UserRound, CreditCard, Shield } from "lucide-react";
+import { Moon, Sun, Settings, LogOut, UserRound, CreditCard, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import defaultLogo from "@/assets/syntax-logo.svg";
 
 export function Header() {
   const { mode, toggleMode } = useTheme();
@@ -27,12 +28,8 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="container flex h-16 items-center justify-between px-4">
         <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary overflow-hidden">
-            {companyIcon ? (
-              <img src={companyIcon} alt={companyName} className="h-full w-full object-cover" />
-            ) : (
-              <Scissors className="h-5 w-5 text-primary-foreground" />
-            )}
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white overflow-hidden border border-border">
+            <img src={companyIcon ?? defaultLogo} alt={companyName} className="h-full w-full object-cover" />
           </div>
           <div className="hidden sm:block">
             <h1 className="text-lg font-bold tracking-tight">{companyName}</h1>

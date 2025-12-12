@@ -151,9 +151,8 @@ console.log(latestOrder)
         </Card>
         <div className="grid gap-4 md:grid-cols-3">
           {availablePlans.map((availablePlan) => {
-            console.log(subscriptionInactive)
             const isCurrent = availablePlan.key === company.subscription_plan;
-            const canCheckout = !isCurrent || subscriptionInactive;
+            const canCheckout = subscriptionInactive || !isCurrent;
             return (
               <Card key={availablePlan.key} className={isCurrent ? "border-primary" : undefined}>
                 <CardHeader>
@@ -167,7 +166,7 @@ console.log(latestOrder)
                     disabled={!canCheckout || checkoutPlan === availablePlan.key}
                     onClick={() => handleCheckout(availablePlan.key)}
                   >
-                    {checkoutPlan === availablePlan.key ? "Gerando link..." : isCurrent ? "Plano atual" : "Assinar agora"}
+                    {checkoutPlan === availablePlan.key ? "Gerando link..." : isCurrent ? "Reativar plano" : "Assinar agora"}
                   </Button>
                 </CardContent>
               </Card>

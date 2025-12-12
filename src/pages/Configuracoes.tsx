@@ -49,6 +49,39 @@ import { useToast } from "@/hooks/use-toast";
 import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME, sanitizeTheme, isValidHexColor } from "@/lib/theme";
 import { useTheme } from "@/contexts/ThemeContext";
 
+const getApiErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    try {
+      const parsed = JSON.parse(error.message);
+      if (parsed && typeof parsed === "object" && "message" in parsed) {
+        const message = (parsed as { message?: string }).message;
+        if (message) {
+          return message;
+        }
+      }
+    } catch {
+      // ignore JSON parse errors
+    }
+    return error.message;
+  }
+
+  if (typeof error === "string") {
+    try {
+      const parsed = JSON.parse(error);
+      if (parsed && typeof parsed === "object" && "message" in parsed) {
+        const message = (parsed as { message?: string }).message;
+        if (message) {
+          return message;
+        }
+      }
+    } catch {
+      return error;
+    }
+  }
+
+  return "Tente novamente.";
+};
+
 export default function Configuracoes() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -323,9 +356,10 @@ export default function Configuracoes() {
         description: "Abra o link, envie /start ao bot e depois clique em verificar.",
       });
     } catch (error) {
+      const message = getApiErrorMessage(error);
       toast({
         title: "Erro ao gerar link",
-        description: error instanceof Error ? error.message : "Tente novamente.",
+        description: message,
         variant: "destructive",
       });
     } finally {

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import defaultLogo from "@/assets/syntax-logo.svg";
 
 const featureCards = [
   {
@@ -54,6 +55,28 @@ const roadmapCards = [
   },
 ];
 
+const pricingPlans = [
+  {
+    name: "Plano Mensal",
+    price: "R$ 59,99 / mês",
+    description: "Flexível para quem quer testar com risco zero.",
+    features: ["Renovação mês a mês", "Todas as funcionalidades ativas", "Sem taxa de implantação"],
+  },
+  {
+    name: "Plano Trimestral",
+    price: "R$ 159,99 / 3 meses",
+    description: "Economia para operações já em ritmo constante.",
+    features: ["Economia em relação ao mensal", "Suporte prioritário", "Consultoria de setup inclusa"],
+    highlighted: true,
+  },
+  {
+    name: "Plano Anual",
+    price: "R$ 659,99 / ano",
+    description: "Melhor custo-benefício para equipes em expansão.",
+    features: ["Economia máxima", "Acesso antecipado ao roadmap", "Treinamentos exclusivos"],
+  },
+];
+
 const Landing = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -67,9 +90,10 @@ const Landing = () => {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(248,191,59,0.35),_rgba(15,23,42,0.9))]" />
         <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-6 py-20 lg:flex-row lg:items-center">
           <div className="flex-1 space-y-6">
-            <span className="inline-flex items-center rounded-full border border-white/20 px-4 py-1 text-sm uppercase tracking-[0.3em] text-amber-300">
+            <div className="inline-flex items-center gap-3 rounded-full border border-white/20 px-4 py-1 text-sm uppercase tracking-[0.3em] text-amber-300">
+              <img src={defaultLogo} alt="SyntaxAtendimento" className="h-7 w-7 rounded-full bg-white p-1" />
               SyntaxAtendimento
-            </span>
+            </div>
             <h1 className="text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
               Organize seu negócio com um painel moderno e descomplicado.
             </h1>
@@ -168,23 +192,41 @@ const Landing = () => {
         </div>
       </section>
 
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-4xl rounded-3xl border border-white/15 bg-gradient-to-r from-amber-400/20 via-orange-500/10 to-rose-500/10 p-10 text-center shadow-2xl">
-          <p className="text-sm uppercase tracking-[0.4em] text-amber-200">Pronto para avançar?</p>
-          <h2 className="mt-4 text-4xl font-black text-white">Comece grátis e migre quando quiser</h2>
-          <p className="mt-3 text-lg text-slate-200">
-            Cadastre sua operação em menos de 5 minutos e já importe a agenda atual. Sem cartão de crédito, sem
-            burocracia.
+      <section className="px-6 py-20 bg-slate-900/50">
+        <div className="mx-auto max-w-6xl text-center">
+          <p className="text-sm uppercase tracking-[0.5em] text-amber-300">Planos</p>
+          <h2 className="mt-4 text-4xl font-bold text-white">Escolha o plano ideal para sua operação</h2>
+          <p className="mt-2 text-slate-300">
+            Cobrança mensal automática, sem fidelidade e com migração simples entre planos.
           </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Button size="lg" onClick={primaryCta} className="text-base">
-              {isAuthenticated ? "Abrir painel" : "Criar conta gratuita"}
-            </Button>
-            {!isAuthenticated && (
-              <Button size="lg" variant="outline" onClick={secondaryCta} className="border-white/40 text-white">
-                Entrar
-              </Button>
-            )}
+          <div className="mt-12 grid gap-8 md:grid-cols-3">
+            {pricingPlans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`rounded-3xl border ${
+                  plan.highlighted ? "border-amber-400/80 bg-amber-400/10 shadow-xl" : "border-white/15 bg-white/5"
+                } p-8 text-left backdrop-blur`}
+              >
+                <p className="text-sm uppercase tracking-[0.3em] text-amber-300">{plan.name}</p>
+                <p className="mt-4 text-3xl font-black text-white">{plan.price}</p>
+                <p className="mt-2 text-sm text-slate-300">{plan.description}</p>
+                <ul className="mt-6 space-y-3 text-sm text-slate-200">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-amber-300" /> {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  size="lg"
+                  className="mt-8 w-full"
+                  variant={plan.highlighted ? "default" : "secondary"}
+                  onClick={primaryCta}
+                >
+                  {isAuthenticated ? "Abrir painel" : "Começar agora"}
+                </Button>
+              </div>
+            ))}
           </div>
         </div>
       </section>

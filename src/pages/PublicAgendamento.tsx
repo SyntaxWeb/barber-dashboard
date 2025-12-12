@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CalendarClock, Copy, LogIn, QrCode, Share2, Sparkles, UserPlus } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarClock, Copy, LogIn, QrCode, Share2, UserPlus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { fetchEmpresaPublic, type EmpresaInfo } from "@/services/companyService";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import defaultLogo from "@/assets/syntax-logo.svg";
 
 export default function PublicAgendamento() {
   const { slug } = useParams<{ slug: string }>();
@@ -156,12 +157,8 @@ export default function PublicAgendamento() {
         <Card className="border-border shadow-gold/40">
           <CardContent className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:gap-10">
             <div className="flex items-center gap-4">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
-                {empresa.icon_url ? (
-                  <img src={empresa.icon_url} alt={empresa.nome} className="h-20 w-20 rounded-full object-cover" />
-                ) : (
-                  <Sparkles className="h-8 w-8" />
-                )}
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white border border-border overflow-hidden">
+                <img src={empresa.icon_url ?? defaultLogo} alt={empresa.nome} className="h-full w-full object-cover" />
               </div>
               <div>
                 <p className="text-sm uppercase tracking-wide text-muted-foreground">Portal SyntaxAtendimento</p>

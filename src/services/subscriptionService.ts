@@ -6,7 +6,19 @@ const authHeaders = () => {
 };
 
 async function handleResponse<T>(response: Response): Promise<T> {
+  const isJson = response.headers.get("content-type")?.includes("application/json");
   if (!response.ok) {
+    if (isJson) {
+      try {
+        const payload = await response.json();
+        if (payload?.message) {
+          throw new Error(payload.message);
+        }
+        throw new Error(JSON.stringify(payload));
+      } catch (error) {
+        throw new Error(error instanceof Error ? error.message : "Erro ao consultar assinatura");
+      }
+    }
     const text = await response.text();
     throw new Error(text || "Erro ao consultar assinatura");
   }

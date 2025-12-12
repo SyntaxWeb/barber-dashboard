@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarCheck, Mail, Lock, LogIn, Moon, Sun } from "lucide-react";
+import { Mail, Lock, LogIn, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
+import defaultLogo from "@/assets/syntax-logo.svg";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -69,8 +70,8 @@ export default function Login() {
 
       <Card className="w-full max-w-md border-border shadow-gold">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary shadow-gold">
-            <CalendarCheck className="h-8 w-8 text-primary-foreground" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white border border-border shadow-gold overflow-hidden">
+            <img src={defaultLogo} alt="SyntaxAtendimento" className="h-full w-full object-cover" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold">SyntaxAtendimento</CardTitle>

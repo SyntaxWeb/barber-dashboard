@@ -38,26 +38,27 @@ const ClienteProtectedRoute = ({ children }: { children: JSX.Element }) => {
 };
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+  const isProvider = user?.role === "provider";
+  const subscriptionStatus = user?.company?.subscription_status?.toLowerCase() ?? "pendente";
+  const allowedPaths = ["/assinatura", "/assinatura/sucesso", "/assinatura/pendente", "/assinatura/erro"];
+  if (isProvider && subscriptionStatus !== "ativo" && !allowedPaths.includes(location.pathname)) {
+    return <Navigate to="/assinatura" replace />;
   }
   return children;
 };
 
 const ProviderRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated, user } = useAuth();
-  const location = useLocation();
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   if (user?.role !== "provider") {
     return <Navigate to="/dashboard" replace />;
-  }
-  const subscriptionStatus = user?.company?.subscription_status?.toLowerCase() ?? "ativo";
-  const allowedPaths = ["/assinatura", "/assinatura/sucesso", "/assinatura/pendente", "/assinatura/erro"];
-  if (subscriptionStatus !== "ativo" && !allowedPaths.includes(location.pathname)) {
-    return <Navigate to="/assinatura" replace />;
   }
   return children;
 };

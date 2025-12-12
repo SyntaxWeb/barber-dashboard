@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, CheckCircle2, Users, CalendarRange, Send, ArrowLeft } from "lucide-react";
+import { CheckCircle2, Users, CalendarRange, Send, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import defaultLogo from "@/assets/syntax-logo.svg";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
 
@@ -87,12 +88,12 @@ export default function Registro() {
 
       toast({
         title: "Conta criada com sucesso!",
-        description: "Seu acesso ao painel está liberado.",
+        description: "Finalize o pagamento da assinatura para liberar o painel.",
       });
 
       const logged = await login(email, senha);
       if (logged) {
-        navigate("/dashboard");
+        navigate("/assinatura");
       } else {
         navigate("/login");
       }
@@ -112,7 +113,7 @@ export default function Registro() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 lg:flex-row lg:items-start">
         <section className="flex-1 rounded-3xl border border-border bg-card/70 p-8 shadow-gold">
           <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-primary">
-            <Sparkles className="h-4 w-4" />
+            <img src={defaultLogo} alt="SyntaxAtendimento" className="h-6 w-6 rounded-full border border-border" />
             SyntaxAtendimento
           </div>
 

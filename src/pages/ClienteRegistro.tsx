@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Sparkles, Mail, User, Phone, Lock, ArrowRight } from "lucide-react";
+import { Mail, User, Phone, Lock, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import defaultLogo from "@/assets/syntax-logo.svg";
 
 export default function ClienteRegistro() {
   const { toast } = useToast();
@@ -109,7 +110,11 @@ export default function ClienteRegistro() {
       <Card className="w-full max-w-lg border-border shadow-gold">
         <CardHeader className="space-y-3 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Sparkles className="h-6 w-6" />
+            <img
+              src={companyInfo?.icon_url ?? defaultLogo}
+              alt="SyntaxAtendimento"
+              className="h-12 w-12 rounded-full border border-border"
+            />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold">Criar conta no SyntaxAtendimento</CardTitle>

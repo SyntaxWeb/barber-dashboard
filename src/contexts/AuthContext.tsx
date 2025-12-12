@@ -56,6 +56,8 @@ const normalizeCompany = (company?: CompanyInfo | null): CompanyInfo | null => {
     icon_url: resolveMediaUrl(company.icon_url),
     dashboard_theme: dashboardTheme,
     client_theme: clientTheme,
+    subscription_status: company.subscription_status ?? "pendente",
+    subscription_plan: company.subscription_plan ?? "mensal",
   };
 };
 
@@ -95,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => getStoredUser());
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("barbeiro-token"));
   const { setPalette, activatePalette } = useTheme();
+  const dashboardThemeKey = JSON.stringify(user?.company?.dashboard_theme);
 
   useEffect(() => {
     if (user?.company?.dashboard_theme) {
@@ -102,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setPalette("dashboard", DEFAULT_DASHBOARD_THEME);
     }
-  }, [user?.company?.dashboard_theme, setPalette]);
+  }, [dashboardThemeKey, setPalette]);
 
   useEffect(() => {
     if (user) {
@@ -144,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!data.token || !data.user) return false;
 
+      console.log(data.user);
       persistUser(data.user, data.token);
       if (data.user.company?.dashboard_theme) {
         setPalette("dashboard", data.user.company.dashboard_theme);

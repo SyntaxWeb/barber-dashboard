@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { CalendarClock, Mail, Lock, LogIn } from "lucide-react";
+import { Mail, Lock, LogIn } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import defaultLogo from "@/assets/syntax-logo.svg";
 
 export default function ClienteLogin() {
   const { toast } = useToast();
@@ -66,8 +67,8 @@ export default function ClienteLogin() {
     >
       <Card className="w-full max-w-md border-border shadow-gold">
         <CardHeader className="text-center space-y-3">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <CalendarClock className="h-7 w-7" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white border border-border overflow-hidden">
+            <img src={companyInfo?.icon_url ?? defaultLogo} alt="SyntaxAtendimento" className="h-full w-full object-cover" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold">Entrar como cliente</CardTitle>
