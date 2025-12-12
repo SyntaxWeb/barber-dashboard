@@ -536,72 +536,116 @@ export default function Configuracoes() {
               </div>
             )}
 
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label>Email para alertas</Label>
-                  <Input
-                    type="email"
-                    placeholder="contato@suaempresa.com"
-                    value={notifyEmail}
-                    onChange={(e) => setNotifyEmail(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <div>
-                    <p className="text-sm font-medium">Receber por email</p>
-                    <p className="text-xs text-muted-foreground">Enviaremos um aviso a cada novo agendamento.</p>
-                  </div>
-                  <Switch checked={notifyViaEmail} onCheckedChange={(checked) => setNotifyViaEmail(Boolean(checked))} />
-                </div>
-              </div>
 
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label>Chat ID do Telegram</Label>
-                  <Input type="text" placeholder="123456789" value={notifyTelegram} readOnly disabled />
-                  <p className="text-xs text-muted-foreground">
-                    Capturaremos automaticamente o chat ao conectar com o bot @syntax_atendimento_bot.
-                  </p>
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    <Button type="button" variant="outline" onClick={handleGenerateTelegramLink} disabled={telegramLinkLoading}>
-                      {telegramLinkLoading ? "Gerando..." : "Capturar automaticamente"}
-                    </Button>
-                    {telegramLink && (
-                      <>
-                        <Button type="button" variant="secondary" onClick={() => window.open(telegramLink, "_blank")}>
-                          Abrir bot
-                        </Button>
-                        <Button
-                          type="button"
-                          onClick={handleVerifyTelegramLink}
-                          disabled={telegramVerifyLoading}
-                          className="bg-emerald-600 hover:bg-emerald-500"
-                        >
-                          {telegramVerifyLoading ? "Verificando..." : "Confirmar captura"}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                  {telegramLink && (
-                    <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-                      <p>Envie /start no bot usando o link acima e clique em confirmar captura.</p>
-                      <p className="mt-1 break-all">{telegramLink}</p>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-5 w-5 text-primary" />
+                  Alertas automativos
+                </CardTitle>
+                <CardDescription>Faça integração com seu email e com seu Telegram para receber notificações.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label>Email para alertas</Label>
+                      <Input
+                        type="email"
+                        placeholder="contato@suaempresa.com"
+                        value={notifyEmail}
+                        onChange={(e) => setNotifyEmail(e.target.value)}
+                      />
                     </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <div>
-                    <p className="text-sm font-medium">Receber via Telegram</p>
-                    <p className="text-xs text-muted-foreground">Um job será disparado para seu integrador.</p>
+                    <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                      <div>
+                        <p className="text-sm font-medium">Receber por email</p>
+                        <p className="text-xs text-muted-foreground">Enviaremos um aviso a cada novo agendamento.</p>
+                      </div>
+                      <Switch checked={notifyViaEmail} onCheckedChange={(checked) => setNotifyViaEmail(Boolean(checked))} />
+                    </div>
                   </div>
-                  <Switch
-                    checked={notifyViaTelegram}
-                    onCheckedChange={(checked) => setNotifyViaTelegram(Boolean(checked))}
-                  />
+
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+
+                      <p className="text-xs text-muted-foreground">
+                        Capturaremos automaticamente o chat ao conectar com o bot @syntax_atendimento_bot.
+                      </p>
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        <Button type="button" variant="outline" onClick={handleGenerateTelegramLink} disabled={telegramLinkLoading}>
+                          {telegramLinkLoading ? "Gerando..." : "Capturar automaticamente"}
+                        </Button>
+                        {telegramLink && (
+                          <>
+                            <Button type="button" variant="secondary" onClick={() => window.open(telegramLink, "_blank")}>
+                              Abrir bot
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={handleVerifyTelegramLink}
+                              disabled={telegramVerifyLoading}
+                              className="bg-emerald-600 hover:bg-emerald-500"
+                            >
+                              {telegramVerifyLoading ? "Verificando..." : "Confirmar captura"}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                      {telegramLink && (
+                        <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+                          <p>Envie /start no bot usando o link acima e clique em confirmar captura.</p>
+                          <p className="mt-1 break-all">{telegramLink}</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                      <div>
+                        <p className="text-sm font-medium">Receber via Telegram</p>
+                        <p className="text-xs text-muted-foreground">Um job será disparado para seu integrador.</p>
+                      </div>
+                      <Switch
+                        checked={notifyViaTelegram}
+                        onCheckedChange={(checked) => setNotifyViaTelegram(Boolean(checked))}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-5 w-5 text-primary" />
+                  Cores do painel interno
+                </CardTitle>
+                <CardDescription>Personalize como o prestador enxerga o sistema.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {renderThemeGrid("dashboard", dashboardThemeState)}
+                <p className="text-xs text-muted-foreground">
+                  Essas cores afetam exclusivamente o painel do prestador, incluindo menu, botões e componentes do backoffice.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Cores do portal do cliente
+                </CardTitle>
+                <CardDescription>Defina a experiência visual para quem agenda nos seus links públicos.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {renderThemeGrid("client", clientThemeState)}
+                <p className="text-xs text-muted-foreground">
+                  Essas cores são usadas no portal público e no fluxo de agendamento do cliente autenticado.
+                </p>
+              </CardContent>
+            </Card>
 
             <Button type="button" className="shadow-gold" onClick={handleSaveEmpresa} disabled={salvandoEmpresa}>
               {salvandoEmpresa ? (
@@ -616,42 +660,12 @@ export default function Configuracoes() {
                 </span>
               )}
             </Button>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5 text-primary" />
-            Cores do painel interno
-          </CardTitle>
-          <CardDescription>Personalize como o prestador enxerga o sistema.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {renderThemeGrid("dashboard", dashboardThemeState)}
-          <p className="text-xs text-muted-foreground">
-            Essas cores afetam exclusivamente o painel do prestador, incluindo menu, botões e componentes do backoffice.
-          </p>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Cores do portal do cliente
-          </CardTitle>
-          <CardDescription>Defina a experiência visual para quem agenda nos seus links públicos.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {renderThemeGrid("client", clientThemeState)}
-          <p className="text-xs text-muted-foreground">
-            Essas cores são usadas no portal público e no fluxo de agendamento do cliente autenticado.
-          </p>
-        </CardContent>
-      </Card>
 
-      <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           {/* Horários de Trabalho */}
           <Card>
             <CardHeader>

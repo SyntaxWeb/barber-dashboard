@@ -73,7 +73,8 @@ export default function Assinatura() {
     ? format(parseISO(company.subscription_renews_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
     : "Nao definida";
   const subscriptionInactive = company.subscription_status !== "ativo";
-
+  const pendingCheckoutUrl = latestOrder?.status === "pendente" ? latestOrder.checkout_url : null;
+console.log(latestOrder)
   const handleCheckout = async (planKey: string) => {
     setCheckoutPlan(planKey);
     setError(null);
@@ -129,9 +130,20 @@ export default function Assinatura() {
                 Escolha um dos planos abaixo para atualizar ou reativar sua assinatura automaticamente.
               </p>
               {latestOrder && latestOrder.status === "pendente" && (
-                <p className="mt-3 text-sm text-amber-600">
-                  Temos um pagamento pendente. Abra o link gerado anteriormente ou gere um novo plano abaixo.
-                </p>
+                <div className="mt-3 space-y-2">
+                  <p className="text-sm text-amber-600">
+                    Temos um pagamento pendente. Abra o link gerado anteriormente ou gere um novo plano abaixo.
+                  </p>
+                  {pendingCheckoutUrl && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => window.open(pendingCheckoutUrl, "_blank", "noopener,noreferrer")}
+                    >
+                      Continuar pagamento
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
@@ -139,6 +151,7 @@ export default function Assinatura() {
         </Card>
         <div className="grid gap-4 md:grid-cols-3">
           {availablePlans.map((availablePlan) => {
+            console.log(subscriptionInactive)
             const isCurrent = availablePlan.key === company.subscription_plan;
             const canCheckout = !isCurrent || subscriptionInactive;
             return (

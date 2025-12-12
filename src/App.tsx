@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ClientAuthProvider, useClientAuth } from "@/contexts/ClientAuthContext";
@@ -47,11 +47,17 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 
 const ProviderRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   if (user?.role !== "provider") {
     return <Navigate to="/dashboard" replace />;
+  }
+  const subscriptionStatus = user?.company?.subscription_status?.toLowerCase() ?? "ativo";
+  const allowedPaths = ["/assinatura", "/assinatura/sucesso", "/assinatura/pendente", "/assinatura/erro"];
+  if (subscriptionStatus !== "ativo" && !allowedPaths.includes(location.pathname)) {
+    return <Navigate to="/assinatura" replace />;
   }
   return children;
 };

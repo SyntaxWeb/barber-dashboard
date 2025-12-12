@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CalendarClock, Copy, LogIn, QrCode, Share2, Sparkles, UserPlus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,9 +19,31 @@ export default function PublicAgendamento() {
 
   const [empresa, setEmpresa] = useState<EmpresaInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastRequestRef = useRef<{ slug: string; timestamp: number } | null>(null);
+
+  const shouldFetch = useCallback((currentSlug: string) => {
+    const now = Date.now();
+    const lastRequest = lastRequestRef.current;
+    const MIN_FETCH_INTERVAL = 30 * 1000;
+
+    if (!lastRequest) {
+      lastRequestRef.current = { slug: currentSlug, timestamp: now };
+      return true;
+    }
+
+    if (lastRequest.slug !== currentSlug || now - lastRequest.timestamp > MIN_FETCH_INTERVAL) {
+      lastRequestRef.current = { slug: currentSlug, timestamp: now };
+      return true;
+    }
+
+    return false;
+  }, []);
 
   useEffect(() => {
     if (!slug) return;
+    if (!shouldFetch(slug)) {
+      return;
+    }
     setLoading(true);
     fetchEmpresaPublic(slug)
       .then((data) => {
@@ -30,13 +52,13 @@ export default function PublicAgendamento() {
       })
       .catch(() => {
         toast({
-          title: "Empresa nÇœo encontrada",
+          title: "Empresa não encontrada",
           description: "Verifique se o link foi digitado corretamente.",
           variant: "destructive",
         });
       })
       .finally(() => setLoading(false));
-  }, [setCompanySlug, slug, toast]);
+  }, [setCompanySlug, shouldFetch, slug, toast]);
 
   const agendamentoUrl = useMemo(() => {
     if (empresa?.agendamento_url) return empresa.agendamento_url;
@@ -77,7 +99,7 @@ export default function PublicAgendamento() {
       URL.revokeObjectURL(url);
     } catch {
       toast({
-        title: "NÇœo foi possÇðvel baixar",
+        title: "Não foi possível baixar",
         description: "Abra o QR Code em nova guia e salve manualmente.",
         variant: "destructive",
       });
@@ -94,7 +116,7 @@ export default function PublicAgendamento() {
       <div className="min-h-screen flex items-center justify-center bg-muted/40">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Preparando a agenda pÇ§blica...</p>
+          <p className="text-sm text-muted-foreground">Preparando a agenda pública...</p>
         </div>
       </div>
     );
@@ -105,12 +127,12 @@ export default function PublicAgendamento() {
       <div className="min-h-screen flex items-center justify-center bg-muted/40 px-4">
         <Card className="max-w-md border-border shadow-gold">
           <CardHeader>
-            <CardTitle>Link invÇ­lido</CardTitle>
-            <CardDescription>PeÇõa um novo link para o prestador ou tente novamente.</CardDescription>
+            <CardTitle>Link inválido</CardTitle>
+            <CardDescription>Peça um novo link para o prestador ou tente novamente.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button className="w-full" onClick={() => navigate("/")}>
-              Voltar ao inÇðcio
+              Voltar ao início
             </Button>
           </CardContent>
         </Card>
@@ -184,7 +206,7 @@ export default function PublicAgendamento() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Fazendo login vocÇ¦ visualiza serviÇõos, horÇ­rios livres e pode acompanhar seus agendamentos.
+                Fazendo login você visualiza serviços, horários livres e pode acompanhar seus agendamentos.
               </p>
               <Button className="w-full shadow-gold" onClick={() => goTo("/cliente/login")}>
                 Entrar e agendar
@@ -208,7 +230,7 @@ export default function PublicAgendamento() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Com uma conta vocÇ¦ pode agendar em vÇ¸rias empresas e acompanhar todos os atendimentos em um Çœnico lugar.
+                Com uma conta você pode agendar em várias empresas e acompanhar todos os atendimentos em um único lugar.
               </p>
               <Button variant="secondary" className="w-full" onClick={() => goTo("/cliente/registro")}>
                 Criar conta gratuita
@@ -223,7 +245,7 @@ export default function PublicAgendamento() {
             <CardHeader>
               <CardTitle>QR Code pronto para impressão</CardTitle>
               <CardDescription>
-                Compartilhe o cÇ?digo com clientes em mesas, balcÇœo ou redes sociais e direcione para este portal.
+                Compartilhe o código com clientes em mesas, balcão ou redes sociais e direcione para este portal.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-4 md:flex-row md:items-center md:gap-10">
@@ -232,8 +254,8 @@ export default function PublicAgendamento() {
               </div>
               <div className="space-y-3 text-sm text-muted-foreground">
                 <Separator />
-                <p>Escaneie o cÇ?digo para abrir este portal direto do celular.</p>
-                <p>Ideal para Telegram, Instagram, cartÇëes de visita e materiais impressos.</p>
+                <p>Escaneie o código para abrir este portal direto do celular.</p>
+                <p>Ideal para Telegram, Instagram, cartões de visita e materiais impressos.</p>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={handleDownloadQr}>
                     <QrCode className="mr-2 h-4 w-4" />

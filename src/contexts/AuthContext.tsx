@@ -16,6 +16,10 @@ interface CompanyInfo {
   notify_via_telegram?: boolean;
   dashboard_theme?: BrandTheme;
   client_theme?: BrandTheme;
+  subscription_plan?: string | null;
+  subscription_status?: string | null;
+  subscription_price?: string | null;
+  subscription_renews_at?: string | null;
 }
 
 interface User {
