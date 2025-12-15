@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Layout } from "@/components/layout/Layout";
-import { Servico, ConfiguracoesBarbearia } from "@/data/mockData";
+import { Servico, ConfiguracoesBarbearia, DaySchedule } from "@/data/mockData";
 import {
   fetchServicos,
   fetchConfiguracoes,
@@ -48,6 +48,43 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME, sanitizeTheme, isValidHexColor } from "@/lib/theme";
 import { useTheme } from "@/contexts/ThemeContext";
+
+const weekDays = [
+  { key: "monday", label: "Segunda-feira" },
+  { key: "tuesday", label: "Terça-feira" },
+  { key: "wednesday", label: "Quarta-feira" },
+  { key: "thursday", label: "Quinta-feira" },
+  { key: "friday", label: "Sexta-feira" },
+  { key: "saturday", label: "Sábado" },
+  { key: "sunday", label: "Domingo" },
+] as const;
+
+type WeekDayKey = (typeof weekDays)[number]["key"];
+type WeeklyScheduleState = Record<WeekDayKey, DaySchedule>;
+
+const createWeeklyScheduleState = (
+  base?: ConfiguracoesBarbearia["weeklySchedule"],
+  fallbackStart = "09:00",
+  fallbackEnd = "19:00",
+): WeeklyScheduleState =>
+  weekDays.reduce((acc, day) => {
+    const config = base?.[day.key];
+    acc[day.key] = {
+      enabled: config?.enabled ?? true,
+      start: config?.start ?? fallbackStart,
+      end: config?.end ?? fallbackEnd,
+      lunchEnabled: config?.lunchEnabled ?? false,
+      lunchStart: config?.lunchStart ?? null,
+      lunchEnd: config?.lunchEnd ?? null,
+    };
+    return acc;
+  }, {} as WeeklyScheduleState);
+
+const minutesFromTime = (value?: string | null) => {
+  if (!value) return 0;
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+};
 
 const getApiErrorMessage = (error: unknown) => {
   if (error instanceof Error) {
@@ -98,6 +135,8 @@ export default function Configuracoes() {
   const [horarioFim, setHorarioFim] = useState("19:00");
   const [intervalo, setIntervalo] = useState("30");
   const [diasBloqueados, setDiasBloqueados] = useState<Date[]>([]);
+  const [weeklySchedule, setWeeklySchedule] = useState<WeeklyScheduleState>(() => createWeeklyScheduleState());
+  const [selectedDay, setSelectedDay] = useState<WeekDayKey>("monday");
 
   // Novo serviço
   const [novoServicoNome, setNovoServicoNome] = useState("");
@@ -187,6 +226,60 @@ export default function Configuracoes() {
     }
   };
 
+  const handleToggleDay = (day: WeekDayKey, enabled: boolean) => {
+    setWeeklySchedule((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        enabled,
+        lunchEnabled: enabled ? prev[day].lunchEnabled : false,
+      },
+    }));
+  };
+
+  const handleWeeklyTimeChange = (day: WeekDayKey, field: "start" | "end", value: string) => {
+    setWeeklySchedule((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleToggleLunch = (day: WeekDayKey, enabled: boolean) => {
+    setWeeklySchedule((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        lunchEnabled: enabled,
+        lunchStart: enabled ? prev[day].lunchStart ?? prev[day].start : null,
+        lunchEnd: enabled ? prev[day].lunchEnd ?? prev[day].end : null,
+      },
+    }));
+  };
+
+  const handleLunchTimeChange = (day: WeekDayKey, field: "lunchStart" | "lunchEnd", value: string) => {
+    setWeeklySchedule((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: value,
+      },
+    }));
+  };
+
+  const applyDefaultToDay = (day: WeekDayKey) => {
+    setWeeklySchedule((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        start: horarioInicio,
+        end: horarioFim,
+      },
+    }));
+  };
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -201,6 +294,7 @@ export default function Configuracoes() {
         setHorarioFim(configData.horarioFim);
         setIntervalo(configData.intervaloMinutos.toString());
         setDiasBloqueados(configData.diasBloqueados.map((d) => new Date(d + "T12:00:00")));
+        setWeeklySchedule(createWeeklyScheduleState(configData.weeklySchedule, configData.horarioInicio, configData.horarioFim));
         setEmpresa(empresaData);
         setEmpresaNome(empresaData.nome);
         setEmpresaDescricao(empresaData.descricao ?? "");
@@ -390,13 +484,59 @@ export default function Configuracoes() {
 
   const handleSaveHorarios = async () => {
     setSaving(true);
+    const invalidDay = weekDays.find(({ key, label }) => {
+      const config = weeklySchedule[key];
+      return config.enabled && minutesFromTime(config.start) >= minutesFromTime(config.end);
+    });
+    if (invalidDay) {
+      setSaving(false);
+      toast({
+        title: "Horário inválido",
+        description: `Revise os horários de ${invalidDay.label}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const invalidLunch = weekDays.find(({ key, label }) => {
+      const config = weeklySchedule[key];
+      if (!config.enabled || !config.lunchEnabled) return false;
+      if (!config.lunchStart || !config.lunchEnd) return true;
+      return (
+        minutesFromTime(config.lunchStart) >= minutesFromTime(config.lunchEnd) ||
+        minutesFromTime(config.lunchStart) < minutesFromTime(config.start) ||
+        minutesFromTime(config.lunchEnd) > minutesFromTime(config.end)
+      );
+    });
+    if (invalidLunch) {
+      setSaving(false);
+      toast({
+        title: "Intervalo de almoço inválido",
+        description: `Verifique o almoço de ${invalidLunch.label}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const weeklySchedulePayload = weekDays.reduce((acc, day) => {
+      acc[day.key] = weeklySchedule[day.key];
+      return acc;
+    }, {} as Record<WeekDayKey, DaySchedule>);
+
     try {
-      await updateConfiguracoes({
+      const updated = await updateConfiguracoes({
         horarioInicio,
         horarioFim,
         intervaloMinutos: parseInt(intervalo),
         diasBloqueados: diasBloqueados.map((d) => format(d, "yyyy-MM-dd")),
+        weeklySchedule: weeklySchedulePayload,
       });
+      setConfiguracoes(updated);
+      setHorarioInicio(updated.horarioInicio);
+      setHorarioFim(updated.horarioFim);
+      setIntervalo(updated.intervaloMinutos.toString());
+      setDiasBloqueados(updated.diasBloqueados.map((d) => new Date(d + "T12:00:00")));
+      setWeeklySchedule(createWeeklyScheduleState(updated.weeklySchedule, updated.horarioInicio, updated.horarioFim));
       toast({
         title: "Configurações salvas",
         description: "Os horários de trabalho foram atualizados.",
@@ -699,7 +839,7 @@ export default function Configuracoes() {
 
 
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="">
           {/* Horários de Trabalho */}
           <Card>
             <CardHeader>
@@ -758,13 +898,153 @@ export default function Configuracoes() {
                 </Select>
               </div>
 
+
+              <div className="space-y-4 rounded-lg border border-dashed p-3">
+                <div>
+                  <p className="text-sm font-medium">Horários por dia</p>
+                  <p className="text-xs text-muted-foreground">
+                    Escolha um dia, ajuste horários específicos ou aplique o padrão geral.
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-[2fr,1fr]">
+                  <div className="space-y-1.5">
+                    <Label>Dia da semana</Label>
+                    <Select value={selectedDay} onValueChange={(value) => setSelectedDay(value as WeekDayKey)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {weekDays.map((day) => (
+                          <SelectItem key={day.key} value={day.key}>
+                            {day.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end">
+                    <Button type="button" variant="secondary" className="w-full" onClick={() => applyDefaultToDay(selectedDay)}>
+                      Usar horário padrão
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border p-4 space-y-4">
+                  {(() => {
+                    const schedule = weeklySchedule[selectedDay];
+                    const dayLabel = weekDays.find((day) => day.key === selectedDay)?.label ?? "Dia selecionado";
+                    return (
+                      <>
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-medium">{dayLabel}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {schedule.enabled ? `${schedule.start} às ${schedule.end}` : "Dia desativado"}
+                            </p>
+                          </div>
+                          <Switch checked={schedule.enabled} onCheckedChange={(checked) => handleToggleDay(selectedDay, checked)} />
+                        </div>
+
+                        {schedule.enabled && (
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs uppercase text-muted-foreground">Início</Label>
+                              <Select value={schedule.start} onValueChange={(value) => handleWeeklyTimeChange(selectedDay, "start", value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {horarios.map((h) => (
+                                    <SelectItem key={`start-${h}`} value={h}>
+                                      {h}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs uppercase text-muted-foreground">Fim</Label>
+                              <Select value={schedule.end} onValueChange={(value) => handleWeeklyTimeChange(selectedDay, "end", value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {horarios.map((h) => (
+                                    <SelectItem key={`end-${h}`} value={h}>
+                                      {h}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="rounded-lg border border-muted/50 p-3 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">Intervalo de almoço</p>
+                              <p className="text-xs text-muted-foreground">
+                                {schedule.lunchEnabled && schedule.lunchStart && schedule.lunchEnd
+                                  ? `${schedule.lunchStart} às ${schedule.lunchEnd}`
+                                  : "Sem intervalo configurado"}
+                              </p>
+                            </div>
+                            <Switch
+                              checked={schedule.lunchEnabled}
+                              disabled={!schedule.enabled}
+                              onCheckedChange={(checked) => handleToggleLunch(selectedDay, checked)}
+                            />
+                          </div>
+                          {schedule.enabled && schedule.lunchEnabled && (
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <div className="space-y-1.5">
+                                <Label className="text-xs uppercase text-muted-foreground">Início do almoço</Label>
+                                <Select value={schedule.lunchStart ?? schedule.start} onValueChange={(value) => handleLunchTimeChange(selectedDay, "lunchStart", value)}>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {horarios.map((h) => (
+                                      <SelectItem key={`lunch-start-${h}`} value={h}>
+                                        {h}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs uppercase text-muted-foreground">Fim do almoço</Label>
+                                <Select value={schedule.lunchEnd ?? schedule.end} onValueChange={(value) => handleLunchTimeChange(selectedDay, "lunchEnd", value)}>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {horarios.map((h) => (
+                                      <SelectItem key={`lunch-end-${h}`} value={h}>
+                                        {h}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
               <Button onClick={handleSaveHorarios} className="w-full" disabled={saving}>
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? "Salvando..." : "Salvar Horários"}
               </Button>
             </CardContent>
           </Card>
-
+        </div>
+        <div>
           {/* Dias Bloqueados */}
           <Card>
             <CardHeader>

@@ -17,11 +17,23 @@ export interface Servico {
   duracao: number; // em minutos
 }
 
+export type DaySchedule = {
+  enabled: boolean;
+  start: string;
+  end: string;
+  lunchEnabled: boolean;
+  lunchStart: string | null;
+  lunchEnd: string | null;
+};
+
+export type WeeklySchedule = Record<string, DaySchedule>;
+
 export interface ConfiguracoesBarbearia {
   horarioInicio: string;
   horarioFim: string;
   intervaloMinutos: number;
   diasBloqueados: string[];
+  weeklySchedule?: WeeklySchedule | null;
 }
 
 export const agendamentosMock: Agendamento[] = [
@@ -125,6 +137,15 @@ export const configuracoesMock: ConfiguracoesBarbearia = {
   horarioFim: "19:00",
   intervaloMinutos: 30,
   diasBloqueados: ["2025-12-25", "2025-12-31", "2026-01-01"],
+  weeklySchedule: {
+    monday: { enabled: true, start: "09:00", end: "19:00", lunchEnabled: true, lunchStart: "12:00", lunchEnd: "13:00" },
+    tuesday: { enabled: true, start: "09:00", end: "19:00", lunchEnabled: true, lunchStart: "12:00", lunchEnd: "13:00" },
+    wednesday: { enabled: true, start: "09:00", end: "19:00", lunchEnabled: true, lunchStart: "12:00", lunchEnd: "13:00" },
+    thursday: { enabled: true, start: "09:00", end: "19:00", lunchEnabled: true, lunchStart: "12:00", lunchEnd: "13:00" },
+    friday: { enabled: true, start: "09:00", end: "19:00", lunchEnabled: true, lunchStart: "12:00", lunchEnd: "13:00" },
+    saturday: { enabled: true, start: "09:00", end: "18:00", lunchEnabled: false, lunchStart: null, lunchEnd: null },
+    sunday: { enabled: false, start: "10:00", end: "15:00", lunchEnabled: false, lunchStart: null, lunchEnd: null },
+  },
 };
 
 export const barbeiroMock = {

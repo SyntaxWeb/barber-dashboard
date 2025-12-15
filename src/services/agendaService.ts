@@ -135,13 +135,32 @@ export async function fetchConfiguracoes(): Promise<ConfiguracoesBarbearia> {
     horarioFim: string;
     intervaloMinutos: number;
     diasBloqueados: string[];
+    weeklySchedule?: Record<
+      string,
+      { enabled: boolean; start: string; end: string; lunch_enabled?: boolean; lunch_start?: string | null; lunch_end?: string | null }
+    >;
   }>("/api/settings");
+
+  const weeklySchedule =
+    data.weeklySchedule &&
+    Object.entries(data.weeklySchedule).reduce((acc, [key, value]) => {
+      acc[key] = {
+        enabled: value.enabled,
+        start: value.start,
+        end: value.end,
+        lunchEnabled: value.lunch_enabled ?? false,
+        lunchStart: value.lunch_start ?? null,
+        lunchEnd: value.lunch_end ?? null,
+      };
+      return acc;
+    }, {} as ConfiguracoesBarbearia["weeklySchedule"]);
 
   return {
     horarioInicio: data.horarioInicio,
     horarioFim: data.horarioFim,
     intervaloMinutos: data.intervaloMinutos,
     diasBloqueados: data.diasBloqueados,
+    weeklySchedule: weeklySchedule ?? null,
   };
 }
 
@@ -152,22 +171,54 @@ export async function updateConfiguracoes(config: Partial<ConfiguracoesBarbearia
     intervalo_minutos: config.intervaloMinutos,
     dias_bloqueados: config.diasBloqueados,
   };
+  if (config.weeklySchedule) {
+    payload.weekly_schedule = Object.entries(config.weeklySchedule).reduce((acc, [key, value]) => {
+      acc[key] = {
+        enabled: value.enabled,
+        start: value.start,
+        end: value.end,
+        lunch_enabled: value.lunchEnabled,
+        lunch_start: value.lunchStart,
+        lunch_end: value.lunchEnd,
+      };
+      return acc;
+    }, {} as Record<string, unknown>);
+  }
 
   const data = await api<{
     horarioInicio: string;
     horarioFim: string;
     intervaloMinutos: number;
     diasBloqueados: string[];
+    weeklySchedule?: Record<
+      string,
+      { enabled: boolean; start: string; end: string; lunch_enabled?: boolean; lunch_start?: string | null; lunch_end?: string | null }
+    >;
   }>("/api/settings", {
     method: "PUT",
     body: JSON.stringify(payload),
   });
+
+  const weeklySchedule =
+    data.weeklySchedule &&
+    Object.entries(data.weeklySchedule).reduce((acc, [key, value]) => {
+      acc[key] = {
+        enabled: value.enabled,
+        start: value.start,
+        end: value.end,
+        lunchEnabled: value.lunch_enabled ?? false,
+        lunchStart: value.lunch_start ?? null,
+        lunchEnd: value.lunch_end ?? null,
+      };
+      return acc;
+    }, {} as ConfiguracoesBarbearia["weeklySchedule"]);
 
   return {
     horarioInicio: data.horarioInicio,
     horarioFim: data.horarioFim,
     intervaloMinutos: data.intervaloMinutos,
     diasBloqueados: data.diasBloqueados,
+    weeklySchedule: weeklySchedule ?? null,
   };
 }
 
