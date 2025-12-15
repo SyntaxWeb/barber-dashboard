@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Moon, Sun, Settings, LogOut, UserRound, CreditCard, Shield } from "lucide-react";
+import { Moon, Sun, Settings, LogOut, UserRound, CreditCard, Shield, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -66,12 +66,20 @@ export function Header() {
           )}
 
           {isAdmin && (
-            <Button variant="ghost" size="icon" asChild className="h-9 w-9">
-              <Link to="/admin/usuarios">
-                <Shield className="h-4 w-4" />
-                <span className="sr-only">Superadmin</span>
-              </Link>
-            </Button>
+            <>
+              <Button variant="ghost" size="icon" asChild className="h-9 w-9">
+                <Link to="/admin/usuarios">
+                  <Shield className="h-4 w-4" />
+                  <span className="sr-only">Superadmin usuários</span>
+                </Link>
+              </Button>
+              <Button variant="ghost" size="icon" asChild className="h-9 w-9">
+                <Link to="/admin/logs">
+                  <FileText className="h-4 w-4" />
+                  <span className="sr-only">Logs e auditoria</span>
+                </Link>
+              </Button>
+            </>
           )}
 
           <Button variant="ghost" size="icon" asChild className="h-9 w-9">

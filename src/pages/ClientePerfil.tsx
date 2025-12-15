@@ -78,9 +78,14 @@ export default function ClientePerfil() {
       style={{ background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 70%, #ffffff 100%)` }}
     >
       <div className="mx-auto w-full max-w-2xl">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          Voltar
-        </Button>
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            Voltar
+          </Button>
+          <Button variant="secondary" onClick={() => navigate("/cliente/agendamentos")}>
+            Meus agendamentos
+          </Button>
+        </div>
         <Card>
           <CardHeader>
             <CardTitle>Meu perfil</CardTitle>

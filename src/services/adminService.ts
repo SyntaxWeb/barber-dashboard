@@ -110,3 +110,50 @@ export async function syncMercadoPagoPlans() {
   const data = await handleResponse<{ data: PlanSyncResult[] }>(response);
   return data.data;
 }
+
+export interface ActivityLog {
+  id: number;
+  action: string;
+  details?: Record<string, unknown> | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at?: string;
+  user?: { id?: number; name?: string; email?: string };
+  company?: { id?: number; nome?: string; slug?: string };
+}
+
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+  };
+}
+
+interface ActivityLogFilters {
+  page?: number;
+  per_page?: number;
+  company_id?: string;
+  user_id?: string;
+  action?: string;
+}
+
+export async function fetchActivityLogs(filters: ActivityLogFilters = {}) {
+  const query = new URLSearchParams();
+  if (filters.page) query.append("page", String(filters.page));
+  if (filters.per_page) query.append("per_page", String(filters.per_page));
+  if (filters.company_id) query.append("company_id", filters.company_id);
+  if (filters.user_id) query.append("user_id", filters.user_id);
+  if (filters.action) query.append("action", filters.action);
+
+  const response = await fetch(`${API_URL}/api/admin/logs?${query.toString()}`, {
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  return handleResponse<PaginatedResponse<ActivityLog>>(response);
+}

@@ -11,6 +11,7 @@ import {
   LogOut,
   ArrowRight,
   UserRound,
+  CalendarCheck,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -178,6 +179,10 @@ export default function ClienteAgendamento() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={() => navigate("/cliente/agendamentos")}>
+                <CalendarCheck className="mr-2 h-4 w-4" />
+                Meus agendamentos
+              </Button>
               <Button variant="ghost" size="sm" onClick={() => navigate("/cliente/perfil")}>
                 <UserRound className="mr-2 h-4 w-4" />
                 Meu perfil

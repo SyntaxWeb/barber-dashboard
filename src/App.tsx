@@ -16,6 +16,7 @@ import Registro from "./pages/Registro";
 import ClienteRegistro from "./pages/ClienteRegistro";
 import ClienteLogin from "./pages/ClienteLogin";
 import ClienteAgendamento from "./pages/ClienteAgendamento";
+import ClienteAgendamentos from "./pages/ClienteAgendamentos";
 import PublicAgendamento from "./pages/PublicAgendamento";
 import Landing from "./pages/Landing";
 import Clientes from "./pages/Clientes";
@@ -23,6 +24,7 @@ import Perfil from "./pages/Perfil";
 import ClientePerfil from "./pages/ClientePerfil";
 import Assinatura from "./pages/Assinatura";
 import AdminUsuarios from "./pages/AdminUsuarios";
+import AdminLogs from "./pages/AdminLogs";
 import AssinaturaSucesso from "./pages/AssinaturaSucesso";
 import AssinaturaPendente from "./pages/AssinaturaPendente";
 import AssinaturaErro from "./pages/AssinaturaErro";
@@ -176,6 +178,14 @@ const App = () => (
                     </SuperAdminRoute>
                   }
                 />
+                <Route
+                  path="/admin/logs"
+                  element={
+                    <SuperAdminRoute>
+                      <AdminLogs />
+                    </SuperAdminRoute>
+                  }
+                />
                 <Route path="/cliente/registro" element={<ClienteRegistro />} />
                 <Route path="/cliente/login" element={<ClienteLogin />} />
                 <Route path="/e/:slug/agendar" element={<PublicAgendamento />} />
@@ -184,6 +194,14 @@ const App = () => (
                   element={
                     <ClienteProtectedRoute>
                       <ClienteAgendamento />
+                    </ClienteProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/cliente/agendamentos"
+                  element={
+                    <ClienteProtectedRoute>
+                      <ClienteAgendamentos />
                     </ClienteProtectedRoute>
                   }
                 />
