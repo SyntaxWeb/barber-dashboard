@@ -15,6 +15,12 @@ export interface AppNotification {
     horario: string;
     service?: string;
     preco?: number;
+    action?: string;
+    company?: {
+      id?: number;
+      nome?: string;
+      slug?: string;
+    };
   };
   read_at: string | null;
   created_at: string;

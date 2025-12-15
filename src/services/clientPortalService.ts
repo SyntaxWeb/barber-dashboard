@@ -107,6 +107,11 @@ export interface ClientAppointment {
   horario: string;
   status: "confirmado" | "concluido" | "cancelado";
   observacoes?: string | null;
+  company?: {
+    id?: number;
+    nome?: string;
+    slug?: string;
+  } | null;
 }
 
 type ApiClientAppointment = {
@@ -119,6 +124,11 @@ type ApiClientAppointment = {
   horario: string;
   status: "confirmado" | "concluido" | "cancelado";
   observacoes?: string | null;
+  company?: {
+    id?: number;
+    nome?: string;
+    slug?: string;
+  } | null;
 };
 
 const normalizeClientAppointment = (appointment: ApiClientAppointment): ClientAppointment => ({
@@ -130,6 +140,7 @@ const normalizeClientAppointment = (appointment: ApiClientAppointment): ClientAp
   horario: appointment.horario,
   status: appointment.status,
   observacoes: appointment.observacoes ?? null,
+  company: appointment.company ?? null,
 });
 
 export async function clientFetchAgendamentos(token: string): Promise<ClientAppointment[]> {

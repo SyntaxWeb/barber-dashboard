@@ -271,6 +271,11 @@ export default function ClienteAgendamentos() {
                           <p className="text-sm text-muted-foreground">
                             {format(parseISO(`${appointment.data}T00:00:00`), "dd/MM/yyyy")} às {appointment.horario}
                           </p>
+                          {appointment.company?.nome && (
+                            <p className="text-xs text-muted-foreground">
+                              Empresa: <span className="font-medium text-foreground">{appointment.company.nome}</span>
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
@@ -296,7 +301,7 @@ export default function ClienteAgendamentos() {
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled={appointment.status !== "confirmado"}
+                          disabled={!canEdit(appointment)}
                           onClick={() => openEdit(appointment)}
                         >
                           <NotebookPen className="mr-2 h-4 w-4" />
@@ -412,3 +417,9 @@ export default function ClienteAgendamentos() {
     </div>
   );
 }
+  const canEdit = (appointment: ClientAppointment) => {
+    if (appointment.status !== "confirmado") return false;
+    const start = new Date(`${appointment.data}T${appointment.horario}:00`);
+    const diffMinutes = (start.getTime() - Date.now()) / (1000 * 60);
+    return diffMinutes >= 60;
+  };

@@ -13,6 +13,28 @@ import { useToast } from "@/hooks/use-toast";
 
 const POLLING_INTERVAL = 30000;
 
+const getActionTitle = (action?: string) => {
+  switch (action) {
+    case "updated":
+      return "Agendamento atualizado";
+    case "cancelled":
+      return "Agendamento cancelado";
+    default:
+      return "Novo agendamento";
+  }
+};
+
+const getActionLabel = (action?: string) => {
+  switch (action) {
+    case "updated":
+      return "Atualizado";
+    case "cancelled":
+      return "Cancelado";
+    default:
+      return "Novo";
+  }
+};
+
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -28,11 +50,12 @@ export function NotificationBell() {
     try {
       const data = await fetchNotifications();
       if (showToast && data.length > 0 && data[0].id !== lastSeenNotificationId.current) {
+        const latest = data[0];
         toast({
-          title: "Novo agendamento",
-          description: `${data[0].data.cliente} confirmou ${data[0].data.horario}`,
+          title: getActionTitle(latest.data.action),
+          description: `${latest.data.cliente} · ${latest.data.data} às ${latest.data.horario}`,
         });
-        lastSeenNotificationId.current = data[0].id;
+        lastSeenNotificationId.current = latest.id;
       } else if (!lastSeenNotificationId.current && data.length > 0) {
         lastSeenNotificationId.current = data[0].id;
       }
@@ -122,8 +145,13 @@ export function NotificationBell() {
               }`}
             >
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">{notification.data.cliente}</p>
-                {!notification.read_at && <Badge variant="secondary">Novo</Badge>}
+                <div className="flex flex-col">
+                  <p className="text-sm font-semibold">{notification.data.cliente}</p>
+                  <span className="text-xs text-muted-foreground">{getActionTitle(notification.data.action)}</span>
+                </div>
+                <Badge variant={notification.data.action === "cancelled" ? "destructive" : "secondary"}>
+                  {getActionLabel(notification.data.action)}
+                </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
                 {notification.data.data} às {notification.data.horario} · {notification.data.service ?? "Serviço"}
