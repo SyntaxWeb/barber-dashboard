@@ -58,20 +58,20 @@ const roadmapCards = [
 const pricingPlans = [
   {
     name: "Plano Mensal",
-    price: "R$ 59,99 / mês",
+    price: "R$ 30,00 / mês",
     description: "Flexível para quem quer testar com risco zero.",
     features: ["Renovação mês a mês", "Todas as funcionalidades ativas", "Sem taxa de implantação"],
   },
   {
     name: "Plano Trimestral",
-    price: "R$ 159,99 / 3 meses",
+    price: "R$ 90,00 / 3 meses",
     description: "Economia para operações já em ritmo constante.",
     features: ["Economia em relação ao mensal", "Suporte prioritário", "Consultoria de setup inclusa"],
     highlighted: true,
   },
   {
     name: "Plano Anual",
-    price: "R$ 659,99 / ano",
+    price: "R$ 360,00 / ano",
     description: "Melhor custo-benefício para equipes em expansão.",
     features: ["Economia máxima", "Acesso antecipado ao roadmap", "Treinamentos exclusivos"],
   },
