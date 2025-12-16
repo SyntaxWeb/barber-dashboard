@@ -5,9 +5,7 @@ import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import "@fullcalendar/core/index.js";
-import "@fullcalendar/daygrid/index.js";
-import "@fullcalendar/timegrid/index.js";
+import "@/styles/fullcalendar.css";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Plus } from "lucide-react";
@@ -19,7 +17,16 @@ import { AgendaItem } from "@/components/agenda/AgendaItem";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Agendamento } from "@/data/mockData";
 import { fetchAgendamentosPorPeriodo } from "@/services/agendaService";
+import "@/styles/fullcalendar.css";
 
+const DEFAULT_ERROR_MESSAGE = "Não foi possível carregar os agendamentos. Tente novamente em instantes.";
+
+const sanitizeErrorMessage = (message?: string | null): string => {
+  if (!message) return DEFAULT_ERROR_MESSAGE;
+  const stripped = message.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  if (!stripped) return DEFAULT_ERROR_MESSAGE;
+  return stripped.length > 240 ? `${stripped.slice(0, 237)}...` : stripped;
+};
 type DateRange = { start: string; end: string };
 
 export default function Agenda() {
@@ -33,6 +40,30 @@ export default function Agenda() {
   const [dayModalDate, setDayModalDate] = useState<Date | null>(null);
   const cacheRef = useRef<Record<string, Agendamento[]>>({});
   const fetchingRanges = useRef<Set<string>>(new Set());
+  const calendarRef = useRef<FullCalendar | null>(null);
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 640px)").matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia("(max-width: 640px)");
+    const handler = (event: MediaQueryListEvent) => setIsMobile(event.matches);
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handler);
+    } else {
+      mediaQuery.addListener(handler);
+    }
+    setIsMobile(mediaQuery.matches);
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener("change", handler);
+      } else {
+        mediaQuery.removeListener(handler);
+      }
+    };
+  }, []);
 
   const loadAgendamentos = useCallback(async () => {
     if (!range) return;
@@ -59,7 +90,8 @@ export default function Agenda() {
       cacheRef.current[cacheKey] = sorted;
       setAgendamentos(sorted);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Não foi possível carregar os agendamentos.");
+      const rawMessage = error instanceof Error ? error.message : String(error);
+      setLoadError(sanitizeErrorMessage(rawMessage));
       setAgendamentos([]);
     } finally {
       fetchingRanges.current.delete(cacheKey);
@@ -78,6 +110,15 @@ export default function Agenda() {
     }
     await loadAgendamentos();
   }, [loadAgendamentos, range]);
+
+  useEffect(() => {
+    const api = calendarRef.current?.getApi();
+    if (!api) return;
+    const desiredView = isMobile ? "timeGridDay" : "dayGridMonth";
+    if (api.view.type !== desiredView) {
+      api.changeView(desiredView);
+    }
+  }, [isMobile]);
 
   const events = useMemo<EventInput[]>(() => {
     return agendamentos.map((agendamento) => {
@@ -157,7 +198,7 @@ export default function Agenda() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold">Agenda</h1>
-            <p className="text-muted-foreground">Visualização completa com FullCalendar</p>
+            <p className="text-muted-foreground">Visualização completa</p>
           </div>
           <Button asChild className="shadow-gold">
             <Link to="/novo-agendamento">
@@ -179,14 +220,15 @@ export default function Agenda() {
             </div>
           )}
           <FullCalendar
+            ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView="dayGridMonth"
+            initialView={isMobile ? "timeGridDay" : "dayGridMonth"}
             locales={[ptBrLocale]}
             locale="pt-br"
             headerToolbar={{
               start: "prev,next today",
               center: "title",
-              end: "dayGridMonth,timeGridWeek,timeGridDay",
+              end: isMobile ? "" : "dayGridMonth,timeGridWeek,timeGridDay",
             }}
             buttonText={{
               today: "Hoje",
