@@ -34,7 +34,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 const normalizeEmpresa = (empresa: EmpresaInfo): EmpresaInfo => ({
   ...empresa,
-  icon_url: resolveMediaUrl(empresa.icon_url),
+  icon_url: empresa.icon_url,
   dashboard_theme: sanitizeTheme(empresa.dashboard_theme, DEFAULT_DASHBOARD_THEME),
   client_theme: sanitizeTheme(empresa.client_theme, DEFAULT_CLIENT_THEME),
 });

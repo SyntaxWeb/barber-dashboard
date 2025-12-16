@@ -47,7 +47,7 @@ const normalizeClientUser = (data: any): ClientUser => ({
   name: data?.name ?? "",
   email: data?.email ?? "",
   telefone: data?.telefone ?? null,
-  avatar_url: resolveMediaUrl(data?.avatar_url),
+  avatar_url: data?.avatar_url,
 });
 
 export function ClientAuthProvider({ children }: { children: ReactNode }) {

@@ -54,7 +54,7 @@ const normalizeCompany = (company?: CompanyInfo | null): CompanyInfo | null => {
   const clientTheme = sanitizeTheme(company.client_theme, DEFAULT_CLIENT_THEME);
   return {
     ...company,
-    icon_url: resolveMediaUrl(company.icon_url),
+    icon_url: company.icon_url,
     dashboard_theme: dashboardTheme,
     client_theme: clientTheme,
     subscription_status: company.subscription_status ?? "pendente",
