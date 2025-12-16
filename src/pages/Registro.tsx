@@ -219,7 +219,7 @@ export default function Registro() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="objetivo">Como podemos ajudar?</Label>
+                  <Label htmlFor="objetivo">Descrição da empresa</Label>
                   <Textarea
                     id="objetivo"
                     placeholder="Conte sobre seus desafios atuais..."

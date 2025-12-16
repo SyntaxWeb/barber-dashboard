@@ -716,7 +716,7 @@ export default function Configuracoes() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Palette className="h-5 w-5 text-primary" />
-                  Alertas automativos
+                  Alertas automaticos
                 </CardTitle>
                 <CardDescription>Faça integração com seu email e com seu Telegram para receber notificações.</CardDescription>
               </CardHeader>

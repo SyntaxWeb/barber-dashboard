@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CalendarClock, Copy, LogIn, QrCode, Share2, UserPlus } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarCheck2, Clock3, LogIn, ShieldCheck, UserPlus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -61,56 +61,55 @@ export default function PublicAgendamento() {
       .finally(() => setLoading(false));
   }, [setCompanySlug, shouldFetch, slug, toast]);
 
-  const agendamentoUrl = useMemo(() => {
-    if (empresa?.agendamento_url) return empresa.agendamento_url;
-    if (slug) return `${window.location.origin}/e/${slug}/agendar`;
-    return "";
-  }, [empresa?.agendamento_url, slug]);
-
-  const qrCodeUrl = agendamentoUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(agendamentoUrl)}`
-    : null;
-
-  const handleCopyLink = async () => {
-    if (!agendamentoUrl) return;
-    try {
-      await navigator.clipboard.writeText(agendamentoUrl);
-      toast({ title: "Link copiado", description: "Envie para seus clientes ou parceiros." });
-    } catch {
-      toast({
-        title: "NÇœo foi possÇðvel copiar",
-        description: "Copie manualmente o link exibido.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDownloadQr = async () => {
-    if (!qrCodeUrl) return;
-    try {
-      const response = await fetch(qrCodeUrl);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `qrcode-${slug ?? "empresa"}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch {
-      toast({
-        title: "Não foi possível baixar",
-        description: "Abra o QR Code em nova guia e salve manualmente.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const goTo = (path: string) => {
     if (!slug) return;
     navigate(`${path}?company=${slug}`);
   };
+
+  const handlePrimaryAction = () => {
+    goTo(isAuthenticated ? "/cliente/agendar" : "/cliente/login");
+  };
+
+  const guideSteps = [
+    {
+      title: "Identifique-se",
+      description: "Entrar garante que só você veja seus dados e histórico.",
+      icon: ShieldCheck,
+    },
+    {
+      title: "Escolha o serviço",
+      description: "Veja valores, duração e profissionais disponíveis.",
+      icon: CalendarCheck2,
+    },
+    {
+      title: "Confirme",
+      description: "Receba confirmação e lembretes automáticos.",
+      icon: Clock3,
+    },
+  ];
+
+  const onboardingCards = [
+    {
+      title: "Já tenho conta",
+      description: "Acesse com seu email e veja horários disponíveis.",
+      detail:
+        "Entrando você enxerga horários livres, confirma serviços e acompanha todos os seus atendimentos.",
+      icon: LogIn,
+      action: () => goTo("/cliente/login"),
+      buttonLabel: "Entrar com meu email",
+      variant: "default" as const,
+    },
+    {
+      title: "Primeiro atendimento",
+      description: "Crie sua conta gratuita para guardar históricos.",
+      detail:
+        "Com uma única conta você agenda em diversas empresas que usam SyntaxAtendimento.",
+      icon: UserPlus,
+      action: () => goTo("/cliente/registro"),
+      buttonLabel: "Criar conta gratuita",
+      variant: "secondary" as const,
+    },
+  ];
 
   if (loading) {
     return (
@@ -141,6 +140,8 @@ export default function PublicAgendamento() {
     );
   }
 
+  const primaryLabel = isAuthenticated ? "Abrir agenda agora" : "Entrar e agendar";
+
   return (
     <div
       className="min-h-screen py-10 px-4"
@@ -148,125 +149,100 @@ export default function PublicAgendamento() {
         background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 60%, #ffffff 100%)`,
       }}
     >
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
         <Button variant="ghost" className="w-fit -ml-2" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
 
         <Card className="border-border shadow-gold/40">
-          <CardContent className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:gap-10">
-            <div className="flex items-center gap-4">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white border border-border overflow-hidden">
+          <CardContent className="flex flex-col gap-6 p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white border border-border shadow-inner overflow-hidden">
                 <img src={empresa.icon_url ?? defaultLogo} alt={empresa.nome} className="h-full w-full object-cover" />
               </div>
               <div>
-                <p className="text-sm uppercase tracking-wide text-muted-foreground">Portal SyntaxAtendimento</p>
+                <p className="text-sm uppercase tracking-wide text-muted-foreground">Agenda oficial</p>
                 <h1 className="text-3xl font-bold text-foreground">{empresa.nome}</h1>
-                <p className="text-muted-foreground">{empresa.descricao || "ServiÇõos personalizados sob demanda."}</p>
+                <p className="text-muted-foreground">
+                  {empresa.descricao || "Escolha seu serviço, confirme o horário e receba lembretes automáticos."}
+                </p>
               </div>
             </div>
-            <div className="flex flex-1 flex-col gap-3 rounded-xl border border-dashed border-border bg-background p-4">
-              <div className="flex items-center gap-3">
-                <CalendarClock className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Link exclusivo</p>
-                  <p className="font-semibold break-all">{agendamentoUrl}</p>
+            <div className="rounded-2xl bg-gradient-to-r from-white to-muted/50 p-5 space-y-5">
+              <div className="flex flex-col gap-4 lg:flex-row">
+                <div className="flex flex-1 flex-col gap-2 p-2 rounded-2xl bg-primary/10 p-5 text-sm text-primary">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">Comece por aqui</p>
+                  <h2 className="text-2xl font-bold text-primary">Reserve em poucos minutos</h2>
+                  <p className="text-sm text-primary/80">
+                    Entrando você acessa o painel seguro da empresa, escolhe um serviço, confirma o horário e recebe
+                    lembretes automáticos.
+                  </p>
+                </div>
+                <div className="flex flex-1 flex-col gap-3">
+                  <Button className="w-full py-5 text-base font-semibold shadow-lg shadow-primary/20" onClick={handlePrimaryAction}>
+                    {primaryLabel}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="w-full py-5 text-base font-semibold border border-primary/30 bg-white text-primary shadow"
+                    onClick={() => goTo("/cliente/registro")}
+                  >
+                    Criar minha conta
+                  </Button>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copiar link
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleDownloadQr} disabled={!qrCodeUrl}>
-                  <QrCode className="mr-2 h-4 w-4" />
-                  Baixar QR Code
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => window.open(agendamentoUrl, "_blank")}>
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Abrir em nova guia
-                </Button>
+              <Separator />
+              <div className="grid gap-4 text-sm text-muted-foreground sm:grid-cols-3">
+                {guideSteps.map((step) => {
+                  const Icon = step.icon;
+                  return (
+                    <div key={step.title} className="flex items-start gap-3 rounded-2xl bg-primary/10 p-4 shadow-sm">
+                      <div className="rounded-full bg-muted p-2">
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">{step.title}</p>
+                        <p>{step.description}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </CardContent>
         </Card>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LogIn className="h-5 w-5 text-primary" />
-                Sou cliente
-              </CardTitle>
-              <CardDescription>Use seu email e senha para acessar a agenda desta empresa.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Fazendo login você visualiza serviços, horários livres e pode acompanhar seus agendamentos.
-              </p>
-              <Button className="w-full shadow-gold" onClick={() => goTo("/cliente/login")}>
-                Entrar e agendar
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-              {isAuthenticated && (
-                <Button variant="outline" className="w-full" onClick={() => goTo("/cliente/agendar")}>
-                  Ir direto para a agenda
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserPlus className="h-5 w-5 text-primary" />
-                Primeiro atendimento
-              </CardTitle>
-              <CardDescription>Crie sua conta gratuita no SyntaxAtendimento para seguir.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Com uma conta você pode agendar em várias empresas e acompanhar todos os atendimentos em um único lugar.
-              </p>
-              <Button variant="secondary" className="w-full" onClick={() => goTo("/cliente/registro")}>
-                Criar conta gratuita
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Card>
+          {onboardingCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Card key={card.title} className="border-border/70 bg-white shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Icon className="h-5 w-5 text-primary" />
+                    {card.title}
+                  </CardTitle>
+                  <CardDescription>{card.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">{card.detail}</p>
+                  <Button
+                    variant={card.variant === "secondary" ? "destructive" : "default"}
+                    className={`w-full py-4 text-base font-semibold ${
+                      card.variant === "secondary" ? "" : "bg-primary text-primary-foreground shadow-gold"
+                    }`}
+                    onClick={card.action}
+                  >
+                    {card.buttonLabel}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
-
-        {qrCodeUrl && (
-          <Card className="border-dashed border-border">
-            <CardHeader>
-              <CardTitle>QR Code pronto para impressão</CardTitle>
-              <CardDescription>
-                Compartilhe o código com clientes em mesas, balcão ou redes sociais e direcione para este portal.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4 md:flex-row md:items-center md:gap-10">
-              <div className="rounded-xl bg-white p-4 shadow-inner">
-                <img src={qrCodeUrl} alt={`QR Code ${empresa.nome}`} className="h-60 w-60" />
-              </div>
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <Separator />
-                <p>Escaneie o código para abrir este portal direto do celular.</p>
-                <p>Ideal para Telegram, Instagram, cartões de visita e materiais impressos.</p>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleDownloadQr}>
-                    <QrCode className="mr-2 h-4 w-4" />
-                    Baixar PNG
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={handleCopyLink}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copiar link
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );

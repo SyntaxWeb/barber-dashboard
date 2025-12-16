@@ -20,6 +20,7 @@ interface ClientAuthContextType {
   companyInfo: EmpresaInfo | null;
   register: (payload: ClientRegisterPayload) => Promise<boolean>;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithGoogle: (credential: string) => Promise<boolean>;
   logout: () => void;
   setCompanySlug: (slug: string | null, company?: EmpresaInfo | null) => void;
   updateClient: (payload: any) => void;
@@ -126,6 +127,24 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+  const loginWithGoogle = async (credential: string): Promise<boolean> => {
+    const response = await fetch(`${API_URL}/api/clients/login/google`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ credential }),
+    });
+
+    if (!response.ok) return false;
+
+    const data = await response.json();
+    if (!data.token || !data.user) return false;
+
+    persistSession(data.user, data.token);
+    return true;
+  };
+
   const logout = () => {
     setClient(null);
     setToken(null);
@@ -174,6 +193,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
         companyInfo,
         register,
         login,
+        loginWithGoogle,
         logout,
         setCompanySlug: persistCompanySlug,
         updateClient: applyClientUpdate,

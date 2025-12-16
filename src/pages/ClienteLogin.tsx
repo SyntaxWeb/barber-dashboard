@@ -5,14 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import defaultLogo from "@/assets/syntax-logo.svg";
+import { GoogleClientButton } from "@/components/auth/GoogleClientButton";
 
 export default function ClienteLogin() {
   const { toast } = useToast();
-  const { login, companySlug, setCompanySlug, companyInfo } = useClientAuth();
+  const { login, loginWithGoogle, companySlug, setCompanySlug, companyInfo } = useClientAuth();
   const { palettes } = useTheme();
   const clientTheme = palettes.client;
   const navigate = useNavigate();
@@ -30,6 +32,7 @@ export default function ClienteLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -57,6 +60,24 @@ export default function ClienteLogin() {
     }
 
     toast({ title: "Bem-vindo de volta!" });
+    navigate(`/cliente/agendar${companyQuery}`);
+  };
+
+  const handleGoogleCredential = async (credential: string) => {
+    setGoogleLoading(true);
+    const success = await loginWithGoogle(credential);
+    setGoogleLoading(false);
+
+    if (!success) {
+      toast({
+        title: "Não foi possível autenticar",
+        description: "O Google não confirmou seu acesso. Tente novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({ title: "Login realizado com Google" });
     navigate(`/cliente/agendar${companyQuery}`);
   };
 
@@ -124,6 +145,15 @@ export default function ClienteLogin() {
               )}
             </Button>
           </form>
+
+          <div className="my-6">
+            <Separator className="my-4" />
+            <p className="mb-3 text-center text-sm text-muted-foreground">ou continue com o Google</p>
+            <GoogleClientButton onCredential={handleGoogleCredential} context="signin" />
+            {googleLoading && (
+              <p className="mt-2 text-center text-xs text-muted-foreground">Conectando com Google...</p>
+            )}
+          </div>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Ainda não tem conta?{" "}
