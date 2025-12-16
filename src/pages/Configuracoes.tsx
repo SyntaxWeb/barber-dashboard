@@ -753,7 +753,11 @@ export default function Configuracoes() {
                         </Button>
                         {telegramLink && (
                           <>
-                            <Button type="button" variant="secondary" onClick={() => window.open(telegramLink, "_blank")}>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => window.open(telegramLink, "_blank", "noopener,noreferrer")}
+                            >
                               Abrir bot
                             </Button>
                             <Button

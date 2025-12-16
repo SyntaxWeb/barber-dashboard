@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { resolveMediaUrl } from "@/lib/media";
 import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME, sanitizeTheme } from "@/lib/theme";
 import { useTheme } from "./ThemeContext";
+import { secureStorage } from "@/lib/secureStorage";
 
 interface CompanyInfo {
   id?: number;
@@ -95,7 +96,7 @@ const getStoredUser = (): User | null => {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => getStoredUser());
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("barbeiro-token"));
+  const [token, setToken] = useState<string | null>(() => secureStorage.getItem("barbeiro-token"));
   const { setPalette, activatePalette } = useTheme();
   const dashboardThemeKey = JSON.stringify(user?.company?.dashboard_theme);
 
@@ -127,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
     if (authToken) {
       setToken(authToken);
-      localStorage.setItem("barbeiro-token", authToken);
+      secureStorage.setItem("barbeiro-token", authToken);
     }
   };
 
@@ -147,7 +148,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!data.token || !data.user) return false;
 
-      console.log(data.user);
       persistUser(data.user, data.token);
       if (data.user.company?.dashboard_theme) {
         setPalette("dashboard", data.user.company.dashboard_theme);
@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setToken(null);
     localStorage.removeItem("barbeiro-user");
-    localStorage.removeItem("barbeiro-token");
+    secureStorage.removeItem("barbeiro-token");
   };
 
   const updateCompany = (company: CompanyInfo | null) => {

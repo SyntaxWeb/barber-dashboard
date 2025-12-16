@@ -3,6 +3,7 @@ import { EmpresaInfo, fetchEmpresaPublic } from "@/services/companyService";
 import { DEFAULT_CLIENT_THEME } from "@/lib/theme";
 import { useTheme } from "./ThemeContext";
 import { resolveMediaUrl } from "@/lib/media";
+import { secureStorage } from "@/lib/secureStorage";
 
 interface ClientUser {
   id?: number;
@@ -54,7 +55,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem(STORAGE_USER);
     return stored ? normalizeClientUser(JSON.parse(stored)) : null;
   });
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(STORAGE_TOKEN));
+  const [token, setToken] = useState<string | null>(() => secureStorage.getItem(STORAGE_TOKEN));
   const [companySlug, setCompanySlugState] = useState<string | null>(() => localStorage.getItem(STORAGE_COMPANY));
   const [companyInfo, setCompanyInfo] = useState<EmpresaInfo | null>(null);
   const { setPalette, activatePalette } = useTheme();
@@ -64,7 +65,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     setClient(normalized);
     setToken(jwt);
     localStorage.setItem(STORAGE_USER, JSON.stringify(normalized));
-    localStorage.setItem(STORAGE_TOKEN, jwt);
+    secureStorage.setItem(STORAGE_TOKEN, jwt);
   };
 
   const applyClientUpdate = (payload: any) => {
@@ -149,7 +150,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     setClient(null);
     setToken(null);
     localStorage.removeItem(STORAGE_USER);
-    localStorage.removeItem(STORAGE_TOKEN);
+    secureStorage.removeItem(STORAGE_TOKEN);
   };
 
   useEffect(() => {

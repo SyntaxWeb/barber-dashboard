@@ -70,7 +70,6 @@ const SuperAdminRoute = ({ children }: { children: JSX.Element }) => {
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  console.log(user)
   if (user?.role !== "admin") {
     return <Navigate to="/dashboard" replace />;
   }
