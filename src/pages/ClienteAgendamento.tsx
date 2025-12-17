@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Calendar as CalendarIcon,
@@ -12,6 +12,8 @@ import {
   ArrowRight,
   UserRound,
   CalendarCheck,
+  Star,
+  StarHalf,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,9 +29,12 @@ import {
   clientCreateAgendamento,
   clientFetchHorarios,
   clientFetchServicos,
+  clientFetchFeedbackSummary,
+  CompanyFeedbackSummary,
 } from "@/services/clientPortalService";
 import { Servico } from "@/data/mockData";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ClienteAgendamento() {
   const { client, token, logout, companySlug, setCompanySlug, companyInfo } = useClientAuth();
@@ -48,6 +53,8 @@ export default function ClienteAgendamento() {
   const [horario, setHorario] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [feedbackSummary, setFeedbackSummary] = useState<CompanyFeedbackSummary | null>(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
 
   useEffect(() => {
     if (queryCompany && queryCompany !== companySlug) {
@@ -61,6 +68,18 @@ export default function ClienteAgendamento() {
       .then(setServicos)
       .catch(() => toast({ title: "Erro ao carregar serviços", variant: "destructive" }));
   }, [activeCompany, toast]);
+
+  useEffect(() => {
+    if (!activeCompany) {
+      setFeedbackSummary(null);
+      return;
+    }
+    setFeedbackLoading(true);
+    clientFetchFeedbackSummary(activeCompany)
+      .then(setFeedbackSummary)
+      .catch(() => setFeedbackSummary(null))
+      .finally(() => setFeedbackLoading(false));
+  }, [activeCompany]);
 
   useEffect(() => {
     if (data && activeCompany) {
@@ -77,6 +96,40 @@ export default function ClienteAgendamento() {
   }, [data, horario, activeCompany]);
 
   const servicoSelecionado = servicos.find((item) => item.id.toString() === servicoId);
+
+  const renderStars = (value?: number | null, size: "md" | "sm" = "md") => {
+    const rating = Math.min(Math.max(value ?? 0, 0), 5);
+    const fullStars = Math.floor(rating);
+    const hasHalf = rating - fullStars >= 0.5;
+    const iconClass = size === "sm" ? "h-4 w-4" : "h-5 w-5";
+
+    return (
+      <div className="flex items-center gap-0.5">
+        {Array.from({ length: 5 }).map((_, index) => {
+          const position = index + 1;
+
+          if (position <= fullStars) {
+            return <Star key={position} className={cn(iconClass, "text-amber-500 fill-amber-500")} />;
+          }
+
+          if (hasHalf && position === fullStars + 1) {
+            return <StarHalf key={position} className={cn(iconClass, "text-amber-500 fill-amber-500")} />;
+          }
+
+          return <Star key={position} className={cn(iconClass, "text-muted-foreground")} />;
+        })}
+      </div>
+    );
+  };
+
+  const formatFeedbackTimestamp = (value?: string | null) => {
+    if (!value) return "há pouco";
+    try {
+      return formatDistanceToNow(new Date(value), { locale: ptBR, addSuffix: true });
+    } catch {
+      return "há pouco";
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -193,6 +246,66 @@ export default function ClienteAgendamento() {
               </Button>
             </div>
           </CardHeader>
+        </Card>
+
+        <Card className="border-border/80 shadow-gold/30">
+          <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle>Feedback dos clientes</CardTitle>
+              <CardDescription>
+                Veja como outros clientes avaliam{" "}
+                <span className="font-semibold text-foreground">{companyInfo?.nome ?? "esta barbearia"}</span>.
+              </CardDescription>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-bold text-primary">
+                {typeof feedbackSummary?.average === "number" ? feedbackSummary.average.toFixed(1) : "--"}
+              </p>
+              <p className="text-xs text-muted-foreground">de 5</p>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {feedbackLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-44" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            ) : feedbackSummary && feedbackSummary.count > 0 ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  {renderStars(feedbackSummary.average)}
+                  <span className="text-sm text-muted-foreground">
+                    {feedbackSummary.count} {feedbackSummary.count === 1 ? "avaliação" : "avaliações"}
+                  </span>
+                </div>
+                <div className="grid gap-3">
+                  {feedbackSummary.recent.slice(0, 2).map((feedback) => (
+                    <div key={feedback.id} className="rounded-xl border border-border/60 bg-muted/30 p-3">
+                      <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                        <span>{feedback.client_name ?? "Cliente"}</span>
+                        <span className="text-xs font-normal text-muted-foreground">
+                          {formatFeedbackTimestamp(feedback.created_at)}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between text-sm">
+                        {renderStars(feedback.rating, "sm")}
+                        <span className="text-xs text-muted-foreground">{feedback.rating.toFixed(1)} / 5</span>
+                      </div>
+                      {feedback.comment && (
+                        <p className="mt-2 text-sm leading-relaxed text-foreground">{feedback.comment}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Ainda não há feedbacks publicados para esta empresa. Seja o primeiro a deixar sua opinião após o
+                atendimento!
+              </p>
+            )}
+          </CardContent>
         </Card>
 
         <Card>

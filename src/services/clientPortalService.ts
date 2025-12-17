@@ -148,6 +148,25 @@ export async function clientFetchAgendamentos(token: string): Promise<ClientAppo
   return data.map(normalizeClientAppointment);
 }
 
+export interface CompanyFeedbackSummary {
+  average: number | null;
+  count: number;
+  recent: Array<{
+    id: number;
+    client_name: string | null;
+    rating: number;
+    comment?: string | null;
+    created_at: string | null;
+  }>;
+}
+
+export async function clientFetchFeedbackSummary(companySlug: string): Promise<CompanyFeedbackSummary> {
+  if (!companySlug) throw new Error("companySlug is required");
+  return publicGet<CompanyFeedbackSummary>(
+    `/api/companies/${encodeURIComponent(companySlug)}/feedback-summary`,
+  );
+}
+
 interface ClientAppointmentUpdatePayload {
   service_id: number;
   data: string;
