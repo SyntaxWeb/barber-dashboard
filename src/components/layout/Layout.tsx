@@ -87,7 +87,7 @@ const mainNavigation: DashboardNavItem[] = [
     label: "Relatórios",
     to: "/relatorios",
     icon: BarChart3,
-    roles: ["provider"],
+    roles: ["provider", "admin"],
   },
   {
     key: "servicos",

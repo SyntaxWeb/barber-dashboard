@@ -1,40 +1,69 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { fetchCompanyReport, CompanyReport } from "@/services/reportService";
+import { fetchCompanyReport, fetchSystemReport, CompanyReport } from "@/services/reportService";
 import { formatarPreco } from "@/services/agendaService";
-import { AlertTriangle, BarChart3, TrendingUp, Users2, RefreshCcw, LineChart } from "lucide-react";
+import {
+  AlertTriangle,
+  BarChart3,
+  TrendingUp,
+  Users2,
+  RefreshCcw,
+  LineChart,
+  Building2,
+  UserCheck,
+  UserPlus,
+  Sparkles,
+  MapPin,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Relatorios() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [report, setReport] = useState<CompanyReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadReport = async () => {
+  const loadReport = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchCompanyReport();
+      const data = await (isAdmin ? fetchSystemReport() : fetchCompanyReport());
       setReport(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível carregar o relatório.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAdmin]);
 
   useEffect(() => {
     loadReport();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadReport]);
 
   const trendMax = useMemo(() => {
     if (!report?.trend?.length) return 0;
     return Math.max(...report.trend.map((item) => item.total));
   }, [report?.trend]);
+
+  const formatCount = (value?: number | null) =>
+    typeof value === "number" ? value.toLocaleString("pt-BR") : "--";
+
+  const formatSystemRevenue = (value?: number | null) =>
+    typeof value === "number" ? formatarPreco(value) : "--";
+
+  const systemOverview = report?.system_overview;
+
+  const planBreakdown = report?.plans_breakdown ?? [];
+  const statusBreakdown = report?.status_breakdown ?? [];
+  const recentCompanies = report?.recent_companies ?? [];
+
+  const pageSubtitle = isAdmin
+    ? "Visão consolidada do sistema com métricas agregadas dos últimos 30 dias."
+    : "Visão consolidada da empresa e frequência de clientes dos últimos 30 dias.";
 
   return (
     <Layout>
@@ -42,15 +71,146 @@ export default function Relatorios() {
         <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold">Relatórios</h1>
-            <p className="text-muted-foreground">
-              Visão consolidada da empresa e frequência de clientes dos últimos 30 dias.
-            </p>
+            <p className="text-muted-foreground">{pageSubtitle}</p>
           </div>
           <Button variant="outline" onClick={loadReport} className="gap-2" disabled={loading}>
             <RefreshCcw className="h-4 w-4" />
             Atualizar
           </Button>
         </header>
+
+        {isAdmin && (
+          <>
+            <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <SummaryCard
+                title="Empresas cadastradas"
+                value={loading ? "..." : formatCount(systemOverview?.total_companies)}
+                description="Contas totais no SyntaxAtendimento"
+                icon={<Building2 className="h-5 w-5 text-primary" />}
+              />
+              <SummaryCard
+                title="Empresas ativas"
+                value={loading ? "..." : formatCount(systemOverview?.active_companies)}
+                description="Assinaturas liberadas"
+                icon={<Sparkles className="h-5 w-5 text-primary" />}
+              />
+              <SummaryCard
+                title="Prestadores ativos"
+                value={loading ? "..." : formatCount(systemOverview?.active_providers)}
+                description="Usuários com acesso ao dashboard"
+                icon={<UserCheck className="h-5 w-5 text-primary" />}
+              />
+              <SummaryCard
+                title="Clientes cadastrados"
+                value={loading ? "..." : formatCount(systemOverview?.total_clients)}
+                description="Perfis confirmados no portal"
+                icon={<UserPlus className="h-5 w-5 text-primary" />}
+              />
+            </section>
+
+            <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <SummaryCard
+                title="Novas empresas (30 dias)"
+                value={loading ? "..." : formatCount(systemOverview?.new_companies_30d)}
+                description="Onboardings concluídos"
+                icon={<MapPin className="h-5 w-5 text-primary" />}
+              />
+              <SummaryCard
+                title="Novos clientes (30 dias)"
+                value={loading ? "..." : formatCount(systemOverview?.new_clients_30d)}
+                description="Cadastros no portal"
+                icon={<Users2 className="h-5 w-5 text-primary" />}
+              />
+              <SummaryCard
+                title="Faturamento do mês (sistema)"
+                value={loading ? "..." : formatSystemRevenue(systemOverview?.revenue_month)}
+                description="Receita agregada nos últimos 30 dias"
+                icon={<TrendingUp className="h-5 w-5 text-primary" />}
+              />
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-3">
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Distribuição de planos</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {loading ? (
+                    <p className="text-sm text-muted-foreground">Carregando...</p>
+                  ) : planBreakdown.length ? (
+                    planBreakdown.map((plan) => (
+                      <div key={plan.label} className="flex items-center justify-between">
+                        <span className="font-medium text-foreground">{plan.label}</span>
+                        <Badge variant="secondary">{plan.total}</Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Ainda não há planos cadastrados.</p>
+                  )}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Status das assinaturas</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {loading ? (
+                    <p className="text-sm text-muted-foreground">Carregando...</p>
+                  ) : statusBreakdown.length ? (
+                    statusBreakdown.map((status) => (
+                      <div key={status.label} className="flex items-center justify-between">
+                        <span className="capitalize text-muted-foreground">{status.label}</span>
+                        <Badge>{status.total}</Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Nenhum status encontrado.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </section>
+
+            <section className="grid gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Novas empresas</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {loading ? (
+                    <p className="text-sm text-muted-foreground">Carregando...</p>
+                  ) : recentCompanies.length ? (
+                    recentCompanies.map((company) => (
+                      <div
+                        key={company.id}
+                        className="flex flex-col gap-1 rounded-lg border p-3 md:flex-row md:items-center md:justify-between"
+                      >
+                        <div>
+                          <p className="font-semibold text-foreground">{company.nome}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Criada em {company.created_at ? new Date(company.created_at).toLocaleDateString("pt-BR") : "--"}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {company.subscription_plan ?? "Sem plano"}
+                          </Badge>
+                          <Badge
+                            variant={company.subscription_status === "ativo" ? "secondary" : "outline"}
+                            className="text-xs capitalize"
+                          >
+                            {company.subscription_status ?? "pendente"}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Nenhuma empresa recente.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </section>
+          </>
+        )}
 
         {error && (
           <Card className="border-destructive/40 bg-destructive/5">

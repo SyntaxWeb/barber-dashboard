@@ -68,6 +68,17 @@ const ProviderRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+const ProviderOrAdminRoute = ({ children }: { children: JSX.Element }) => {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  if (user?.role !== "provider" && user?.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
+
 const SuperAdminRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated, user } = useAuth();
   if (!isAuthenticated) {
@@ -104,9 +115,9 @@ const App = () => (
                 <Route
                   path="/relatorios"
                   element={
-                    <ProviderRoute>
+                    <ProviderOrAdminRoute>
                       <Relatorios />
-                    </ProviderRoute>
+                    </ProviderOrAdminRoute>
                   }
                 />
                 <Route
