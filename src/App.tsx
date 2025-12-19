@@ -22,6 +22,9 @@ import Landing from "./pages/Landing";
 import Clientes from "./pages/Clientes";
 import Perfil from "./pages/Perfil";
 import ClientePerfil from "./pages/ClientePerfil";
+import ClienteDashboard from "./pages/ClienteDashboard";
+import FeedbackPublico from "./pages/FeedbackPublico";
+import Relatorios from "./pages/Relatorios";
 import Assinatura from "./pages/Assinatura";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import AdminLogs from "./pages/AdminLogs";
@@ -95,6 +98,15 @@ const App = () => (
                     <ProtectedRoute>
                       <Dashboard />
                     </ProtectedRoute>
+                  }
+                />
+                <Route path="/cliente/feedback" element={<FeedbackPublico />} />
+                <Route
+                  path="/relatorios"
+                  element={
+                    <ProviderRoute>
+                      <Relatorios />
+                    </ProviderRoute>
                   }
                 />
                 <Route
@@ -188,6 +200,14 @@ const App = () => (
                 <Route path="/cliente/registro" element={<ClienteRegistro />} />
                 <Route path="/cliente/login" element={<ClienteLogin />} />
                 <Route path="/e/:slug/agendar" element={<PublicAgendamento />} />
+                <Route
+                  path="/cliente"
+                  element={
+                    <ClienteProtectedRoute>
+                      <ClienteDashboard />
+                    </ClienteProtectedRoute>
+                  }
+                />
                 <Route
                   path="/cliente/agendar"
                   element={

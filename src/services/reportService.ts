@@ -16,12 +16,11 @@ const unwrap = <T>(payload: MaybeWrapped<T>): T => {
   return payload as T;
 };
 
-async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function api<T>(path: string): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
-    ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(options.headers || {}),
+      Accept: "application/json",
       ...authHeaders(),
     },
   });
@@ -31,39 +30,41 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(message || "Erro na requisição");
   }
 
-  if (response.status === 204) {
-    return {} as T;
-  }
-
   const payload = (await response.json()) as MaybeWrapped<T>;
   return unwrap(payload);
 }
 
-export interface Cliente {
-  id: number;
-  nome: string;
-  email: string;
-  telefone?: string | null;
-  observacoes?: string | null;
-  created_at?: string;
-  updated_at?: string;
+export interface CompanyReport {
+  summary: {
+    total_appointments: number;
+    confirmed: number;
+    completed: number;
+    upcoming_week: number;
+    revenue_month: number;
+  };
+  feedback: {
+    average: number | null;
+    responses: number;
+    pending: number;
+  };
+  top_clients: Array<{
+    cliente: string;
+    telefone: string | null;
+    total: number;
+    last_visit: string | null;
+  }>;
+  services: Array<{
+    service_id: number | null;
+    servico: string;
+    total: number;
+    revenue: number;
+  }>;
+  trend: Array<{
+    date: string;
+    total: number;
+  }>;
 }
 
-export interface CreateClientePayload {
-  nome: string;
-  email: string;
-  telefone: string;
-  observacoes?: string;
-}
-
-export async function fetchClientes(search?: string): Promise<Cliente[]> {
-  const query = search ? `?search=${encodeURIComponent(search)}` : "";
-  return api<Cliente[]>(`/api/clients${query}`);
-}
-
-export async function createCliente(payload: CreateClientePayload): Promise<Cliente> {
-  return api<Cliente>("/api/clients", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+export async function fetchCompanyReport(): Promise<CompanyReport> {
+  return api<CompanyReport>("/api/company/report");
 }

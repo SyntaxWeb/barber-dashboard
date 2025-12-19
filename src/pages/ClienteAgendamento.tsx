@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Calendar as CalendarIcon,
@@ -8,10 +8,9 @@ import {
   Scissors,
   NotebookPen,
   CheckCircle2,
-  LogOut,
   ArrowRight,
-  UserRound,
-  CalendarCheck,
+  Star,
+  StarHalf,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,19 +21,20 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
-import { useTheme } from "@/contexts/ThemeContext";
 import {
   clientCreateAgendamento,
   clientFetchHorarios,
   clientFetchServicos,
+  clientFetchFeedbackSummary,
+  CompanyFeedbackSummary,
 } from "@/services/clientPortalService";
 import { Servico } from "@/data/mockData";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ClientPortalLayout } from "@/components/layout/ClientPortalLayout";
 
 export default function ClienteAgendamento() {
-  const { client, token, logout, companySlug, setCompanySlug, companyInfo } = useClientAuth();
-  const { palettes } = useTheme();
-  const clientPalette = palettes.client;
+  const { client, token, companySlug, setCompanySlug, companyInfo } = useClientAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -48,6 +48,8 @@ export default function ClienteAgendamento() {
   const [horario, setHorario] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [feedbackSummary, setFeedbackSummary] = useState<CompanyFeedbackSummary | null>(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
 
   useEffect(() => {
     if (queryCompany && queryCompany !== companySlug) {
@@ -61,6 +63,18 @@ export default function ClienteAgendamento() {
       .then(setServicos)
       .catch(() => toast({ title: "Erro ao carregar serviços", variant: "destructive" }));
   }, [activeCompany, toast]);
+
+  useEffect(() => {
+    if (!activeCompany) {
+      setFeedbackSummary(null);
+      return;
+    }
+    setFeedbackLoading(true);
+    clientFetchFeedbackSummary(activeCompany)
+      .then(setFeedbackSummary)
+      .catch(() => setFeedbackSummary(null))
+      .finally(() => setFeedbackLoading(false));
+  }, [activeCompany]);
 
   useEffect(() => {
     if (data && activeCompany) {
@@ -77,6 +91,40 @@ export default function ClienteAgendamento() {
   }, [data, horario, activeCompany]);
 
   const servicoSelecionado = servicos.find((item) => item.id.toString() === servicoId);
+
+  const renderStars = (value?: number | null, size: "md" | "sm" = "md") => {
+    const rating = Math.min(Math.max(value ?? 0, 0), 5);
+    const fullStars = Math.floor(rating);
+    const hasHalf = rating - fullStars >= 0.5;
+    const iconClass = size === "sm" ? "h-4 w-4" : "h-5 w-5";
+
+    return (
+      <div className="flex items-center gap-0.5">
+        {Array.from({ length: 5 }).map((_, index) => {
+          const position = index + 1;
+
+          if (position <= fullStars) {
+            return <Star key={position} className={cn(iconClass, "text-amber-500 fill-amber-500")} />;
+          }
+
+          if (hasHalf && position === fullStars + 1) {
+            return <StarHalf key={position} className={cn(iconClass, "text-amber-500 fill-amber-500")} />;
+          }
+
+          return <Star key={position} className={cn(iconClass, "text-muted-foreground")} />;
+        })}
+      </div>
+    );
+  };
+
+  const formatFeedbackTimestamp = (value?: string | null) => {
+    if (!value) return "há pouco";
+    try {
+      return formatDistanceToNow(new Date(value), { locale: ptBR, addSuffix: true });
+    } catch {
+      return "há pouco";
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -136,66 +184,35 @@ export default function ClienteAgendamento() {
     }
   };
 
-  if (!activeCompany) {
-    return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center px-4 py-10">
-        <Card className="max-w-md border-border shadow-gold">
-          <CardHeader>
-            <CardTitle>Escolha uma empresa</CardTitle>
-            <CardDescription>
-              Acesse este portal usando um link exclusivo do estabelecimento para visualizar horários disponíveis.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>Peça ao profissional o link do tipo `https://seu-dominio.com/e/&lt;empresa&gt;/agendar`.</p>
-            <p>
-              Ao abrir esse link, o parâmetro `company` será preenchido automaticamente e você poderá prosseguir com o
-              agendamento.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const content = !activeCompany ? (
+    <Card className="border-border shadow-gold">
+      <CardHeader>
+        <CardTitle>Escolha uma empresa</CardTitle>
+        <CardDescription>
+          Acesse este portal usando um link exclusivo do estabelecimento para visualizar horários disponíveis.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm text-muted-foreground">
+        <p>Peça ao profissional o link do tipo `https://seu-dominio.com/e/&lt;empresa&gt;/agendar`.</p>
+        <p>
+          Ao abrir esse link, o parâmetro `company` será preenchido automaticamente e você poderá prosseguir com o
+          agendamento.
+        </p>
+      </CardContent>
+    </Card>
+  ) : (
+    <>
+      <Card className="border-border shadow-gold/50 mb-3">
+        <CardHeader>
+          <CardTitle className="text-xl">Olá, {client?.name}</CardTitle>
+          <CardDescription>
+            Escolha o serviço e confirme seu horário disponível na empresa{" "}
+            <span className="font-semibold text-foreground">{companyInfo?.nome ?? activeCompany}</span>.
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
-  return (
-    <div
-      className="min-h-screen py-10 px-4"
-      style={{
-        background: `linear-gradient(180deg, ${clientPalette.background} 0%, ${clientPalette.surface} 60%, #ffffff 100%)`,
-      }}
-    >
-      <div className="mx-auto max-w-3xl space-y-6">
-        <Card className="border-border shadow-gold/50">
-          <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle>Olá, {client?.name}</CardTitle>
-              <CardDescription>
-                Escolha o serviço e confirme seu horário disponível na empresa{" "}
-                <span className="font-semibold text-foreground">
-                  {companyInfo?.nome ?? activeCompany}
-                </span>
-                .
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" size="sm" onClick={() => navigate("/cliente/agendamentos")}>
-                <CalendarCheck className="mr-2 h-4 w-4" />
-                Meus agendamentos
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/cliente/perfil")}>
-                <UserRound className="mr-2 h-4 w-4" />
-                Meu perfil
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => logout()}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-              </Button>
-            </div>
-          </CardHeader>
-        </Card>
-
-        <Card>
+      <Card className="mb-3">
           <CardHeader>
             <CardTitle>Novo agendamento</CardTitle>
             <CardDescription>Verificamos automaticamente todos os horários livres.</CardDescription>
@@ -299,9 +316,9 @@ export default function ClienteAgendamento() {
               </Button>
             </form>
           </CardContent>
-        </Card>
+      </Card>
 
-        <Card>
+      <Card>
           <CardHeader>
             <CardTitle>Dicas rápidas</CardTitle>
             <CardDescription>Melhore sua experiência no SyntaxAtendimento</CardDescription>
@@ -320,8 +337,9 @@ export default function ClienteAgendamento() {
               Precisa remarcar? Entre em contato com o profissional e escolha outro horário disponível.
             </div>
           </CardContent>
-        </Card>
-      </div>
-    </div>
+      </Card>
+    </>
   );
+
+  return <ClientPortalLayout>{content}</ClientPortalLayout>;
 }

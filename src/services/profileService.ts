@@ -1,12 +1,14 @@
+import { secureStorage } from "@/lib/secureStorage";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
 
 const authHeaders = () => {
-  const token = localStorage.getItem("barbeiro-token");
+  const token = secureStorage.getItem("barbeiro-token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
 const clientHeaders = () => {
-  const token = localStorage.getItem("cliente-token");
+  const token = secureStorage.getItem("cliente-token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 

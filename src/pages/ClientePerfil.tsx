@@ -8,14 +8,12 @@ import { useToast } from "@/hooks/use-toast";
 import { updateClientProfile } from "@/services/profileService";
 import { Camera, Upload, Save } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useTheme } from "@/contexts/ThemeContext";
+import { ClientPortalLayout } from "@/components/layout/ClientPortalLayout";
 
 export default function ClientePerfil() {
   const { client, updateClient, logout } = useClientAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { palettes } = useTheme();
-  const clientTheme = palettes.client;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -73,12 +71,9 @@ export default function ClientePerfil() {
   };
 
   return (
-    <div
-      className="min-h-screen py-10 px-4"
-      style={{ background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 70%, #ffffff 100%)` }}
-    >
-      <div className="mx-auto w-full max-w-2xl">
-        <div className="mb-4 flex flex-wrap gap-2">
+    <ClientPortalLayout>
+      <div className="mx-auto w-full max-w-2xl space-y-4">
+        <div className="flex flex-wrap gap-2">
           <Button variant="ghost" onClick={() => navigate(-1)}>
             Voltar
           </Button>
@@ -164,6 +159,6 @@ export default function ClientePerfil() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </ClientPortalLayout>
   );
 }

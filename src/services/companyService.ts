@@ -1,10 +1,11 @@
+import { secureStorage } from "@/lib/secureStorage";
 import { resolveMediaUrl } from "@/lib/media";
 import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME, sanitizeTheme } from "@/lib/theme";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
 
 const authHeaders = () => {
-  const token = localStorage.getItem("barbeiro-token");
+  const token = secureStorage.getItem("barbeiro-token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
@@ -15,6 +16,7 @@ export interface EmpresaInfo {
   slug: string;
   agendamento_url: string;
   icon_url?: string | null;
+  gallery_photos?: string[] | null;
   notify_email?: string | null;
   notify_telegram?: string | null;
   notify_via_email?: boolean;
@@ -31,12 +33,21 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-const normalizeEmpresa = (empresa: EmpresaInfo): EmpresaInfo => ({
-  ...empresa,
-  icon_url: resolveMediaUrl(empresa.icon_url),
-  dashboard_theme: sanitizeTheme(empresa.dashboard_theme, DEFAULT_DASHBOARD_THEME),
-  client_theme: sanitizeTheme(empresa.client_theme, DEFAULT_CLIENT_THEME),
-});
+const normalizeEmpresa = (empresa: EmpresaInfo): EmpresaInfo => {
+  const galleryPhotos = Array.isArray(empresa.gallery_photos)
+    ? empresa.gallery_photos
+        .map((photo) => photo ?? photo)
+        .filter((photo): photo is string => Boolean(photo))
+    : [];
+
+  return {
+    ...empresa,
+    icon_url: resolveMediaUrl(empresa.icon_url) ?? empresa.icon_url,
+    gallery_photos: galleryPhotos,
+    dashboard_theme: sanitizeTheme(empresa.dashboard_theme, DEFAULT_DASHBOARD_THEME),
+    client_theme: sanitizeTheme(empresa.client_theme, DEFAULT_CLIENT_THEME),
+  };
+};
 
 export async function fetchEmpresa(): Promise<EmpresaInfo> {
   const response = await fetch(`${API_URL}/api/company`, {
@@ -75,6 +86,8 @@ interface UpdateEmpresaPayload {
   notify_via_telegram?: boolean;
   dashboard_theme?: BrandTheme;
   client_theme?: BrandTheme;
+  gallery_photos?: File[];
+  gallery_remove?: string[];
 }
 
 export async function updateEmpresa(payload: UpdateEmpresaPayload): Promise<EmpresaInfo> {
@@ -106,6 +119,16 @@ export async function updateEmpresa(payload: UpdateEmpresaPayload): Promise<Empr
   if (payload.client_theme) {
     Object.entries(payload.client_theme).forEach(([key, value]) => {
       formData.append(`client_theme[${key}]`, value);
+    });
+  }
+  if (payload.gallery_photos?.length) {
+    payload.gallery_photos.forEach((file) => {
+      formData.append("gallery_photos[]", file);
+    });
+  }
+  if (payload.gallery_remove?.length) {
+    payload.gallery_remove.forEach((photo) => {
+      formData.append("gallery_remove[]", photo);
     });
   }
 

@@ -46,8 +46,17 @@ export default function ClienteLogin() {
       return;
     }
 
+    if (!targetCompany) {
+      toast({
+        title: "Link inválido",
+        description: "Acesse pelo link exclusivo da empresa para continuar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
-    const success = await login(email, password);
+    const success = await login(email, password, targetCompany);
     setLoading(false);
 
     if (!success) {
@@ -60,12 +69,21 @@ export default function ClienteLogin() {
     }
 
     toast({ title: "Bem-vindo de volta!" });
-    navigate(`/cliente/agendar${companyQuery}`);
+    navigate(`/cliente${companyQuery}`);
   };
 
   const handleGoogleCredential = async (credential: string) => {
+    if (!targetCompany) {
+      toast({
+        title: "Link inválido",
+        description: "Acesse pelo link exclusivo da empresa para continuar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setGoogleLoading(true);
-    const success = await loginWithGoogle(credential);
+    const success = await loginWithGoogle(credential, targetCompany);
     setGoogleLoading(false);
 
     if (!success) {
@@ -78,7 +96,7 @@ export default function ClienteLogin() {
     }
 
     toast({ title: "Login realizado com Google" });
-    navigate(`/cliente/agendar${companyQuery}`);
+    navigate(`/cliente${companyQuery}`);
   };
 
   return (

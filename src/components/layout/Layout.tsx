@@ -37,6 +37,7 @@ import {
   Shield,
   UserRound,
   Users2,
+  BarChart3,
 } from "lucide-react";
 import defaultLogo from "@/assets/syntax-logo.svg";
 
@@ -80,6 +81,13 @@ const mainNavigation: DashboardNavItem[] = [
     label: "Clientes",
     to: "/clientes",
     icon: Users2,
+  },
+  {
+    key: "relatorios",
+    label: "Relatórios",
+    to: "/relatorios",
+    icon: BarChart3,
+    roles: ["provider"],
   },
   {
     key: "servicos",
