@@ -18,8 +18,14 @@ export interface EmpresaInfo {
   gallery_photos?: string[] | null;
   notify_email?: string | null;
   notify_telegram?: string | null;
+  notify_whatsapp?: string | null;
   notify_via_email?: boolean;
   notify_via_telegram?: boolean;
+  notify_via_whatsapp?: boolean;
+  whatsapp_session_id?: string | null;
+  whatsapp_status?: string | null;
+  whatsapp_phone?: string | null;
+  whatsapp_connected_at?: string | null;
   dashboard_theme: BrandTheme;
   client_theme: BrandTheme;
 }
@@ -81,8 +87,10 @@ interface UpdateEmpresaPayload {
   icone?: File | null;
   notify_email?: string | null;
   notify_telegram?: string | null;
+  notify_whatsapp?: string | null;
   notify_via_email?: boolean;
   notify_via_telegram?: boolean;
+  notify_via_whatsapp?: boolean;
   dashboard_theme?: BrandTheme;
   client_theme?: BrandTheme;
   gallery_photos?: File[];
@@ -104,11 +112,17 @@ export async function updateEmpresa(payload: UpdateEmpresaPayload): Promise<Empr
   if (payload.notify_telegram !== undefined) {
     formData.append("notify_telegram", payload.notify_telegram ?? "");
   }
+  if (payload.notify_whatsapp !== undefined) {
+    formData.append("notify_whatsapp", payload.notify_whatsapp ?? "");
+  }
   if (payload.notify_via_email !== undefined) {
     formData.append("notify_via_email", String(payload.notify_via_email));
   }
   if (payload.notify_via_telegram !== undefined) {
     formData.append("notify_via_telegram", String(payload.notify_via_telegram));
+  }
+  if (payload.notify_via_whatsapp !== undefined) {
+    formData.append("notify_via_whatsapp", String(payload.notify_via_whatsapp));
   }
   if (payload.dashboard_theme) {
     Object.entries(payload.dashboard_theme).forEach(([key, value]) => {

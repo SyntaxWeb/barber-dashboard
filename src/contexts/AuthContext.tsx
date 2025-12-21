@@ -14,8 +14,14 @@ interface CompanyInfo {
   gallery_photos?: string[] | null;
   notify_email?: string | null;
   notify_telegram?: string | null;
+  notify_whatsapp?: string | null;
   notify_via_email?: boolean;
   notify_via_telegram?: boolean;
+  notify_via_whatsapp?: boolean;
+  whatsapp_session_id?: string | null;
+  whatsapp_status?: string | null;
+  whatsapp_phone?: string | null;
+  whatsapp_connected_at?: string | null;
   dashboard_theme?: BrandTheme;
   client_theme?: BrandTheme;
   subscription_plan?: string | null;

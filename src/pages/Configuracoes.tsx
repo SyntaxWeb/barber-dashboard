@@ -1,4 +1,4 @@
-import { useEffect, useState, ChangeEvent, useRef } from "react";
+import { useEffect, useState, ChangeEvent, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -15,6 +15,8 @@ import {
   Palette,
   Sparkles,
   Images,
+  MessageCircle,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -46,6 +48,12 @@ import {
   verifyTelegramLink,
   type EmpresaInfo,
 } from "@/services/companyService";
+import {
+  fetchWhatsappSession,
+  logoutWhatsappSession,
+  normalizeQrCode,
+  startWhatsappSession,
+} from "@/services/whatsappService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME, sanitizeTheme, isValidHexColor } from "@/lib/theme";
@@ -163,11 +171,19 @@ export default function Configuracoes() {
   const [notifyTelegram, setNotifyTelegram] = useState("");
   const [notifyViaEmail, setNotifyViaEmail] = useState(false);
   const [notifyViaTelegram, setNotifyViaTelegram] = useState(false);
+  const [notifyWhatsapp, setNotifyWhatsapp] = useState("");
+  const [notifyViaWhatsapp, setNotifyViaWhatsapp] = useState(false);
   const [telegramLink, setTelegramLink] = useState<string | null>(null);
   const [telegramLinkLoading, setTelegramLinkLoading] = useState(false);
   const [telegramVerifyLoading, setTelegramVerifyLoading] = useState(false);
   const [dashboardThemeState, setDashboardThemeState] = useState<BrandTheme>(DEFAULT_DASHBOARD_THEME);
   const [clientThemeState, setClientThemeState] = useState<BrandTheme>(DEFAULT_CLIENT_THEME);
+  const [whatsappStatus, setWhatsappStatus] = useState("desconectado");
+  const [whatsappLoading, setWhatsappLoading] = useState(false);
+  const [whatsappQrCode, setWhatsappQrCode] = useState<string | null>(null);
+  const [whatsappError, setWhatsappError] = useState<string | null>(null);
+  const [whatsappInfo, setWhatsappInfo] = useState<{ phone?: string | null; pushname?: string | null }>({});
+  const [whatsappSessionId, setWhatsappSessionId] = useState<string | null>(null);
 
   const themeFields: Array<{ key: keyof BrandTheme; label: string; description: string }> = [
     { key: "primary", label: "Cor primária", description: "Botões, links e destaques" },
@@ -292,6 +308,69 @@ export default function Configuracoes() {
     }));
   };
 
+  const refreshWhatsappStatus = useCallback(async () => {
+    setWhatsappLoading(true);
+    setWhatsappError(null);
+    try {
+      const data = await fetchWhatsappSession();
+      setWhatsappSessionId(data.session_id ?? null);
+      const status = data.status ?? {};
+      const stateCandidate = typeof status.state === "string" ? status.state : status.status;
+      const connected =
+        Boolean(status.connected) ||
+        stateCandidate === "CONNECTED" ||
+        stateCandidate === "isLogged" ||
+        stateCandidate === "connected";
+      const normalizedState =
+        typeof stateCandidate === "string" ? stateCandidate.toLowerCase() : connected ? "conectado" : "desconectado";
+      setWhatsappStatus(connected ? "conectado" : normalizedState);
+      const phone = status.phone?.wid?.user ?? status.phone?.device_model ?? (notifyWhatsapp || null);
+      const pushname = status.phone?.pushname ?? null;
+      setWhatsappInfo({ phone, pushname });
+      if (!connected) {
+        setWhatsappQrCode(normalizeQrCode(data.qr_code ?? null));
+      } else {
+        setWhatsappQrCode(null);
+      }
+    } catch (error) {
+      setWhatsappError(getApiErrorMessage(error));
+      setWhatsappStatus("desconectado");
+      setWhatsappInfo({});
+      setWhatsappQrCode(null);
+      setWhatsappSessionId(null);
+    } finally {
+      setWhatsappLoading(false);
+    }
+  }, [notifyWhatsapp]);
+
+  const handleStartWhatsapp = useCallback(async () => {
+    setWhatsappLoading(true);
+    setWhatsappError(null);
+    try {
+      await startWhatsappSession();
+      await refreshWhatsappStatus();
+      toast({ title: "Sessão iniciada", description: "Escaneie o QR Code pelo WhatsApp." });
+    } catch (error) {
+      setWhatsappError(getApiErrorMessage(error));
+    } finally {
+      setWhatsappLoading(false);
+    }
+  }, [refreshWhatsappStatus, toast]);
+
+  const handleLogoutWhatsapp = useCallback(async () => {
+    setWhatsappLoading(true);
+    setWhatsappError(null);
+    try {
+      await logoutWhatsappSession();
+      await refreshWhatsappStatus();
+      toast({ title: "Sessão desconectada", description: "Você pode gerar outro QR Code quando preferir." });
+    } catch (error) {
+      setWhatsappError(getApiErrorMessage(error));
+    } finally {
+      setWhatsappLoading(false);
+    }
+  }, [refreshWhatsappStatus, toast]);
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -315,6 +394,8 @@ export default function Configuracoes() {
         setNotifyTelegram(empresaData.notify_telegram ?? "");
         setNotifyViaEmail(Boolean(empresaData.notify_via_email));
         setNotifyViaTelegram(Boolean(empresaData.notify_via_telegram));
+        setNotifyWhatsapp(empresaData.notify_whatsapp ?? "");
+        setNotifyViaWhatsapp(Boolean(empresaData.notify_via_whatsapp));
         const dashboardTheme = sanitizeTheme(empresaData.dashboard_theme, DEFAULT_DASHBOARD_THEME);
         const clientTheme = sanitizeTheme(empresaData.client_theme, DEFAULT_CLIENT_THEME);
         setDashboardThemeState(dashboardTheme);
@@ -344,6 +425,10 @@ export default function Configuracoes() {
     }
     loadData();
   }, []);
+
+  useEffect(() => {
+    refreshWhatsappStatus();
+  }, [refreshWhatsappStatus]);
 
   useEffect(() => {
     return () => {
@@ -424,6 +509,15 @@ export default function Configuracoes() {
       return;
     }
 
+    if (notifyViaWhatsapp && !notifyWhatsapp.trim()) {
+      toast({
+        title: "Número do WhatsApp obrigatório",
+        description: "Informe o número que receberá os alertas automáticos ou desative esta opção.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSalvandoEmpresa(true);
     const galleryNewFiles = galleryPending.map((item) => item.file);
     try {
@@ -433,8 +527,10 @@ export default function Configuracoes() {
         icone: iconeFile ?? undefined,
         notify_email: notifyEmail.trim() || null,
         notify_telegram: notifyTelegram.trim() || null,
+        notify_whatsapp: notifyWhatsapp.trim() || null,
         notify_via_email: notifyViaEmail,
         notify_via_telegram: notifyViaTelegram,
+        notify_via_whatsapp: notifyViaWhatsapp,
         dashboard_theme: dashboardThemeState,
         client_theme: clientThemeState,
         gallery_photos: galleryNewFiles.length ? galleryNewFiles : undefined,
@@ -444,8 +540,10 @@ export default function Configuracoes() {
       setIconePreview(atualizada.icon_url ?? null);
       setNotifyEmail(atualizada.notify_email ?? "");
       setNotifyTelegram(atualizada.notify_telegram ?? "");
+      setNotifyWhatsapp(atualizada.notify_whatsapp ?? "");
       setNotifyViaEmail(Boolean(atualizada.notify_via_email));
       setNotifyViaTelegram(Boolean(atualizada.notify_via_telegram));
+      setNotifyViaWhatsapp(Boolean(atualizada.notify_via_whatsapp));
       const updatedDashboardTheme = sanitizeTheme(atualizada.dashboard_theme, DEFAULT_DASHBOARD_THEME);
       const updatedClientTheme = sanitizeTheme(atualizada.client_theme, DEFAULT_CLIENT_THEME);
       setDashboardThemeState(updatedDashboardTheme);
@@ -722,10 +820,16 @@ export default function Configuracoes() {
         </div>
 
         <Tabs defaultValue="empresa" className="space-y-6">
-          <TabsList className="grid gap-2 sm:grid-cols-3">
-            <TabsTrigger value="empresa">Marca & canais</TabsTrigger>
-            <TabsTrigger value="agenda">Agenda & horários</TabsTrigger>
-            <TabsTrigger value="servicos">Serviços & catálogo</TabsTrigger>
+          <TabsList className="flex w-full flex-col gap-2 h-auto sm:h-10 sm:flex-row sm:gap-2">
+            <TabsTrigger value="empresa" className="w-full flex-1 whitespace-normal text-center sm:whitespace-nowrap">
+              Marca & canais
+            </TabsTrigger>
+            <TabsTrigger value="agenda" className="w-full flex-1 whitespace-normal text-center sm:whitespace-nowrap">
+              Agenda & horários
+            </TabsTrigger>
+            <TabsTrigger value="servicos" className="w-full flex-1 whitespace-normal text-center sm:whitespace-nowrap">
+              Serviços & catálogo
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="empresa" className="space-y-6">
@@ -872,6 +976,24 @@ export default function Configuracoes() {
                           </>
                         )}
                       </div>
+                      <div className="space-y-2 pt-2">
+                        <Label>WhatsApp para alertas</Label>
+                        <Input
+                          type="tel"
+                          placeholder="5511999999999"
+                          value={notifyWhatsapp}
+                          onChange={(event) => setNotifyWhatsapp(event.target.value)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                        <div>
+                          <p className="text-sm font-medium">Receber via WhatsApp</p>
+                          <p className="text-xs text-muted-foreground">
+                            Os alertas serão enviados automaticamente para o número acima.
+                          </p>
+                        </div>
+                        <Switch checked={notifyViaWhatsapp} onCheckedChange={(checked) => setNotifyViaWhatsapp(Boolean(checked))} />
+                      </div>
                       {telegramLink && (
                         <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
                           <p>Envie /start no bot usando o link acima e clique em confirmar captura.</p>
@@ -889,6 +1011,78 @@ export default function Configuracoes() {
                         />
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <MessageCircle className="h-4 w-4 text-primary" />
+                      WhatsApp automático
+                    </CardTitle>
+                    <CardDescription>Conecte seu WhatsApp via WPPConnect para disparar mensagens.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-sm">
+                    {!whatsappSessionId && (
+                      <p className="text-sm text-muted-foreground">
+                        Clique em &quot;Gerar QR Code&quot; para criar a sess?o e concluir a conex?o.
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                      <div>
+                        <p className="text-sm font-medium capitalize">Status: {whatsappStatus}</p>
+                        {whatsappInfo.pushname && (
+                          <p className="text-xs text-muted-foreground">{whatsappInfo.pushname}</p>
+                        )}
+                        {whatsappInfo.phone && (
+                          <p className="text-xs text-muted-foreground">N?mero: {whatsappInfo.phone}</p>
+                        )}
+                      </div>
+                      {whatsappLoading ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" onClick={refreshWhatsappStatus}>
+                            Atualizar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleLogoutWhatsapp}
+                            disabled={whatsappStatus === "desconectado"}
+                          >
+                            Desconectar
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    {whatsappError && <p className="text-xs text-destructive">{whatsappError}</p>}
+                    {whatsappQrCode ? (
+                      <div className="rounded-lg border border-dashed border-border p-4 text-center">
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Abra o WhatsApp &gt; Aparelhos conectados e leia o QR Code abaixo.
+                        </p>
+                        <img
+                          src={normalizeQrCode(whatsappQrCode) ?? undefined}
+                          alt="QR Code do WhatsApp"
+                          className="mx-auto h-48 w-48"
+                        />
+                        <p className="mt-2 text-xs text-muted-foreground">Expirou? Clique em atualizar.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">
+                          Se estiver desconectado gere um novo QR Code e leia pelo aplicativo.
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button onClick={handleStartWhatsapp} disabled={whatsappLoading}>
+                            {whatsappLoading ? "Gerando..." : "Gerar QR Code"}
+                          </Button>
+                          <Button variant="outline" onClick={refreshWhatsappStatus} disabled={whatsappLoading}>
+                            Recarregar QR Code
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
                 <div className="grid gap-4 lg:grid-cols-2">

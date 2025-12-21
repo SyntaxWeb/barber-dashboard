@@ -90,6 +90,19 @@ export interface CompanyReport {
     subscription_status?: string | null;
     created_at?: string | null;
   }>;
+  company_feedback_ranking?: CompanyFeedbackRankingEntry[];
+  feedback_by_company?: CompanyFeedbackRankingEntry[];
+  top_companies_feedback?: CompanyFeedbackRankingEntry[];
+}
+
+export interface CompanyFeedbackRankingEntry {
+  company_id?: number | string;
+  company_name: string;
+  average?: number | null;
+  total_feedbacks?: number;
+  city?: string | null;
+  state?: string | null;
+  last_feedback_at?: string | null;
 }
 
 export async function fetchCompanyReport(): Promise<CompanyReport> {

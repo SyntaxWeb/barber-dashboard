@@ -16,6 +16,7 @@ import {
   UserPlus,
   Sparkles,
   MapPin,
+  Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -60,6 +61,12 @@ export default function Relatorios() {
   const planBreakdown = report?.plans_breakdown ?? [];
   const statusBreakdown = report?.status_breakdown ?? [];
   const recentCompanies = report?.recent_companies ?? [];
+  const companyFeedbackRanking = useMemo(() => {
+    if (!report) return [];
+    const ranking =
+      report.company_feedback_ranking ?? report.feedback_by_company ?? report.top_companies_feedback ?? [];
+    return ranking.filter((entry) => Boolean(entry?.company_name));
+  }, [report]);
 
   const pageSubtitle = isAdmin
     ? "Visão consolidada do sistema com métricas agregadas dos últimos 30 dias."
@@ -205,6 +212,62 @@ export default function Relatorios() {
                     ))
                   ) : (
                     <p className="text-sm text-muted-foreground">Nenhuma empresa recente.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </section>
+
+            <section className="grid gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="h-5 w-5 text-primary" />
+                    Classificação por empresa
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {loading ? (
+                    <p className="text-sm text-muted-foreground">Carregando...</p>
+                  ) : companyFeedbackRanking.length ? (
+                    companyFeedbackRanking.slice(0, 6).map((company, index) => {
+                      const location = [company.city, company.state].filter(Boolean).join(" / ");
+                      const lastFeedback = company.last_feedback_at
+                        ? new Date(company.last_feedback_at).toLocaleDateString("pt-BR")
+                        : null;
+                      const formattedAverage =
+                        typeof company.average === "number" ? company.average.toFixed(1) : "--";
+
+                      return (
+                        <div
+                          key={(company.company_id ?? company.company_name) as string}
+                          className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-muted/30 p-4"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                              {index + 1}º
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">{company.company_name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {location && `${location} • `}
+                                {lastFeedback ? `Último feedback em ${lastFeedback}` : "Sem feedback recente"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-primary">{formattedAverage}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {company.total_feedbacks ?? 0} {" "}
+                              {(company.total_feedbacks ?? 0) === 1 ? "avaliação" : "avaliações"}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Ainda não há feedbacks suficientes para gerar uma classificação.
+                    </p>
                   )}
                 </CardContent>
               </Card>
