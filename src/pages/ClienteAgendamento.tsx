@@ -8,10 +8,7 @@ import {
   Scissors,
   NotebookPen,
   CheckCircle2,
-  LogOut,
   ArrowRight,
-  UserRound,
-  CalendarCheck,
   Star,
   StarHalf,
 } from "lucide-react";
@@ -24,7 +21,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
-import { useTheme } from "@/contexts/ThemeContext";
 import {
   clientCreateAgendamento,
   clientFetchHorarios,
@@ -35,11 +31,10 @@ import {
 import { Servico } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ClientPortalLayout } from "@/components/layout/ClientPortalLayout";
 
 export default function ClienteAgendamento() {
-  const { client, token, logout, companySlug, setCompanySlug, companyInfo } = useClientAuth();
-  const { palettes } = useTheme();
-  const clientPalette = palettes.client;
+  const { client, token, companySlug, setCompanySlug, companyInfo } = useClientAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -82,18 +77,21 @@ export default function ClienteAgendamento() {
   }, [activeCompany]);
 
   useEffect(() => {
-    if (data && activeCompany) {
-      const dataStr = format(data, "yyyy-MM-dd");
-      clientFetchHorarios(dataStr, activeCompany)
-        .then((horarios) => {
-          setHorariosDisponiveis(horarios);
-          if (!horarios.includes(horario)) {
-            setHorario("");
-          }
-        })
-        .catch(() => setHorariosDisponiveis([]));
+    if (!data || !activeCompany || !servicoId) {
+      setHorariosDisponiveis([]);
+      setHorario("");
+      return;
     }
-  }, [data, horario, activeCompany]);
+    const dataStr = format(data, "yyyy-MM-dd");
+    clientFetchHorarios(dataStr, activeCompany, Number(servicoId))
+      .then((horarios) => {
+        setHorariosDisponiveis(horarios);
+        if (!horarios.includes(horario)) {
+          setHorario("");
+        }
+      })
+      .catch(() => setHorariosDisponiveis([]));
+  }, [data, horario, activeCompany, servicoId]);
 
   const servicoSelecionado = servicos.find((item) => item.id.toString() === servicoId);
 
@@ -189,126 +187,35 @@ export default function ClienteAgendamento() {
     }
   };
 
-  if (!activeCompany) {
-    return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center px-4 py-10">
-        <Card className="max-w-md border-border shadow-gold">
-          <CardHeader>
-            <CardTitle>Escolha uma empresa</CardTitle>
-            <CardDescription>
-              Acesse este portal usando um link exclusivo do estabelecimento para visualizar horários disponíveis.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>Peça ao profissional o link do tipo `https://seu-dominio.com/e/&lt;empresa&gt;/agendar`.</p>
-            <p>
-              Ao abrir esse link, o parâmetro `company` será preenchido automaticamente e você poderá prosseguir com o
-              agendamento.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const content = !activeCompany ? (
+    <Card className="border-border shadow-gold">
+      <CardHeader>
+        <CardTitle>Escolha uma empresa</CardTitle>
+        <CardDescription>
+          Acesse este portal usando um link exclusivo do estabelecimento para visualizar horários disponíveis.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm text-muted-foreground">
+        <p>Peça ao profissional o link do tipo `https://seu-dominio.com/e/&lt;empresa&gt;/agendar`.</p>
+        <p>
+          Ao abrir esse link, o parâmetro `company` será preenchido automaticamente e você poderá prosseguir com o
+          agendamento.
+        </p>
+      </CardContent>
+    </Card>
+  ) : (
+    <>
+      <Card className="border-border shadow-gold/50 mb-3">
+        <CardHeader>
+          <CardTitle className="text-xl">Olá, {client?.name}</CardTitle>
+          <CardDescription>
+            Escolha o serviço e confirme seu horário disponível na empresa{" "}
+            <span className="font-semibold text-foreground">{companyInfo?.nome ?? activeCompany}</span>.
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
-  return (
-    <div
-      className="min-h-screen py-10 px-4"
-      style={{
-        background: `linear-gradient(180deg, ${clientPalette.background} 0%, ${clientPalette.surface} 60%, #ffffff 100%)`,
-      }}
-    >
-      <div className="mx-auto max-w-3xl space-y-6">
-        <Card className="border-border shadow-gold/50">
-          <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle>Olá, {client?.name}</CardTitle>
-              <CardDescription>
-                Escolha o serviço e confirme seu horário disponível na empresa{" "}
-                <span className="font-semibold text-foreground">
-                  {companyInfo?.nome ?? activeCompany}
-                </span>
-                .
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" size="sm" onClick={() => navigate("/cliente/agendamentos")}>
-                <CalendarCheck className="mr-2 h-4 w-4" />
-                Meus agendamentos
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/cliente/perfil")}>
-                <UserRound className="mr-2 h-4 w-4" />
-                Meu perfil
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => logout()}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-              </Button>
-            </div>
-          </CardHeader>
-        </Card>
-
-        <Card className="border-border/80 shadow-gold/30">
-          <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle>Feedback dos clientes</CardTitle>
-              <CardDescription>
-                Veja como outros clientes avaliam{" "}
-                <span className="font-semibold text-foreground">{companyInfo?.nome ?? "esta barbearia"}</span>.
-              </CardDescription>
-            </div>
-            <div className="text-right">
-              <p className="text-3xl font-bold text-primary">
-                {typeof feedbackSummary?.average === "number" ? feedbackSummary.average.toFixed(1) : "--"}
-              </p>
-              <p className="text-xs text-muted-foreground">de 5</p>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {feedbackLoading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-5 w-44" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
-            ) : feedbackSummary && feedbackSummary.count > 0 ? (
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  {renderStars(feedbackSummary.average)}
-                  <span className="text-sm text-muted-foreground">
-                    {feedbackSummary.count} {feedbackSummary.count === 1 ? "avaliação" : "avaliações"}
-                  </span>
-                </div>
-                <div className="grid gap-3">
-                  {feedbackSummary.recent.slice(0, 2).map((feedback) => (
-                    <div key={feedback.id} className="rounded-xl border border-border/60 bg-muted/30 p-3">
-                      <div className="flex items-center justify-between text-sm font-semibold text-foreground">
-                        <span>{feedback.client_name ?? "Cliente"}</span>
-                        <span className="text-xs font-normal text-muted-foreground">
-                          {formatFeedbackTimestamp(feedback.created_at)}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between text-sm">
-                        {renderStars(feedback.rating, "sm")}
-                        <span className="text-xs text-muted-foreground">{feedback.rating.toFixed(1)} / 5</span>
-                      </div>
-                      {feedback.comment && (
-                        <p className="mt-2 text-sm leading-relaxed text-foreground">{feedback.comment}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Ainda não há feedbacks publicados para esta empresa. Seja o primeiro a deixar sua opinião após o
-                atendimento!
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
+      <Card className="mb-3">
           <CardHeader>
             <CardTitle>Novo agendamento</CardTitle>
             <CardDescription>Verificamos automaticamente todos os horários livres.</CardDescription>
@@ -363,7 +270,7 @@ export default function ClienteAgendamento() {
 
                 <div className="flex-1 space-y-2">
                   <Label>Horário</Label>
-                  <Select value={horario} onValueChange={setHorario}>
+                  <Select value={horario} onValueChange={setHorario} disabled={!data || !servicoId}>
                     <SelectTrigger>
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-muted-foreground" />
@@ -371,7 +278,10 @@ export default function ClienteAgendamento() {
                       </div>
                     </SelectTrigger>
                     <SelectContent>
-                      {horariosDisponiveis.length === 0 && (
+                      {!servicoId && (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">Selecione um serviço primeiro</div>
+                      )}
+                      {servicoId && horariosDisponiveis.length === 0 && (
                         <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum horário livre</div>
                       )}
                       {horariosDisponiveis.map((item) => (
@@ -412,9 +322,9 @@ export default function ClienteAgendamento() {
               </Button>
             </form>
           </CardContent>
-        </Card>
+      </Card>
 
-        <Card>
+      <Card>
           <CardHeader>
             <CardTitle>Dicas rápidas</CardTitle>
             <CardDescription>Melhore sua experiência no SyntaxAtendimento</CardDescription>
@@ -433,8 +343,9 @@ export default function ClienteAgendamento() {
               Precisa remarcar? Entre em contato com o profissional e escolha outro horário disponível.
             </div>
           </CardContent>
-        </Card>
-      </div>
-    </div>
+      </Card>
+    </>
   );
+
+  return <ClientPortalLayout>{content}</ClientPortalLayout>;
 }

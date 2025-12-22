@@ -11,10 +11,17 @@ interface CompanyInfo {
   agendamento_url?: string;
   descricao?: string | null;
   icon_url?: string | null;
+  gallery_photos?: string[] | null;
   notify_email?: string | null;
   notify_telegram?: string | null;
+  notify_whatsapp?: string | null;
   notify_via_email?: boolean;
   notify_via_telegram?: boolean;
+  notify_via_whatsapp?: boolean;
+  whatsapp_session_id?: string | null;
+  whatsapp_status?: string | null;
+  whatsapp_phone?: string | null;
+  whatsapp_connected_at?: string | null;
   dashboard_theme?: BrandTheme;
   client_theme?: BrandTheme;
   subscription_plan?: string | null;
@@ -52,9 +59,15 @@ const normalizeCompany = (company?: CompanyInfo | null): CompanyInfo | null => {
   if (!company) return null;
   const dashboardTheme = sanitizeTheme(company.dashboard_theme, DEFAULT_DASHBOARD_THEME);
   const clientTheme = sanitizeTheme(company.client_theme, DEFAULT_CLIENT_THEME);
+  const galleryPhotos = Array.isArray(company.gallery_photos)
+    ? company.gallery_photos
+        .map((photo) => photo ?? photo)
+        .filter((photo): photo is string => Boolean(photo))
+    : [];
   return {
     ...company,
-    icon_url: company.icon_url,
+    icon_url: company.icon_url ?? null,
+    gallery_photos: galleryPhotos,
     dashboard_theme: dashboardTheme,
     client_theme: clientTheme,
     subscription_status: company.subscription_status ?? "pendente",

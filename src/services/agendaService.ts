@@ -225,8 +225,19 @@ export async function updateConfiguracoes(config: Partial<ConfiguracoesBarbearia
 
 // ========== HELPERS ==========
 
-export async function fetchHorariosDisponiveis(data: string): Promise<string[]> {
-  const result = await api<{ horarios: string[] }>(`/api/availability?date=${data}`);
+export async function fetchHorariosDisponiveis(
+  data: string,
+  serviceId?: number,
+  appointmentId?: number,
+): Promise<string[]> {
+  const params = new URLSearchParams({ date: data });
+  if (serviceId) {
+    params.set("service_id", serviceId.toString());
+  }
+  if (appointmentId) {
+    params.set("appointment_id", appointmentId.toString());
+  }
+  const result = await api<{ horarios: string[] }>(`/api/availability?${params.toString()}`);
   return result.horarios;
 }
 

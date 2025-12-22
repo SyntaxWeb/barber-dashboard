@@ -1,3 +1,13 @@
+export interface AppointmentFeedback {
+  service_rating: number;
+  professional_rating: number;
+  scheduling_rating: number;
+  comment?: string | null;
+  allow_public_testimonial?: boolean;
+  submitted_at?: string | null;
+  average_rating?: number | null;
+}
+
 export interface Agendamento {
   id: number;
   cliente: string;
@@ -8,6 +18,7 @@ export interface Agendamento {
   preco: number;
   status: "confirmado" | "concluido" | "cancelado";
   observacoes?: string;
+  feedback?: AppointmentFeedback | null;
 }
 
 export interface Servico {

@@ -53,18 +53,21 @@ export default function NovoAgendamento() {
   }, []);
 
   useEffect(() => {
-    if (data && configuracoes) {
-      const dataStr = format(data, "yyyy-MM-dd");
-      fetchHorariosDisponiveis(dataStr)
-        .then((horarios) => {
-          setHorariosDisponiveis(horarios);
-          if (!horarios.includes(horario)) {
-            setHorario("");
-          }
-        })
-        .catch(() => setHorariosDisponiveis([]));
+    if (!data || !configuracoes || !servicoId) {
+      setHorariosDisponiveis([]);
+      setHorario("");
+      return;
     }
-  }, [data, configuracoes, horario]);
+    const dataStr = format(data, "yyyy-MM-dd");
+    fetchHorariosDisponiveis(dataStr, Number(servicoId))
+      .then((horarios) => {
+        setHorariosDisponiveis(horarios);
+        if (!horarios.includes(horario)) {
+          setHorario("");
+        }
+      })
+      .catch(() => setHorariosDisponiveis([]));
+  }, [data, configuracoes, horario, servicoId]);
 
   const formatarTelefone = (valor: string) => {
     const numeros = valor.replace(/\D/g, "");
@@ -326,7 +329,7 @@ export default function NovoAgendamento() {
 
                 <div className="space-y-2">
                   <Label>Horário</Label>
-                  <Select value={horario} onValueChange={setHorario} disabled={!data}>
+                  <Select value={horario} onValueChange={setHorario} disabled={!data || !servicoId}>
                     <SelectTrigger className="w-full">
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-muted-foreground" />
@@ -334,7 +337,9 @@ export default function NovoAgendamento() {
                       </div>
                     </SelectTrigger>
                     <SelectContent>
-                      {horariosDisponiveis.length === 0 ? (
+                      {!servicoId ? (
+                        <div className="p-2 text-sm text-muted-foreground">Selecione um serviço primeiro</div>
+                      ) : horariosDisponiveis.length === 0 ? (
                         <div className="p-2 text-sm text-muted-foreground">Nenhum horário disponível</div>
                       ) : (
                         horariosDisponiveis.map((h) => (

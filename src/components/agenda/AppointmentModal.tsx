@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Phone, Calendar, Clock, Scissors, FileText, Check, Trash2 } from "lucide-react";
+import { X, Phone, Calendar, Clock, Scissors, FileText, Check, Trash2, Star, MessageSquareText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -144,8 +144,66 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
               </Button>
             </div>
           )}
+
+          {agendamento.feedback && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 space-y-3">
+              <div className="flex items-center justify-between text-sm font-semibold text-emerald-900">
+                <span className="flex items-center gap-1">
+                  <MessageSquareText className="h-4 w-4" />
+                  Feedback enviado
+                </span>
+                <span className="text-xs font-medium">
+                  {formatAverage(agendamento.feedback.average_rating, agendamento.feedback)}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                {renderStars(calculateAverage(agendamento.feedback))}
+              </div>
+              {agendamento.feedback.comment && (
+                <p className="text-sm text-emerald-900/90 leading-relaxed">{agendamento.feedback.comment}</p>
+              )}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
+const calculateAverage = (feedback: NonNullable<Agendamento["feedback"]>) => {
+  if (typeof feedback.average_rating === "number") {
+    return feedback.average_rating;
+  }
+  const values = [feedback.service_rating, feedback.professional_rating, feedback.scheduling_rating].filter(
+    (value) => typeof value === "number" && !Number.isNaN(value),
+  );
+  if (values.length === 0) return 0;
+  const sum = values.reduce((acc, value) => acc + value, 0);
+  return sum / values.length;
+};
+
+const renderStars = (rating: number) => {
+  const safeRating = Math.max(0, Math.min(5, rating));
+  const fullStars = Math.floor(safeRating);
+  const hasHalf = safeRating - fullStars >= 0.5;
+
+  return Array.from({ length: 5 }).map((_, index) => {
+    const position = index + 1;
+    if (position <= fullStars) {
+      return <Star key={position} className="h-4 w-4 text-amber-500 fill-amber-500" />;
+    }
+    if (hasHalf && position === fullStars + 1) {
+      return <Star key={position} className="h-4 w-4 text-amber-500 fill-amber-500/60" />;
+    }
+    return <Star key={position} className="h-4 w-4 text-muted-foreground" />;
+  });
+};
+
+const formatAverage = (
+  average: number | null | undefined,
+  feedback: NonNullable<Agendamento["feedback"]>,
+): string => {
+  const computed = average ?? calculateAverage(feedback);
+  if (!computed) return "Sem nota";
+  return `${computed.toFixed(1)} / 5`;
+};

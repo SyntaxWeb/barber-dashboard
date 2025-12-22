@@ -68,11 +68,24 @@ export async function clientFetchServicos(companySlug: string): Promise<Servico[
   return publicGet<Servico[]>(`/api/services?company=${encodeURIComponent(companySlug)}`);
 }
 
-export async function clientFetchHorarios(date: string, companySlug: string): Promise<string[]> {
+export async function clientFetchHorarios(
+  date: string,
+  companySlug: string,
+  serviceId?: number,
+  appointmentId?: number,
+): Promise<string[]> {
   if (!companySlug) throw new Error("companySlug is required");
-  const result = await publicGet<{ horarios: string[] }>(
-    `/api/availability?date=${date}&company=${encodeURIComponent(companySlug)}`,
-  );
+  const params = new URLSearchParams({
+    date,
+    company: companySlug,
+  });
+  if (serviceId) {
+    params.set("service_id", serviceId.toString());
+  }
+  if (appointmentId) {
+    params.set("appointment_id", appointmentId.toString());
+  }
+  const result = await publicGet<{ horarios: string[] }>(`/api/availability?${params.toString()}`);
   return result.horarios;
 }
 
@@ -98,6 +111,16 @@ export async function clientCreateAgendamento(
   });
 }
 
+export interface AppointmentFeedback {
+  service_rating: number;
+  professional_rating: number;
+  scheduling_rating: number;
+  comment?: string | null;
+  allow_public_testimonial?: boolean;
+  submitted_at?: string | null;
+  average_rating?: number | null;
+}
+
 export interface ClientAppointment {
   id: number;
   service_id: number;
@@ -112,6 +135,7 @@ export interface ClientAppointment {
     nome?: string;
     slug?: string;
   } | null;
+  feedback?: AppointmentFeedback | null;
 }
 
 type ApiClientAppointment = {
@@ -129,6 +153,7 @@ type ApiClientAppointment = {
     nome?: string;
     slug?: string;
   } | null;
+  feedback?: AppointmentFeedback | null;
 };
 
 const normalizeClientAppointment = (appointment: ApiClientAppointment): ClientAppointment => ({
@@ -141,6 +166,7 @@ const normalizeClientAppointment = (appointment: ApiClientAppointment): ClientAp
   status: appointment.status,
   observacoes: appointment.observacoes ?? null,
   company: appointment.company ?? null,
+  feedback: appointment.feedback ?? null,
 });
 
 export async function clientFetchAgendamentos(token: string): Promise<ClientAppointment[]> {
@@ -193,4 +219,64 @@ export async function clientCancelarAgendamento(id: number, token: string): Prom
   await privateRequest(`/api/clients/appointments/${id}/cancel`, token, {
     method: "POST",
   });
+}
+
+export interface ClientAppointmentFeedbackPayload {
+  service_rating: number;
+  professional_rating: number;
+  scheduling_rating: number;
+  comment?: string;
+  allow_public_testimonial?: boolean;
+}
+
+export async function clientEnviarFeedback(
+  appointmentId: number,
+  payload: ClientAppointmentFeedbackPayload,
+  token: string,
+): Promise<void> {
+  await privateRequest(`/api/clients/appointments/${appointmentId}/feedback`, token, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface PublicFeedbackAppointment {
+  id: number;
+  servico: string | null;
+  data: string | null;
+  horario: string | null;
+  company?: {
+    nome?: string;
+    slug?: string;
+  } | null;
+  feedback?: AppointmentFeedback | null;
+}
+
+export async function fetchPublicFeedbackForm(token: string): Promise<PublicFeedbackAppointment> {
+  if (!token) throw new Error("Token inválido");
+  const result = await publicGet<PublicFeedbackAppointment>(`/api/feedback/form/${encodeURIComponent(token)}`);
+  return result;
+}
+
+export async function submitPublicFeedback(
+  token: string,
+  payload: ClientAppointmentFeedbackPayload,
+): Promise<PublicFeedbackAppointment> {
+  if (!token) throw new Error("Token inválido");
+  const response = await fetch(`${API_URL}/api/feedback/form/${encodeURIComponent(token)}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Erro ao enviar feedback");
+  }
+
+  const payloadResponse = (await response.json()) as MaybeWrapped<PublicFeedbackAppointment>;
+  return unwrap(payloadResponse);
 }

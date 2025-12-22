@@ -2,17 +2,53 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { Calendar, Clock, Users, TrendingUp, Plus, ArrowRight } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import { Layout } from "@/components/layout/Layout";
 import { Agendamento } from "@/data/mockData";
 import { fetchAgendamentosPorData, formatarPreco } from "@/services/agendaService";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import defaultLogo from "@/assets/syntax-logo.svg";
 
 export default function Dashboard() {
   const [agendamentosHoje, setAgendamentosHoje] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const company = user?.company;
+  const companyIcon = company?.icon_url ?? defaultLogo;
+  const galleryPhotos = Array.isArray(company?.gallery_photos) ? company.gallery_photos : [];
+  const agendaLink = company?.agendamento_url ?? "";
+  const notifyEmail = company?.notify_via_email && company?.notify_email ? company.notify_email : null;
+  const notifyTelegram = company?.notify_via_telegram && company?.notify_telegram ? company.notify_telegram : null;
 
   const hoje = format(new Date(), "yyyy-MM-dd");
+
+  const handleCopyAgendaLink = async () => {
+    if (!agendaLink) return;
+    try {
+      await navigator.clipboard.writeText(agendaLink);
+      toast({
+        title: "Link copiado",
+        description: "Compartilhe com os clientes para aumentar os retornos.",
+      });
+    } catch {
+      toast({
+        title: "Nao foi possivel copiar",
+        description: "Copie o endereco manualmente.",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -69,10 +105,10 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl font-bold">Dashboard</h1>
             <p className="text-muted-foreground">
-              {new Date().toLocaleDateString('pt-BR', { 
-                weekday: 'long', 
-                day: 'numeric', 
-                month: 'long' 
+              {new Date().toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long'
               })}
             </p>
           </div>
@@ -175,6 +211,133 @@ export default function Dashboard() {
                 <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </CardContent>
             </Link>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Informacoes da barbearia</CardTitle>
+              <CardDescription>Tudo que aparece para os clientes nos links publicos.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted shadow-inner overflow-hidden">
+                  <img src={companyIcon} alt={company?.nome ?? "Barbearia"} className="h-full w-full object-cover" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-foreground">{company?.nome ?? "Configure sua barbearia"}</p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    {company?.slug && <Badge variant="secondary">/{company.slug}</Badge>}
+                    {company?.subscription_plan && (
+                      <Badge className="bg-primary/10 text-primary">
+                        Plano {company.subscription_plan}
+                      </Badge>
+                    )}
+                    {company?.subscription_status && (
+                      <Badge variant="outline" className="text-xs">
+                        Status {company.subscription_status}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                {company?.descricao
+                  ? company.descricao
+                  : "Conte seu diferencial nas configuracoes para reforcar o posicionamento da barbearia."}
+              </p>
+
+              <div className="space-y-3 text-sm">
+                <div className="rounded-xl border border-border/70 p-3">
+                  <p className="text-xs uppercase text-muted-foreground">Agenda publica</p>
+                  {agendaLink ? (
+                    <>
+                      <p className="mt-1 break-all font-semibold text-foreground">{agendaLink}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button variant="secondary" size="sm" onClick={handleCopyAgendaLink}>
+                          Copiar link
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={agendaLink} target="_blank" rel="noreferrer">
+                            Abrir
+                          </a>
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="mt-1 text-muted-foreground">
+                      Gere seu link publico em Configuracoes &gt; Empresa.
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-border/70 p-3">
+                    <p className="text-xs uppercase text-muted-foreground">Alertas por email</p>
+                    <p className="mt-1 font-semibold text-foreground">{notifyEmail ?? "Sem email definido"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {company?.notify_via_email ? "Ativo" : "Desativado"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-border/70 p-3">
+                    <p className="text-xs uppercase text-muted-foreground">Alertas no Telegram</p>
+                    <p className="mt-1 font-semibold text-foreground">{notifyTelegram ?? "Sem chat conectado"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {company?.notify_via_telegram ? "Ativo" : "Desativado"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Ajuste essas informacoes no menu{" "}
+                <Link to="/configuracoes" className="font-semibold text-primary hover:underline">
+                  Configuracoes
+                </Link>
+                .
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden">
+            <CardHeader>
+              <CardTitle>Galeria da barbearia</CardTitle>
+              <CardDescription>Use imagens reais para reforcar o estilo do seu espaco.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {galleryPhotos.length ? (
+                <div className="space-y-3">
+                  <Carousel opts={{ loop: true }}>
+                    <CarouselContent>
+                      {galleryPhotos.map((photo, index) => (
+                        <CarouselItem key={`${photo}-${index}`}>
+                          <div className="relative h-60 w-full overflow-hidden rounded-2xl border border-border/60 bg-muted">
+                            <img src={photo} alt={`Foto ${index + 1} da barbearia`} className="h-full w-full object-cover" />
+                            <div className="absolute bottom-3 right-3 rounded-full bg-background/80 px-3 py-1 text-xs font-semibold shadow">
+                              {index + 1} / {galleryPhotos.length}
+                            </div>
+                          </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    <CarouselPrevious className="bg-background/80" />
+                    <CarouselNext className="bg-background/80" />
+                  </Carousel>
+                  <p className="text-xs text-muted-foreground">
+                    Atualize as fotos em Configuracoes &gt; Empresa para manter o feed sempre atual.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4 rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
+                  <p>Ainda nao ha fotos cadastradas. Mostre o clima do espaco para aumentar a confianca.</p>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/configuracoes">Adicionar fotos</Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </div>
       </div>

@@ -22,6 +22,9 @@ import Landing from "./pages/Landing";
 import Clientes from "./pages/Clientes";
 import Perfil from "./pages/Perfil";
 import ClientePerfil from "./pages/ClientePerfil";
+import ClienteDashboard from "./pages/ClienteDashboard";
+import FeedbackPublico from "./pages/FeedbackPublico";
+import Relatorios from "./pages/Relatorios";
 import Assinatura from "./pages/Assinatura";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import AdminLogs from "./pages/AdminLogs";
@@ -65,6 +68,17 @@ const ProviderRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+const ProviderOrAdminRoute = ({ children }: { children: JSX.Element }) => {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  if (user?.role !== "provider" && user?.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
+
 const SuperAdminRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated, user } = useAuth();
   if (!isAuthenticated) {
@@ -95,6 +109,15 @@ const App = () => (
                     <ProtectedRoute>
                       <Dashboard />
                     </ProtectedRoute>
+                  }
+                />
+                <Route path="/cliente/feedback" element={<FeedbackPublico />} />
+                <Route
+                  path="/relatorios"
+                  element={
+                    <ProviderOrAdminRoute>
+                      <Relatorios />
+                    </ProviderOrAdminRoute>
                   }
                 />
                 <Route
@@ -188,6 +211,14 @@ const App = () => (
                 <Route path="/cliente/registro" element={<ClienteRegistro />} />
                 <Route path="/cliente/login" element={<ClienteLogin />} />
                 <Route path="/e/:slug/agendar" element={<PublicAgendamento />} />
+                <Route
+                  path="/cliente"
+                  element={
+                    <ClienteProtectedRoute>
+                      <ClienteDashboard />
+                    </ClienteProtectedRoute>
+                  }
+                />
                 <Route
                   path="/cliente/agendar"
                   element={
