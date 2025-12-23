@@ -229,8 +229,12 @@ export async function fetchHorariosDisponiveis(
   data: string,
   serviceId?: number,
   appointmentId?: number,
+  companySlug?: string,
 ): Promise<string[]> {
   const params = new URLSearchParams({ date: data });
+  if (companySlug) {
+    params.set("company", companySlug);
+  }
   if (serviceId) {
     params.set("service_id", serviceId.toString());
   }

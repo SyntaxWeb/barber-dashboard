@@ -23,10 +23,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { fetchClientes, type Cliente as ClienteInfo } from "@/services/clientesService";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function NovoAgendamento() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [configuracoes, setConfiguracoes] = useState<ConfiguracoesBarbearia | null>(null);
@@ -42,6 +44,7 @@ export default function NovoAgendamento() {
   const [data, setData] = useState<Date | undefined>(new Date());
   const [horario, setHorario] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const companySlug = user?.company?.slug;
 
   useEffect(() => {
     async function loadData() {
@@ -59,7 +62,7 @@ export default function NovoAgendamento() {
       return;
     }
     const dataStr = format(data, "yyyy-MM-dd");
-    fetchHorariosDisponiveis(dataStr, Number(servicoId))
+    fetchHorariosDisponiveis(dataStr, Number(servicoId), undefined, companySlug)
       .then((horarios) => {
         setHorariosDisponiveis(horarios);
         if (!horarios.includes(horario)) {
@@ -67,7 +70,7 @@ export default function NovoAgendamento() {
         }
       })
       .catch(() => setHorariosDisponiveis([]));
-  }, [data, configuracoes, horario, servicoId]);
+  }, [data, configuracoes, horario, servicoId, companySlug]);
 
   const formatarTelefone = (valor: string) => {
     const numeros = valor.replace(/\D/g, "");
