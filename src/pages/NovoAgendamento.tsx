@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { fetchClientes, type Cliente as ClienteInfo } from "@/services/clientesService";
 import { useAuth } from "@/contexts/AuthContext";
+import { AvailabilityData, joinHorario } from "@/lib/availability";
 
 export default function NovoAgendamento() {
   const navigate = useNavigate();
@@ -32,7 +33,11 @@ export default function NovoAgendamento() {
 
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [configuracoes, setConfiguracoes] = useState<ConfiguracoesBarbearia | null>(null);
-  const [horariosDisponiveis, setHorariosDisponiveis] = useState<string[]>([]);
+  const [availability, setAvailability] = useState<AvailabilityData>({
+    horarios: [],
+    horas: [],
+    minutosPorHora: {},
+  });
   const [loading, setLoading] = useState(false);
 
   const [cliente, setCliente] = useState("");
@@ -42,7 +47,8 @@ export default function NovoAgendamento() {
   const [clienteSelecionado, setClienteSelecionado] = useState<ClienteInfo | null>(null);
   const [servicoId, setServicoId] = useState("");
   const [data, setData] = useState<Date | undefined>(new Date());
-  const [horario, setHorario] = useState("");
+  const [hora, setHora] = useState("");
+  const [minuto, setMinuto] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const companySlug = user?.company?.slug;
 
@@ -57,20 +63,34 @@ export default function NovoAgendamento() {
 
   useEffect(() => {
     if (!data || !configuracoes || !servicoId) {
-      setHorariosDisponiveis([]);
-      setHorario("");
+      setAvailability({ horarios: [], horas: [], minutosPorHora: {} });
+      setHora("");
+      setMinuto("");
       return;
     }
     const dataStr = format(data, "yyyy-MM-dd");
     fetchHorariosDisponiveis(dataStr, Number(servicoId), undefined, companySlug)
-      .then((horarios) => {
-        setHorariosDisponiveis(horarios);
-        if (!horarios.includes(horario)) {
-          setHorario("");
-        }
+      .then((dataResponse) => {
+        setAvailability(dataResponse);
       })
-      .catch(() => setHorariosDisponiveis([]));
-  }, [data, configuracoes, horario, servicoId, companySlug]);
+      .catch(() => setAvailability({ horarios: [], horas: [], minutosPorHora: {} }));
+  }, [data, configuracoes, servicoId, companySlug]);
+
+  useEffect(() => {
+    if (!hora) {
+      if (minuto) setMinuto("");
+      return;
+    }
+    if (!availability.horas.includes(hora)) {
+      setHora("");
+      setMinuto("");
+      return;
+    }
+    const minutosDisponiveis = availability.minutosPorHora[hora] ?? [];
+    if (!minutosDisponiveis.includes(minuto) && minuto) {
+      setMinuto("");
+    }
+  }, [availability, hora, minuto]);
 
   const formatarTelefone = (valor: string) => {
     const numeros = valor.replace(/\D/g, "");
@@ -138,6 +158,8 @@ export default function NovoAgendamento() {
   };
 
   const servicoSelecionado = servicos.find((s) => s.id.toString() === servicoId);
+  const horarioSelecionado = joinHorario(hora, minuto);
+  const minutosDisponiveis = hora ? availability.minutosPorHora[hora] ?? [] : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,7 +180,7 @@ export default function NovoAgendamento() {
       toast({ title: "Selecione uma data", variant: "destructive" });
       return;
     }
-    if (!horario) {
+    if (!horarioSelecionado) {
       toast({ title: "Selecione um horário", variant: "destructive" });
       return;
     }
@@ -170,7 +192,7 @@ export default function NovoAgendamento() {
         cliente: cliente.trim(),
         telefone: telefone.trim(),
         data: format(data, "yyyy-MM-dd"),
-        horario,
+        horario: horarioSelecionado,
         service_id: servicoSelecionado!.id,
         preco: servicoSelecionado!.preco,
         observacoes: observacoes.trim() || undefined,
@@ -178,7 +200,7 @@ export default function NovoAgendamento() {
 
       toast({
         title: "Agendamento criado!",
-        description: `${cliente} agendado para ${format(data, "dd/MM/yyyy")} às ${horario}`,
+        description: `${cliente} agendado para ${format(data, "dd/MM/yyyy")} às ${horarioSelecionado}`,
       });
 
       navigate("/agenda");
@@ -332,27 +354,57 @@ export default function NovoAgendamento() {
 
                 <div className="space-y-2">
                   <Label>Horário</Label>
-                  <Select value={horario} onValueChange={setHorario} disabled={!data || !servicoId}>
-                    <SelectTrigger className="w-full">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="Selecione" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {!servicoId ? (
-                        <div className="p-2 text-sm text-muted-foreground">Selecione um serviço primeiro</div>
-                      ) : horariosDisponiveis.length === 0 ? (
-                        <div className="p-2 text-sm text-muted-foreground">Nenhum horário disponível</div>
-                      ) : (
-                        horariosDisponiveis.map((h) => (
-                          <SelectItem key={h} value={h}>
-                            {h}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select
+                      value={hora}
+                      onValueChange={(value) => {
+                        setHora(value);
+                        setMinuto("");
+                      }}
+                      disabled={!data || !servicoId}
+                    >
+                      <SelectTrigger className="w-full">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder="Hora" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {!servicoId ? (
+                          <div className="p-2 text-sm text-muted-foreground">Selecione um serviço primeiro</div>
+                        ) : availability.horas.length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground">Nenhuma hora disponível</div>
+                        ) : (
+                          availability.horas.map((h) => (
+                            <SelectItem key={h} value={h}>
+                              {h}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <Select value={minuto} onValueChange={setMinuto} disabled={!hora}>
+                      <SelectTrigger className="w-full">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder="Minuto" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {!hora ? (
+                          <div className="p-2 text-sm text-muted-foreground">Selecione uma hora</div>
+                        ) : minutosDisponiveis.length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground">Nenhum minuto disponível</div>
+                        ) : (
+                          minutosDisponiveis.map((m) => (
+                            <SelectItem key={m} value={m}>
+                              {m}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 

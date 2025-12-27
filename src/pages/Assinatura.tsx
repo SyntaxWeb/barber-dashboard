@@ -74,7 +74,6 @@ export default function Assinatura() {
     : "Nao definida";
   const subscriptionInactive = company.subscription_status !== "ativo";
   const pendingCheckoutUrl = latestOrder?.status === "pendente" ? latestOrder.checkout_url : null;
-console.log(latestOrder)
   const handleCheckout = async (planKey: string) => {
     setCheckoutPlan(planKey);
     setError(null);

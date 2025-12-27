@@ -46,6 +46,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import defaultLogo from "@/assets/syntax-logo.svg";
+import { AvailabilityData, joinHorario, splitHorario } from "@/lib/availability";
 
 const createFeedbackDefaults = (): ClientAppointmentFeedbackPayload => ({
   service_rating: 5,
@@ -79,9 +80,14 @@ export default function ClienteAgendamentos() {
   const [editAppointment, setEditAppointment] = useState<ClientAppointment | null>(null);
   const [editServiceId, setEditServiceId] = useState("");
   const [editDate, setEditDate] = useState<Date | undefined>(undefined);
-  const [editHorario, setEditHorario] = useState("");
+  const [editHora, setEditHora] = useState("");
+  const [editMinuto, setEditMinuto] = useState("");
   const [editNotes, setEditNotes] = useState("");
-  const [horariosEdit, setHorariosEdit] = useState<string[]>([]);
+  const [editAvailability, setEditAvailability] = useState<AvailabilityData>({
+    horarios: [],
+    horas: [],
+    minutosPorHora: {},
+  });
   const [savingEdit, setSavingEdit] = useState(false);
   const [loadingHorarios, setLoadingHorarios] = useState(false);
   const [feedbackAppointment, setFeedbackAppointment] = useState<ClientAppointment | null>(null);
@@ -141,20 +147,34 @@ export default function ClienteAgendamentos() {
 
   useEffect(() => {
     if (!editAppointment || !editDate || !activeCompany || !editServiceId) {
-      setHorariosEdit([]);
-      setEditHorario("");
+      setEditAvailability({ horarios: [], horas: [], minutosPorHora: {} });
+      setEditHora("");
+      setEditMinuto("");
       return;
     }
     setLoadingHorarios(true);
     clientFetchHorarios(format(editDate, "yyyy-MM-dd"), activeCompany, Number(editServiceId), editAppointment.id)
-      .then((horarios) => {
-        setHorariosEdit(horarios);
-        if (!horarios.includes(editHorario)) {
-          setEditHorario("");
-        }
+      .then((dataResponse) => {
+        setEditAvailability(dataResponse);
       })
       .finally(() => setLoadingHorarios(false));
-  }, [editAppointment, editDate, activeCompany, editServiceId, editHorario]);
+  }, [editAppointment, editDate, activeCompany, editServiceId]);
+
+  useEffect(() => {
+    if (!editHora) {
+      if (editMinuto) setEditMinuto("");
+      return;
+    }
+    if (!editAvailability.horas.includes(editHora)) {
+      setEditHora("");
+      setEditMinuto("");
+      return;
+    }
+    const minutosDisponiveis = editAvailability.minutosPorHora[editHora] ?? [];
+    if (!minutosDisponiveis.includes(editMinuto) && editMinuto) {
+      setEditMinuto("");
+    }
+  }, [editAvailability, editHora, editMinuto]);
 
   const statusBadge = useMemo(
     () => ({
@@ -178,6 +198,7 @@ export default function ClienteAgendamentos() {
     return diffMinutes >= 60;
   };
   const canGiveFeedback = (appointment: ClientAppointment) => appointment.status === "concluido";
+  const minutosEditDisponiveis = editHora ? editAvailability.minutosPorHora[editHora] ?? [] : [];
 
   const handleCancel = async (appointment: ClientAppointment) => {
     if (!token) return;
@@ -273,13 +294,16 @@ export default function ClienteAgendamentos() {
     setEditAppointment(appointment);
     setEditServiceId(appointment.service_id?.toString() ?? "");
     setEditDate(parseISO(`${appointment.data}T00:00:00`));
-    setEditHorario(appointment.horario);
+    const { hora, minuto } = splitHorario(appointment.horario);
+    setEditHora(hora);
+    setEditMinuto(minuto);
     setEditNotes(appointment.observacoes ?? "");
   };
 
   const handleUpdate = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!editAppointment || !token || !activeCompany || !editDate || !editServiceId || !editHorario) {
+    const horarioSelecionado = joinHorario(editHora, editMinuto);
+    if (!editAppointment || !token || !activeCompany || !editDate || !editServiceId || !horarioSelecionado) {
       toast({
         title: "Preencha todos os campos",
         description: "Selecione serviço, data e horário disponíveis.",
@@ -294,7 +318,7 @@ export default function ClienteAgendamentos() {
         {
           service_id: Number(editServiceId),
           data: format(editDate, "yyyy-MM-dd"),
-          horario: editHorario,
+          horario: horarioSelecionado,
           observacoes: editNotes.trim() || undefined,
         },
         token,
@@ -302,7 +326,7 @@ export default function ClienteAgendamentos() {
       );
       toast({
         title: "Agendamento atualizado",
-        description: `${format(editDate, "dd/MM")} às ${editHorario}`,
+        description: `${format(editDate, "dd/MM")} às ${horarioSelecionado}`,
       });
       setEditAppointment(null);
       loadAppointments();
@@ -548,29 +572,57 @@ export default function ClienteAgendamentos() {
             </div>
             <div className="space-y-2">
               <Label>Horário</Label>
-              <Select
-                value={editHorario}
-                onValueChange={setEditHorario}
-                disabled={loadingHorarios || !editDate || !editServiceId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingHorarios ? "Carregando..." : "Selecione um horário"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {!editServiceId && (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">Selecione um serviço primeiro</div>
-                  )}
-                  {editServiceId && horariosEdit.length === 0 && !loadingHorarios ? (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum horário disponível</div>
-                  ) : (
-                    horariosEdit.map((hora) => (
-                      <SelectItem key={hora} value={hora}>
-                        {hora}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-2 gap-2">
+                <Select
+                  value={editHora}
+                  onValueChange={(value) => {
+                    setEditHora(value);
+                    setEditMinuto("");
+                  }}
+                  disabled={loadingHorarios || !editDate || !editServiceId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingHorarios ? "Carregando..." : "Hora"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {!editServiceId && (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">Selecione um serviço primeiro</div>
+                    )}
+                    {editServiceId && editAvailability.horas.length === 0 && !loadingHorarios ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">Nenhuma hora disponível</div>
+                    ) : (
+                      editAvailability.horas.map((hora) => (
+                        <SelectItem key={hora} value={hora}>
+                          {hora}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={editMinuto}
+                  onValueChange={setEditMinuto}
+                  disabled={loadingHorarios || !editHora}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Minuto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {!editHora && (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">Selecione uma hora</div>
+                    )}
+                    {editHora && minutosEditDisponiveis.length === 0 && !loadingHorarios ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum minuto disponível</div>
+                    ) : (
+                      minutosEditDisponiveis.map((minuto) => (
+                        <SelectItem key={minuto} value={minuto}>
+                          {minuto}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Observações</Label>
