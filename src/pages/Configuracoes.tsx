@@ -29,13 +29,40 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { ConfiguracoesEmpresaTab } from "@/pages/configuracoes/ConfiguracoesEmpresaTab";
 import { ConfiguracoesAgendaTab } from "@/pages/configuracoes/ConfiguracoesAgendaTab";
 import { ConfiguracoesServicosTab } from "@/pages/configuracoes/ConfiguracoesServicosTab";
+import {
+  ConfiguracoesFidelidadeTab,
+  type LoyaltyRewardDraft,
+  type LoyaltySettingsForm,
+} from "@/pages/configuracoes/ConfiguracoesFidelidadeTab";
 import { createWeeklyScheduleState, weekDays, type WeekDayKey, type WeeklyScheduleState } from "@/pages/configuracoes/constants";
 import type { ExistingGalleryPhoto, GalleryUpload, WhatsappInfo } from "@/pages/configuracoes/types";
+import {
+  createLoyaltyReward,
+  deleteLoyaltyReward,
+  fetchLoyaltyRewards,
+  fetchLoyaltySettings,
+  type LoyaltyReward,
+  updateLoyaltyReward,
+  updateLoyaltySettings,
+} from "@/services/loyaltyService";
 
 const minutesFromTime = (value?: string | null) => {
   if (!value) return 0;
   const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
+};
+
+const centsToAmount = (value: number) => {
+  const normalized = Number.isFinite(value) ? value / 100 : 0;
+  return normalized.toFixed(2);
+};
+
+const amountToCents = (value: string) => {
+  const normalized = Number(value.replace(",", "."));
+  if (!Number.isFinite(normalized) || normalized <= 0) {
+    return 0;
+  }
+  return Math.round(normalized * 100);
 };
 
 const getApiErrorMessage = (error: unknown) => {
@@ -130,6 +157,23 @@ export default function Configuracoes() {
   const [whatsappError, setWhatsappError] = useState<string | null>(null);
   const [whatsappInfo, setWhatsappInfo] = useState<WhatsappInfo>({});
   const [whatsappSessionId, setWhatsappSessionId] = useState<string | null>(null);
+  const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettingsForm>({
+    enabled: false,
+    ruleType: "spend",
+    spendAmount: "10.00",
+    pointsPerVisit: "1",
+    expirationEnabled: false,
+    expirationDays: "180",
+  });
+  const [loyaltyRewards, setLoyaltyRewards] = useState<LoyaltyReward[]>([]);
+  const [loyaltySaving, setLoyaltySaving] = useState(false);
+  const [rewardCreating, setRewardCreating] = useState(false);
+  const [rewardDraft, setRewardDraft] = useState<LoyaltyRewardDraft>({
+    name: "",
+    description: "",
+    pointsCost: "",
+    active: true,
+  });
 
   const themeFields: Array<{ key: keyof BrandTheme; label: string; description: string }> = [
     { key: "primary", label: "Cor primária", description: "Botões, links e destaques" },
@@ -320,10 +364,12 @@ export default function Configuracoes() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [servicosData, configData, empresaData] = await Promise.all([
+        const [servicosData, configData, empresaData, loyaltySettingsData, loyaltyRewardsData] = await Promise.all([
           fetchServicos(),
           fetchConfiguracoes(),
           fetchEmpresa(),
+          fetchLoyaltySettings(),
+          fetchLoyaltyRewards(),
         ]);
         setServicos(servicosData);
         setConfiguracoes(configData);
@@ -365,6 +411,17 @@ export default function Configuracoes() {
         }
         setGalleryRemoved([]);
         clearGalleryPending();
+        setLoyaltyRewards(loyaltyRewardsData);
+        setLoyaltySettings({
+          enabled: loyaltySettingsData.enabled,
+          ruleType: loyaltySettingsData.rule_type,
+          spendAmount: centsToAmount(loyaltySettingsData.spend_amount_cents_per_point),
+          pointsPerVisit: String(loyaltySettingsData.points_per_visit ?? 1),
+          expirationEnabled: loyaltySettingsData.expiration_enabled,
+          expirationDays: loyaltySettingsData.expiration_days
+            ? String(loyaltySettingsData.expiration_days)
+            : "180",
+        });
       } finally {
         setLoading(false);
       }
@@ -739,6 +796,129 @@ export default function Configuracoes() {
     }
   };
 
+  const handleLoyaltyFormChange = (patch: Partial<LoyaltySettingsForm>) => {
+    setLoyaltySettings((prev) => ({ ...prev, ...patch }));
+  };
+
+  const handleSaveLoyaltySettings = async () => {
+    const amountCents = amountToCents(loyaltySettings.spendAmount);
+    const pointsPerVisit = Number.parseInt(loyaltySettings.pointsPerVisit, 10);
+    const expirationDays = Number.parseInt(loyaltySettings.expirationDays, 10);
+
+    if (loyaltySettings.ruleType === "spend" && amountCents <= 0) {
+      toast({ title: "Valor inválido", description: "Informe o valor por ponto.", variant: "destructive" });
+      return;
+    }
+
+    if (loyaltySettings.ruleType === "visits" && (!pointsPerVisit || pointsPerVisit <= 0)) {
+      toast({ title: "Pontos inválidos", description: "Informe pontos por presença.", variant: "destructive" });
+      return;
+    }
+
+    if (loyaltySettings.expirationEnabled && (!expirationDays || expirationDays <= 0)) {
+      toast({ title: "Prazo inválido", description: "Informe em quantos dias os pontos expiram.", variant: "destructive" });
+      return;
+    }
+
+    setLoyaltySaving(true);
+    try {
+      const payload = await updateLoyaltySettings({
+        enabled: loyaltySettings.enabled,
+        rule_type: loyaltySettings.ruleType,
+        spend_amount_cents_per_point: amountCents || 1000,
+        points_per_visit: pointsPerVisit || 1,
+        expiration_enabled: loyaltySettings.expirationEnabled,
+        expiration_days: loyaltySettings.expirationEnabled ? expirationDays : null,
+      });
+      setLoyaltySettings({
+        enabled: payload.enabled,
+        ruleType: payload.rule_type,
+        spendAmount: centsToAmount(payload.spend_amount_cents_per_point),
+        pointsPerVisit: String(payload.points_per_visit ?? 1),
+        expirationEnabled: payload.expiration_enabled,
+        expirationDays: payload.expiration_days ? String(payload.expiration_days) : "180",
+      });
+      toast({ title: "Fidelidade atualizada", description: "As regras foram salvas com sucesso." });
+    } catch (error) {
+      toast({ title: "Erro ao salvar", description: getApiErrorMessage(error), variant: "destructive" });
+    } finally {
+      setLoyaltySaving(false);
+    }
+  };
+
+  const handleRewardDraftChange = (patch: Partial<LoyaltyRewardDraft>) => {
+    setRewardDraft((prev) => ({ ...prev, ...patch }));
+  };
+
+  const handleCreateReward = async () => {
+    const name = rewardDraft.name.trim();
+    const pointsCost = Number.parseInt(rewardDraft.pointsCost, 10);
+
+    if (!name) {
+      toast({ title: "Nome obrigatório", description: "Informe o nome da recompensa.", variant: "destructive" });
+      return;
+    }
+    if (!pointsCost || pointsCost <= 0) {
+      toast({ title: "Pontos inválidos", description: "Informe o custo em pontos.", variant: "destructive" });
+      return;
+    }
+
+    setRewardCreating(true);
+    try {
+      const reward = await createLoyaltyReward({
+        name,
+        description: rewardDraft.description.trim() || undefined,
+        points_cost: pointsCost,
+        active: rewardDraft.active,
+      });
+      setLoyaltyRewards((prev) => [...prev, reward].sort((a, b) => a.points_cost - b.points_cost));
+      setRewardDraft({ name: "", description: "", pointsCost: "", active: true });
+      toast({ title: "Recompensa adicionada", description: "A recompensa foi criada." });
+    } catch (error) {
+      toast({ title: "Erro ao criar", description: getApiErrorMessage(error), variant: "destructive" });
+    } finally {
+      setRewardCreating(false);
+    }
+  };
+
+  const handleRewardChange = (id: number, patch: Partial<LoyaltyReward>) => {
+    setLoyaltyRewards((prev) => prev.map((reward) => (reward.id === id ? { ...reward, ...patch } : reward)));
+  };
+
+  const handleSaveReward = async (reward: LoyaltyReward) => {
+    if (!reward.name.trim()) {
+      toast({ title: "Nome obrigatório", description: "Informe o nome da recompensa.", variant: "destructive" });
+      return;
+    }
+    if (!reward.points_cost || reward.points_cost <= 0) {
+      toast({ title: "Pontos inválidos", description: "Informe o custo em pontos.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const updated = await updateLoyaltyReward(reward.id, {
+        name: reward.name.trim(),
+        description: reward.description ?? undefined,
+        points_cost: reward.points_cost,
+        active: reward.active,
+      });
+      setLoyaltyRewards((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      toast({ title: "Recompensa atualizada", description: "Os dados foram salvos." });
+    } catch (error) {
+      toast({ title: "Erro ao salvar", description: getApiErrorMessage(error), variant: "destructive" });
+    }
+  };
+
+  const handleDeleteReward = async (id: number) => {
+    try {
+      await deleteLoyaltyReward(id);
+      setLoyaltyRewards((prev) => prev.filter((reward) => reward.id !== id));
+      toast({ title: "Recompensa removida", description: "A recompensa foi excluída." });
+    } catch (error) {
+      toast({ title: "Erro ao excluir", description: getApiErrorMessage(error), variant: "destructive" });
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -773,6 +953,9 @@ export default function Configuracoes() {
             </TabsTrigger>
             <TabsTrigger value="servicos" className="w-full flex-1 whitespace-normal text-center sm:whitespace-nowrap">
               Serviços & catálogo
+            </TabsTrigger>
+            <TabsTrigger value="fidelidade" className="w-full flex-1 whitespace-normal text-center sm:whitespace-nowrap">
+              Fidelidade
             </TabsTrigger>
           </TabsList>
 
@@ -855,6 +1038,21 @@ export default function Configuracoes() {
             onAddServico={handleAddServico}
             servicos={servicos}
             onDeleteServico={handleDeleteServico}
+          />
+
+          <ConfiguracoesFidelidadeTab
+            form={loyaltySettings}
+            onFormChange={handleLoyaltyFormChange}
+            onSaveSettings={handleSaveLoyaltySettings}
+            savingSettings={loyaltySaving}
+            rewards={loyaltyRewards}
+            onRewardChange={handleRewardChange}
+            onSaveReward={handleSaveReward}
+            onDeleteReward={handleDeleteReward}
+            rewardDraft={rewardDraft}
+            onRewardDraftChange={handleRewardDraftChange}
+            onCreateReward={handleCreateReward}
+            creatingReward={rewardCreating}
           />
         </Tabs>
       </div>

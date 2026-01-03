@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Calendar as CalendarIcon,
@@ -9,8 +9,6 @@ import {
   NotebookPen,
   CheckCircle2,
   ArrowRight,
-  Star,
-  StarHalf,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,16 +19,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
-import {
-  clientCreateAgendamento,
-  clientFetchHorarios,
-  clientFetchServicos,
-  clientFetchFeedbackSummary,
-  CompanyFeedbackSummary,
-} from "@/services/clientPortalService";
+import { clientCreateAgendamento, clientFetchHorarios, clientFetchServicos } from "@/services/clientPortalService";
 import { Servico } from "@/data/mockData";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ClientPortalLayout } from "@/components/layout/ClientPortalLayout";
 import { AvailabilityData, joinHorario } from "@/lib/availability";
 
@@ -54,9 +45,6 @@ export default function ClienteAgendamento() {
   const [minuto, setMinuto] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [loading, setLoading] = useState(false);
-  const [feedbackSummary, setFeedbackSummary] = useState<CompanyFeedbackSummary | null>(null);
-  const [feedbackLoading, setFeedbackLoading] = useState(false);
-
   useEffect(() => {
     if (queryCompany && queryCompany !== companySlug) {
       setCompanySlug(queryCompany);
@@ -69,18 +57,6 @@ export default function ClienteAgendamento() {
       .then(setServicos)
       .catch(() => toast({ title: "Erro ao carregar serviços", variant: "destructive" }));
   }, [activeCompany, toast]);
-
-  useEffect(() => {
-    if (!activeCompany) {
-      setFeedbackSummary(null);
-      return;
-    }
-    setFeedbackLoading(true);
-    clientFetchFeedbackSummary(activeCompany)
-      .then(setFeedbackSummary)
-      .catch(() => setFeedbackSummary(null))
-      .finally(() => setFeedbackLoading(false));
-  }, [activeCompany]);
 
   useEffect(() => {
     if (!data || !activeCompany || !servicoId) {

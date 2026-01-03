@@ -56,6 +56,32 @@ export interface CreateClientePayload {
   observacoes?: string;
 }
 
+export interface ClienteLoyaltyTransaction {
+  id: number;
+  type: string;
+  points: number;
+  reason?: string | null;
+  created_at?: string | null;
+}
+
+export interface ClienteAppointmentHistory {
+  id: number;
+  data?: string | null;
+  horario?: string | null;
+  servico?: string | null;
+  preco?: number | null;
+  status?: string | null;
+}
+
+export interface ClienteHistory {
+  client: Cliente;
+  loyalty: {
+    points_balance: number;
+    transactions: ClienteLoyaltyTransaction[];
+  };
+  appointments: ClienteAppointmentHistory[];
+}
+
 export async function fetchClientes(search?: string): Promise<Cliente[]> {
   const query = search ? `?search=${encodeURIComponent(search)}` : "";
   return api<Cliente[]>(`/api/clients${query}`);
@@ -66,4 +92,8 @@ export async function createCliente(payload: CreateClientePayload): Promise<Clie
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function fetchClienteHistory(id: number): Promise<ClienteHistory> {
+  return api<ClienteHistory>(`/api/clients/${id}/history`);
 }
