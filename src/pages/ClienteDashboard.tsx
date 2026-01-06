@@ -55,7 +55,6 @@ const quickActions = [
 
 export default function ClienteDashboard() {
   const { companyInfo } = useClientAuth();
-  console.log(companyInfo)
 
   const companyName = companyInfo?.nome ?? "Barbearia";
   const companyDescription =

@@ -1,4 +1,5 @@
 import { Servico } from "@/data/mockData";
+import { AvailabilityData, normalizeAvailabilityResponse } from "@/lib/availability";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
 
@@ -68,12 +69,29 @@ export async function clientFetchServicos(companySlug: string): Promise<Servico[
   return publicGet<Servico[]>(`/api/services?company=${encodeURIComponent(companySlug)}`);
 }
 
-export async function clientFetchHorarios(date: string, companySlug: string): Promise<string[]> {
+export async function clientFetchHorarios(
+  date: string,
+  companySlug: string,
+  serviceId?: number,
+  appointmentId?: number,
+): Promise<AvailabilityData> {
   if (!companySlug) throw new Error("companySlug is required");
-  const result = await publicGet<{ horarios: string[] }>(
-    `/api/availability?date=${date}&company=${encodeURIComponent(companySlug)}`,
-  );
-  return result.horarios;
+  const params = new URLSearchParams({
+    date,
+    company: companySlug,
+  });
+  if (serviceId) {
+    params.set("service_id", serviceId.toString());
+  }
+  if (appointmentId) {
+    params.set("appointment_id", appointmentId.toString());
+  }
+  const result = await publicGet<{
+    horarios?: string[];
+    horas?: string[];
+    minutos_por_hora?: Record<string, string[]>;
+  }>(`/api/availability?${params.toString()}`);
+  return normalizeAvailabilityResponse(result);
 }
 
 interface ClientAppointmentPayload {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, FormEvent } from "react";
 import { format } from "date-fns";
-import { Users, Plus, Search, Mail, Phone, MessageSquare } from "lucide-react";
+import { Users, Plus, Search, Mail, Phone, MessageSquare, Eye } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { createCliente, fetchClientes, type Cliente } from "@/services/clientesService";
+import { createCliente, fetchClienteHistory, fetchClientes, type Cliente, type ClienteHistory } from "@/services/clientesService";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function Clientes() {
@@ -23,6 +23,10 @@ export default function Clientes() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [lastInvite, setLastInvite] = useState<{ nome: string; url: string } | null>(null);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyData, setHistoryData] = useState<ClienteHistory | null>(null);
 
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -105,6 +109,19 @@ export default function Clientes() {
     }
   };
 
+  const handleOpenHistory = (cliente: Cliente) => {
+    setHistoryDialogOpen(true);
+    setHistoryLoading(true);
+    setHistoryError(null);
+    setHistoryData(null);
+    fetchClienteHistory(cliente.id)
+      .then((data) => setHistoryData(data))
+      .catch((err) => {
+        setHistoryError(err instanceof Error ? err.message : "Não foi possível carregar o histórico.");
+      })
+      .finally(() => setHistoryLoading(false));
+  };
+
   const handleCreateCliente = async (event: FormEvent) => {
     event.preventDefault();
     if (!nome.trim() || !email.trim() || !telefone.trim()) {
@@ -145,6 +162,15 @@ export default function Clientes() {
 
   const formatCreatedAt = (cliente: Cliente) => {
     const value = cliente.created_at ?? cliente.updated_at;
+    if (!value) return "—";
+    try {
+      return format(new Date(value), "dd/MM/yyyy");
+    } catch {
+      return value;
+    }
+  };
+
+  const formatAppointmentDate = (value?: string | null) => {
     if (!value) return "—";
     try {
       return format(new Date(value), "dd/MM/yyyy");
@@ -283,6 +309,7 @@ export default function Clientes() {
                     <TableHead>Email</TableHead>
                     <TableHead>Telefone</TableHead>
                     <TableHead className="w-32">Desde</TableHead>
+                    <TableHead className="w-36 text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -307,6 +334,12 @@ export default function Clientes() {
                         </div>
                       </TableCell>
                       <TableCell>{formatCreatedAt(cliente)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" className="gap-2" onClick={() => handleOpenHistory(cliente)}>
+                          <Eye className="h-4 w-4" />
+                          Ver histórico
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -314,6 +347,110 @@ export default function Clientes() {
             )}
           </CardContent>
         </Card>
+
+        <Dialog open={historyDialogOpen} onOpenChange={(open) => {
+          setHistoryDialogOpen(open);
+          if (!open) {
+            setHistoryData(null);
+            setHistoryError(null);
+          }
+        }}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Histórico do cliente</DialogTitle>
+              <DialogDescription>
+                {historyData?.client?.nome ? `${historyData.client.nome} - resumo de fidelidade e atendimentos.` : "Resumo de fidelidade e atendimentos."}
+              </DialogDescription>
+            </DialogHeader>
+
+            {historyLoading ? (
+              <div className="py-6 text-center text-muted-foreground">Carregando histórico...</div>
+            ) : historyError ? (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {historyError}
+              </div>
+            ) : historyData ? (
+              <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Pontos disponíveis</CardTitle>
+                      <CardDescription>Saldo atual de fidelidade.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-4xl font-bold text-primary">{historyData.loyalty.points_balance}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Últimas movimentações</CardTitle>
+                      <CardDescription>Até 20 registros recentes.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {historyData.loyalty.transactions.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Nenhuma movimentação registrada.</p>
+                      ) : (
+                        <div className="space-y-3 text-sm">
+                          {historyData.loyalty.transactions.map((transaction) => (
+                            <div key={transaction.id} className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                              <div>
+                                <p className="font-medium">{transaction.reason ?? "Movimentação de pontos"}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {transaction.created_at ? formatAppointmentDate(transaction.created_at) : "—"}
+                                </p>
+                              </div>
+                              <span className={transaction.points >= 0 ? "text-emerald-600" : "text-rose-600"}>
+                                {transaction.points >= 0 ? "+" : ""}{transaction.points}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Atendimentos recentes</CardTitle>
+                    <CardDescription>Últimos horários registrados para este cliente.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {historyData.appointments.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Nenhum atendimento registrado.</p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Data</TableHead>
+                            <TableHead>Hora</TableHead>
+                            <TableHead>Serviço</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {historyData.appointments.map((appointment) => (
+                            <TableRow key={appointment.id}>
+                              <TableCell>{formatAppointmentDate(appointment.data)}</TableCell>
+                              <TableCell>{appointment.horario ?? "—"}</TableCell>
+                              <TableCell>{appointment.servico ?? "—"}</TableCell>
+                              <TableCell>{appointment.status ?? "—"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : null}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setHistoryDialogOpen(false)}>
+                Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

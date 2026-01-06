@@ -55,7 +55,6 @@ const navItems = [
 export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   const { client, companyInfo, logout } = useClientAuth();
 
-  console.log(client)
 
   const { palettes } = useTheme();
   const clientTheme = palettes.client;

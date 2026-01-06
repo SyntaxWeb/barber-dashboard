@@ -50,11 +50,12 @@ const normalizeClientUser = (data: any): ClientUser => ({
 });
 
 export function ClientAuthProvider({ children }: { children: ReactNode }) {
+  const initialToken = secureStorage.getItem(STORAGE_TOKEN);
   const [client, setClient] = useState<ClientUser | null>(() => {
     const stored = localStorage.getItem(STORAGE_USER);
-    return stored ? normalizeClientUser(JSON.parse(stored)) : null;
+    return stored && initialToken ? normalizeClientUser(JSON.parse(stored)) : null;
   });
-  const [token, setToken] = useState<string | null>(() => secureStorage.getItem(STORAGE_TOKEN));
+  const [token, setToken] = useState<string | null>(initialToken);
   const [companySlug, setCompanySlugState] = useState<string | null>(() => localStorage.getItem(STORAGE_COMPANY));
   const [companyInfo, setCompanyInfo] = useState<EmpresaInfo | null>(null);
   const { setPalette, activatePalette } = useTheme();
@@ -175,6 +176,13 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_USER);
     secureStorage.removeItem(STORAGE_TOKEN);
   };
+
+  useEffect(() => {
+    if (!token && client) {
+      setClient(null);
+      localStorage.removeItem(STORAGE_USER);
+    }
+  }, [token, client]);
 
   useEffect(() => {
     if (!companySlug) {

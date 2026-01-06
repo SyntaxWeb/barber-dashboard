@@ -1,4 +1,5 @@
 import { Agendamento, Servico, ConfiguracoesBarbearia } from "@/data/mockData";
+import { AvailabilityData, normalizeAvailabilityResponse } from "@/lib/availability";
 import { secureStorage } from "@/lib/secureStorage";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
@@ -225,9 +226,28 @@ export async function updateConfiguracoes(config: Partial<ConfiguracoesBarbearia
 
 // ========== HELPERS ==========
 
-export async function fetchHorariosDisponiveis(data: string): Promise<string[]> {
-  const result = await api<{ horarios: string[] }>(`/api/availability?date=${data}`);
-  return result.horarios;
+export async function fetchHorariosDisponiveis(
+  data: string,
+  serviceId?: number,
+  appointmentId?: number,
+  companySlug?: string,
+): Promise<AvailabilityData> {
+  const params = new URLSearchParams({ date: data });
+  if (companySlug) {
+    params.set("company", companySlug);
+  }
+  if (serviceId) {
+    params.set("service_id", serviceId.toString());
+  }
+  if (appointmentId) {
+    params.set("appointment_id", appointmentId.toString());
+  }
+  const result = await api<{
+    horarios?: string[];
+    horas?: string[];
+    minutos_por_hora?: Record<string, string[]>;
+  }>(`/api/availability?${params.toString()}`);
+  return normalizeAvailabilityResponse(result);
 }
 
 export function formatarData(data: string): string {

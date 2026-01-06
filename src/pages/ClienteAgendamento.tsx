@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Calendar as CalendarIcon,
@@ -9,8 +9,6 @@ import {
   NotebookPen,
   CheckCircle2,
   ArrowRight,
-  Star,
-  StarHalf,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,17 +19,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
-import {
-  clientCreateAgendamento,
-  clientFetchHorarios,
-  clientFetchServicos,
-  clientFetchFeedbackSummary,
-  CompanyFeedbackSummary,
-} from "@/services/clientPortalService";
+import { clientCreateAgendamento, clientFetchHorarios, clientFetchServicos } from "@/services/clientPortalService";
 import { Servico } from "@/data/mockData";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ClientPortalLayout } from "@/components/layout/ClientPortalLayout";
+import { AvailabilityData, joinHorario } from "@/lib/availability";
 
 export default function ClienteAgendamento() {
   const { client, token, companySlug, setCompanySlug, companyInfo } = useClientAuth();
@@ -44,13 +36,15 @@ export default function ClienteAgendamento() {
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [servicoId, setServicoId] = useState("");
   const [data, setData] = useState<Date | undefined>(new Date());
-  const [horariosDisponiveis, setHorariosDisponiveis] = useState<string[]>([]);
-  const [horario, setHorario] = useState("");
+  const [availability, setAvailability] = useState<AvailabilityData>({
+    horarios: [],
+    horas: [],
+    minutosPorHora: {},
+  });
+  const [hora, setHora] = useState("");
+  const [minuto, setMinuto] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [loading, setLoading] = useState(false);
-  const [feedbackSummary, setFeedbackSummary] = useState<CompanyFeedbackSummary | null>(null);
-  const [feedbackLoading, setFeedbackLoading] = useState(false);
-
   useEffect(() => {
     if (queryCompany && queryCompany !== companySlug) {
       setCompanySlug(queryCompany);
@@ -65,66 +59,40 @@ export default function ClienteAgendamento() {
   }, [activeCompany, toast]);
 
   useEffect(() => {
-    if (!activeCompany) {
-      setFeedbackSummary(null);
+    if (!data || !activeCompany || !servicoId) {
+      setAvailability({ horarios: [], horas: [], minutosPorHora: {} });
+      setHora("");
+      setMinuto("");
       return;
     }
-    setFeedbackLoading(true);
-    clientFetchFeedbackSummary(activeCompany)
-      .then(setFeedbackSummary)
-      .catch(() => setFeedbackSummary(null))
-      .finally(() => setFeedbackLoading(false));
-  }, [activeCompany]);
+    const dataStr = format(data, "yyyy-MM-dd");
+    clientFetchHorarios(dataStr, activeCompany, Number(servicoId))
+      .then((dataResponse) => {
+        setAvailability(dataResponse);
+      })
+      .catch(() => setAvailability({ horarios: [], horas: [], minutosPorHora: {} }));
+  }, [data, activeCompany, servicoId]);
 
   useEffect(() => {
-    if (data && activeCompany) {
-      const dataStr = format(data, "yyyy-MM-dd");
-      clientFetchHorarios(dataStr, activeCompany)
-        .then((horarios) => {
-          setHorariosDisponiveis(horarios);
-          if (!horarios.includes(horario)) {
-            setHorario("");
-          }
-        })
-        .catch(() => setHorariosDisponiveis([]));
+    if (!hora) {
+      if (minuto) setMinuto("");
+      return;
     }
-  }, [data, horario, activeCompany]);
+    if (!availability.horas.includes(hora)) {
+      setHora("");
+      setMinuto("");
+      return;
+    }
+    const minutosDisponiveis = availability.minutosPorHora[hora] ?? [];
+    if (!minutosDisponiveis.includes(minuto) && minuto) {
+      setMinuto("");
+    }
+  }, [availability, hora, minuto]);
 
   const servicoSelecionado = servicos.find((item) => item.id.toString() === servicoId);
+  const horarioSelecionado = joinHorario(hora, minuto);
+  const minutosDisponiveis = hora ? availability.minutosPorHora[hora] ?? [] : [];
 
-  const renderStars = (value?: number | null, size: "md" | "sm" = "md") => {
-    const rating = Math.min(Math.max(value ?? 0, 0), 5);
-    const fullStars = Math.floor(rating);
-    const hasHalf = rating - fullStars >= 0.5;
-    const iconClass = size === "sm" ? "h-4 w-4" : "h-5 w-5";
-
-    return (
-      <div className="flex items-center gap-0.5">
-        {Array.from({ length: 5 }).map((_, index) => {
-          const position = index + 1;
-
-          if (position <= fullStars) {
-            return <Star key={position} className={cn(iconClass, "text-amber-500 fill-amber-500")} />;
-          }
-
-          if (hasHalf && position === fullStars + 1) {
-            return <StarHalf key={position} className={cn(iconClass, "text-amber-500 fill-amber-500")} />;
-          }
-
-          return <Star key={position} className={cn(iconClass, "text-muted-foreground")} />;
-        })}
-      </div>
-    );
-  };
-
-  const formatFeedbackTimestamp = (value?: string | null) => {
-    if (!value) return "há pouco";
-    try {
-      return formatDistanceToNow(new Date(value), { locale: ptBR, addSuffix: true });
-    } catch {
-      return "há pouco";
-    }
-  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -144,7 +112,7 @@ export default function ClienteAgendamento() {
       return;
     }
 
-    if (!servicoSelecionado || !data || !horario) {
+    if (!servicoSelecionado || !data || !horarioSelecionado) {
       toast({
         title: "Preencha todos os campos",
         description: "Escolha serviço, data e horário disponíveis.",
@@ -159,7 +127,7 @@ export default function ClienteAgendamento() {
         {
           service_id: servicoSelecionado.id,
           data: format(data, "yyyy-MM-dd"),
-          horario,
+          horario: horarioSelecionado,
           observacoes: observacoes.trim() || undefined,
         },
         token,
@@ -168,11 +136,12 @@ export default function ClienteAgendamento() {
 
       toast({
         title: "Agendamento confirmado!",
-        description: `${servicoSelecionado.nome} em ${format(data, "dd/MM/yyyy")} às ${horario}`,
+        description: `${servicoSelecionado.nome} em ${format(data, "dd/MM/yyyy")} às ${horarioSelecionado}`,
       });
       setServicoId("");
       setObservacoes("");
-      setHorario("");
+      setHora("");
+      setMinuto("");
     } catch (error) {
       toast({
         title: "Horário indisponível",
@@ -267,24 +236,57 @@ export default function ClienteAgendamento() {
 
                 <div className="flex-1 space-y-2">
                   <Label>Horário</Label>
-                  <Select value={horario} onValueChange={setHorario}>
-                    <SelectTrigger>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="Escolha o horário" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {horariosDisponiveis.length === 0 && (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum horário livre</div>
-                      )}
-                      {horariosDisponiveis.map((item) => (
-                        <SelectItem key={item} value={item}>
-                          {item}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select
+                      value={hora}
+                      onValueChange={(value) => {
+                        setHora(value);
+                        setMinuto("");
+                      }}
+                      disabled={!data || !servicoId}
+                    >
+                      <SelectTrigger>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder="Hora" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {!servicoId && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">Selecione um serviço primeiro</div>
+                        )}
+                        {servicoId && availability.horas.length === 0 && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">Nenhuma hora livre</div>
+                        )}
+                        {availability.horas.map((item) => (
+                          <SelectItem key={item} value={item}>
+                            {item}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={minuto} onValueChange={setMinuto} disabled={!hora}>
+                      <SelectTrigger>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder="Minuto" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {!hora && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">Selecione uma hora</div>
+                        )}
+                        {hora && minutosDisponiveis.length === 0 && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum minuto livre</div>
+                        )}
+                        {minutosDisponiveis.map((item) => (
+                          <SelectItem key={item} value={item}>
+                            {item}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
