@@ -1,6 +1,5 @@
 import { secureStorage } from "@/lib/secureStorage";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
+import { apiFetch } from "@/services/api";
 
 const authHeaders = () => {
   const token = secureStorage.getItem("barbeiro-token");
@@ -29,12 +28,16 @@ export interface AppNotification {
 }
 
 export async function fetchNotifications(): Promise<AppNotification[]> {
-  const response = await fetch(`${API_URL}/api/notifications`, {
-    headers: {
-      Accept: "application/json",
-      ...authHeaders(),
+  const response = await apiFetch(
+    "/api/notifications",
+    {
+      headers: {
+        Accept: "application/json",
+        ...authHeaders(),
+      },
     },
-  });
+    "provider",
+  );
 
   if (!response.ok) {
     throw new Error("Não foi possível carregar as notificações");
@@ -48,13 +51,17 @@ export async function fetchNotifications(): Promise<AppNotification[]> {
 }
 
 export async function markNotificationAsRead(id: string): Promise<void> {
-  const response = await fetch(`${API_URL}/api/notifications/${id}/read`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      ...authHeaders(),
+  const response = await apiFetch(
+    `/api/notifications/${id}/read`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        ...authHeaders(),
+      },
     },
-  });
+    "provider",
+  );
 
   if (!response.ok) {
     throw new Error("Não foi possível atualizar a notificação");
@@ -62,13 +69,17 @@ export async function markNotificationAsRead(id: string): Promise<void> {
 }
 
 export async function markAllNotificationsAsRead(): Promise<void> {
-  const response = await fetch(`${API_URL}/api/notifications/read-all`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      ...authHeaders(),
+  const response = await apiFetch(
+    "/api/notifications/read-all",
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        ...authHeaders(),
+      },
     },
-  });
+    "provider",
+  );
 
   if (!response.ok) {
     throw new Error("Não foi possível atualizar as notificações");

@@ -1,6 +1,5 @@
 import { secureStorage } from "@/lib/secureStorage";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
+import { apiFetch } from "@/services/api";
 
 const authHeaders = () => {
   const token = secureStorage.getItem("barbeiro-token");
@@ -22,15 +21,19 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    method: options.method ?? "GET",
-    headers: {
-      Accept: "application/json",
-      ...authHeaders(),
-      ...(options.headers ?? {}),
+  const response = await apiFetch(
+    path,
+    {
+      method: options.method ?? "GET",
+      headers: {
+        Accept: "application/json",
+        ...authHeaders(),
+        ...(options.headers ?? {}),
+      },
+      body: options.body,
     },
-    body: options.body,
-  });
+    "provider",
+  );
 
   return handleResponse<T>(response);
 }

@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { resolveMediaUrl } from "@/lib/media";
 import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME, sanitizeTheme } from "@/lib/theme";
 import { useTheme } from "./ThemeContext";
 import { secureStorage } from "@/lib/secureStorage";
+import { apiFetch } from "@/services/api";
 
 interface CompanyInfo {
   id?: number;
@@ -127,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, activatePalette]);
 
-  const persistUser = (payload: any, authToken?: string | null) => {
+  const persistUser = useCallback((payload: any, authToken?: string | null) => {
     const normalizedUser = normalizeUser(payload);
     setUser(normalizedUser);
     localStorage.setItem(
@@ -143,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(authToken);
       secureStorage.setItem("barbeiro-token", authToken);
     }
-  };
+  }, []);
 
   const login = async (email: string, _senha: string): Promise<boolean> => {
     try {
@@ -174,12 +175,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     localStorage.removeItem("barbeiro-user");
     secureStorage.removeItem("barbeiro-token");
-  };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ scope?: string }>).detail;
+      if (detail?.scope && detail.scope !== "provider" && detail.scope !== "any") return;
+      logout();
+    };
+    window.addEventListener("auth:expired", handler);
+    return () => window.removeEventListener("auth:expired", handler);
+  }, [logout]);
 
   const updateCompany = (company: CompanyInfo | null) => {
     const normalized = normalizeCompany(company);
@@ -197,9 +209,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateUser = (payload: any) => {
-    persistUser(payload, token ?? null);
-  };
+  const updateUser = useCallback(
+    (payload: any) => {
+      persistUser(payload, token ?? null);
+    },
+    [persistUser, token],
+  );
+
+  useEffect(() => {
+    if (!token || typeof document === "undefined") return;
+    let cancelled = false;
+    const validate = async () => {
+      const response = await apiFetch(
+        "/api/me",
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        },
+        "provider",
+      );
+      if (!response.ok || cancelled) return;
+      try {
+        const payload = await response.json();
+        updateUser(payload);
+      } catch {
+        // ignore payload parsing errors
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void validate();
+      }
+    };
+
+    void validate();
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [token, updateUser]);
 
   return (
     <AuthContext.Provider

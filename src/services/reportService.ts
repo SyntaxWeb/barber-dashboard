@@ -1,6 +1,5 @@
 import { secureStorage } from "@/lib/secureStorage";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
+import { apiFetch } from "@/services/api";
 
 const authHeaders = () => {
   const token = secureStorage.getItem("barbeiro-token");
@@ -24,13 +23,17 @@ const unwrap = <T>(payload: MaybeWrapped<T>): T => {
 type ApiError = Error & { status?: number };
 
 async function api<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      ...authHeaders(),
+  const response = await apiFetch(
+    path,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...authHeaders(),
+      },
     },
-  });
+    "provider",
+  );
 
   if (!response.ok) {
     const message = await response.text();

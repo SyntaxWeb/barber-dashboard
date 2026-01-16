@@ -1,8 +1,7 @@
 import { Agendamento, Servico, ConfiguracoesBarbearia } from "@/data/mockData";
 import { AvailabilityData, normalizeAvailabilityResponse } from "@/lib/availability";
 import { secureStorage } from "@/lib/secureStorage";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
+import { apiFetch } from "@/services/api";
 
 const authHeaders = () => {
   const token = secureStorage.getItem("barbeiro-token");
@@ -19,14 +18,18 @@ const unwrap = <T>(payload: MaybeWrapped<T>): T => {
 };
 
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-      ...authHeaders(),
+  const response = await apiFetch(
+    path,
+    {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+        ...authHeaders(),
+      },
     },
-  });
+    "provider",
+  );
 
   if (!response.ok) {
     const message = await response.text();

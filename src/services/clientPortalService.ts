@@ -1,7 +1,6 @@
 import { Servico } from "@/data/mockData";
 import { AvailabilityData, normalizeAvailabilityResponse } from "@/lib/availability";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
+import { apiFetch } from "@/services/api";
 
 type MaybeWrapped<T> = T | { data: T };
 
@@ -13,7 +12,7 @@ const unwrap = <T>(payload: MaybeWrapped<T>): T => {
 };
 
 async function publicGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`);
+  const response = await apiFetch(path);
   if (!response.ok) {
     const message = await response.text();
     throw new Error(message || "Erro na requisição");
@@ -24,15 +23,19 @@ async function publicGet<T>(path: string): Promise<T> {
 }
 
 async function privateRequest<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      ...(options.headers || {}),
-      Authorization: `Bearer ${token}`,
+  const response = await apiFetch(
+    path,
+    {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(options.headers || {}),
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+    "client",
+  );
 
   const contentType = response.headers.get("content-type") ?? "";
 
@@ -268,7 +271,7 @@ export async function submitPublicFeedback(
   payload: ClientAppointmentFeedbackPayload,
 ): Promise<PublicFeedbackAppointment> {
   if (!token) throw new Error("Token inválido");
-  const response = await fetch(`${API_URL}/api/feedback/form/${encodeURIComponent(token)}`, {
+  const response = await apiFetch(`/api/feedback/form/${encodeURIComponent(token)}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

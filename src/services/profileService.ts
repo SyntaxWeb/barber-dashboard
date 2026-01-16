@@ -1,6 +1,5 @@
 import { secureStorage } from "@/lib/secureStorage";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
+import { apiFetch, handleResponse } from "@/services/api";
 
 const authHeaders = () => {
   const token = secureStorage.getItem("barbeiro-token");
@@ -11,14 +10,6 @@ const clientHeaders = () => {
   const token = secureStorage.getItem("cliente-token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Erro ao salvar perfil");
-  }
-  return (await response.json()) as T;
-}
 
 type ProviderProfilePayload = {
   name: string;
@@ -66,15 +57,19 @@ export async function updateProviderProfile(payload: ProviderProfilePayload) {
     avatar: payload.avatar ?? undefined,
   });
 
-  const response = await fetch(`${API_URL}/api/profile`, {
+  const response = await apiFetch(
+    "/api/profile",
+    {
     method: "POST",
     headers: {
       ...authHeaders(),
     },
     body: formData,
-  });
+    },
+    "provider",
+  );
 
-  return handleResponse(response);
+  return handleResponse(response, "Erro ao salvar perfil");
 }
 
 export async function updateClientProfile(payload: ClientProfilePayload) {
@@ -87,13 +82,17 @@ export async function updateClientProfile(payload: ClientProfilePayload) {
     avatar: payload.avatar ?? undefined,
   });
 
-  const response = await fetch(`${API_URL}/api/clients/profile`, {
+  const response = await apiFetch(
+    "/api/clients/profile",
+    {
     method: "POST",
     headers: {
       ...clientHeaders(),
     },
     body: formData,
-  });
+    },
+    "client",
+  );
 
-  return handleResponse(response);
+  return handleResponse(response, "Erro ao salvar perfil");
 }

@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { EmpresaInfo, fetchEmpresaPublic } from "@/services/companyService";
 import { DEFAULT_CLIENT_THEME } from "@/lib/theme";
 import { useTheme } from "./ThemeContext";
 import { secureStorage } from "@/lib/secureStorage";
+import { apiFetch } from "@/services/api";
 
 interface ClientUser {
   id?: number;
@@ -60,19 +61,19 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
   const [companyInfo, setCompanyInfo] = useState<EmpresaInfo | null>(null);
   const { setPalette, activatePalette } = useTheme();
 
-  const persistSession = (userPayload: any, jwt: string) => {
+  const persistSession = useCallback((userPayload: any, jwt: string) => {
     const normalized = normalizeClientUser(userPayload);
     setClient(normalized);
     setToken(jwt);
     localStorage.setItem(STORAGE_USER, JSON.stringify(normalized));
     secureStorage.setItem(STORAGE_TOKEN, jwt);
-  };
+  }, []);
 
-  const applyClientUpdate = (payload: any) => {
+  const applyClientUpdate = useCallback((payload: any) => {
     const normalized = normalizeClientUser(payload);
     setClient(normalized);
     localStorage.setItem(STORAGE_USER, JSON.stringify(normalized));
-  };
+  }, []);
 
   const persistCompanySlug = (slug: string | null, info?: EmpresaInfo | null) => {
     setCompanySlugState(slug);
@@ -170,12 +171,60 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setClient(null);
     setToken(null);
     localStorage.removeItem(STORAGE_USER);
     secureStorage.removeItem(STORAGE_TOKEN);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ scope?: string }>).detail;
+      if (detail?.scope && detail.scope !== "client" && detail.scope !== "any") return;
+      logout();
+    };
+    window.addEventListener("auth:expired", handler);
+    return () => window.removeEventListener("auth:expired", handler);
+  }, [logout]);
+
+  useEffect(() => {
+    if (!token || typeof document === "undefined") return;
+    let cancelled = false;
+    const validate = async () => {
+      const response = await apiFetch(
+        "/api/clients/me",
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        },
+        "client",
+      );
+      if (!response.ok || cancelled) return;
+      try {
+        const payload = await response.json();
+        applyClientUpdate(payload);
+      } catch {
+        // ignore payload parsing errors
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void validate();
+      }
+    };
+
+    void validate();
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [token, applyClientUpdate]);
 
   useEffect(() => {
     if (!token && client) {

@@ -1,6 +1,5 @@
 import { secureStorage } from "@/lib/secureStorage";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
+import { apiFetch } from "@/services/api";
 
 const authHeaders = () => {
   const token = secureStorage.getItem("barbeiro-token");
@@ -28,12 +27,16 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function fetchSubscriptionSummary() {
-  const response = await fetch(`${API_URL}/api/subscription`, {
-    headers: {
-      Accept: "application/json",
-      ...authHeaders(),
+  const response = await apiFetch(
+    "/api/subscription",
+    {
+      headers: {
+        Accept: "application/json",
+        ...authHeaders(),
+      },
     },
-  });
+    "provider",
+  );
 
   return handleResponse<{
     company: {
@@ -65,14 +68,18 @@ export async function fetchSubscriptionSummary() {
 }
 
 export async function requestSubscriptionCheckout(plan: string) {
-  const response = await fetch(`${API_URL}/api/subscription/checkout`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
+  const response = await apiFetch(
+    "/api/subscription/checkout",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(),
+      },
+      body: JSON.stringify({ plan }),
     },
-    body: JSON.stringify({ plan }),
-  });
+    "provider",
+  );
 
   return handleResponse<{
     checkout_url: string | null;

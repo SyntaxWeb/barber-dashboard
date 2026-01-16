@@ -1,33 +1,28 @@
 import { secureStorage } from "@/lib/secureStorage";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
+import { apiFetch, handleResponse } from "@/services/api";
 
 const authHeaders = () => {
   const token = secureStorage.getItem("barbeiro-token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Erro ao consultar dados");
-  }
-  return (await response.json()) as T;
-}
-
 export async function fetchProviders(params?: { plan?: string; status?: string }) {
   const query = new URLSearchParams();
   if (params?.plan) query.append("plan", params.plan);
   if (params?.status) query.append("status", params.status);
 
-  const response = await fetch(`${API_URL}/api/admin/providers?${query.toString()}`, {
+  const response = await apiFetch(
+    `/api/admin/providers?${query.toString()}`,
+    {
     headers: {
       Accept: "application/json",
       ...authHeaders(),
     },
-  });
+    },
+    "provider",
+  );
 
-  return handleResponse(response);
+  return handleResponse(response, "Erro ao consultar dados");
 }
 
 export type MercadoPagoSubscription = {
@@ -48,49 +43,61 @@ export type MercadoPagoSubscription = {
 };
 
 export async function fetchPlans() {
-  const response = await fetch(`${API_URL}/api/admin/plans`, {
+  const response = await apiFetch(
+    "/api/admin/plans",
+    {
     headers: {
       Accept: "application/json",
       ...authHeaders(),
     },
-  });
+    },
+    "provider",
+  );
 
   return handleResponse<{
     plans: Record<string, { name: string; price: number; months: number }>;
     statuses: string[];
-  }>(response);
+  }>(response, "Erro ao consultar dados");
 }
 
 export async function updateProviderSubscription(companyId: number, payload: { plan: string; status: string; price: number; renews_at?: string }) {
-  const response = await fetch(`${API_URL}/api/admin/providers/${companyId}/subscription`, {
-    method: "POST",
-    headers: {
-      ...authHeaders(),
+  const response = await apiFetch(
+    `/api/admin/providers/${companyId}/subscription`,
+    {
+      method: "POST",
+      headers: {
+        ...authHeaders(),
+      },
+      body: (() => {
+        const formData = new FormData();
+        formData.append("plan", payload.plan);
+        formData.append("status", payload.status);
+        formData.append("price", String(payload.price));
+        if (payload.renews_at) {
+          formData.append("renews_at", payload.renews_at);
+        }
+        return formData;
+      })(),
     },
-    body: (() => {
-      const formData = new FormData();
-      formData.append("plan", payload.plan);
-      formData.append("status", payload.status);
-      formData.append("price", String(payload.price));
-      if (payload.renews_at) {
-        formData.append("renews_at", payload.renews_at);
-      }
-      return formData;
-    })(),
-  });
+    "provider",
+  );
 
-  return handleResponse(response);
+  return handleResponse(response, "Erro ao consultar dados");
 }
 
 export async function fetchMercadoPagoSubscriptions() {
-  const response = await fetch(`${API_URL}/api/admin/mercado-pago/subscriptions`, {
-    headers: {
-      Accept: "application/json",
-      ...authHeaders(),
+  const response = await apiFetch(
+    "/api/admin/mercado-pago/subscriptions",
+    {
+      headers: {
+        Accept: "application/json",
+        ...authHeaders(),
+      },
     },
-  });
+    "provider",
+  );
 
-  const data = await handleResponse<{ data: MercadoPagoSubscription[] }>(response);
+  const data = await handleResponse<{ data: MercadoPagoSubscription[] }>(response, "Erro ao consultar dados");
   return data.data;
 }
 
@@ -101,15 +108,19 @@ type PlanSyncResult = {
 };
 
 export async function syncMercadoPagoPlans() {
-  const response = await fetch(`${API_URL}/api/admin/mercado-pago/plans/sync`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      ...authHeaders(),
+  const response = await apiFetch(
+    "/api/admin/mercado-pago/plans/sync",
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        ...authHeaders(),
+      },
     },
-  });
+    "provider",
+  );
 
-  const data = await handleResponse<{ data: PlanSyncResult[] }>(response);
+  const data = await handleResponse<{ data: PlanSyncResult[] }>(response, "Erro ao consultar dados");
   return data.data;
 }
 
@@ -150,12 +161,16 @@ export async function fetchActivityLogs(filters: ActivityLogFilters = {}) {
   if (filters.user_id) query.append("user_id", filters.user_id);
   if (filters.action) query.append("action", filters.action);
 
-  const response = await fetch(`${API_URL}/api/admin/logs?${query.toString()}`, {
+  const response = await apiFetch(
+    `/api/admin/logs?${query.toString()}`,
+    {
     headers: {
       Accept: "application/json",
       ...authHeaders(),
     },
-  });
+    },
+    "provider",
+  );
 
-  return handleResponse<PaginatedResponse<ActivityLog>>(response);
+  return handleResponse<PaginatedResponse<ActivityLog>>(response, "Erro ao consultar dados");
 }

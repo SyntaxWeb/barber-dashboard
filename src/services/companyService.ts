@@ -1,7 +1,6 @@
 import { secureStorage } from "@/lib/secureStorage";
 import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME, sanitizeTheme } from "@/lib/theme";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
+import { apiFetch, handleResponse } from "@/services/api";
 
 const authHeaders = () => {
   const token = secureStorage.getItem("barbeiro-token");
@@ -30,14 +29,6 @@ export interface EmpresaInfo {
   client_theme: BrandTheme;
 }
 
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Erro na requisição");
-  }
-  return (await response.json()) as T;
-}
-
 const normalizeEmpresa = (empresa: EmpresaInfo): EmpresaInfo => {
   const galleryPhotos = Array.isArray(empresa.gallery_photos)
     ? empresa.gallery_photos
@@ -55,14 +46,18 @@ const normalizeEmpresa = (empresa: EmpresaInfo): EmpresaInfo => {
 };
 
 export async function fetchEmpresa(): Promise<EmpresaInfo> {
-  const response = await fetch(`${API_URL}/api/company`, {
+  const response = await apiFetch(
+    "/api/company",
+    {
     headers: {
       Accept: "application/json",
       ...authHeaders(),
     },
-  });
+    },
+    "provider",
+  );
 
-  const data = await handleResponse<EmpresaInfo>(response);
+  const data = await handleResponse<EmpresaInfo>(response, "Erro na requisição");
   return normalizeEmpresa(data);
 }
 
@@ -71,13 +66,13 @@ export async function fetchEmpresaPublic(slug: string): Promise<EmpresaInfo> {
     throw new Error("slug is required");
   }
 
-  const response = await fetch(`${API_URL}/api/companies/${encodeURIComponent(slug)}`, {
+  const response = await apiFetch(`/api/companies/${encodeURIComponent(slug)}`, {
     headers: {
       Accept: "application/json",
     },
   });
 
-  const data = await handleResponse<EmpresaInfo>(response);
+  const data = await handleResponse<EmpresaInfo>(response, "Erro na requisição");
   return normalizeEmpresa(data);
 }
 
@@ -145,38 +140,50 @@ export async function updateEmpresa(payload: UpdateEmpresaPayload): Promise<Empr
     });
   }
 
-  const response = await fetch(`${API_URL}/api/company`, {
-    method: "POST",
-    headers: {
-      ...authHeaders(),
+  const response = await apiFetch(
+    "/api/company",
+    {
+      method: "POST",
+      headers: {
+        ...authHeaders(),
+      },
+      body: formData,
     },
-    body: formData,
-  });
+    "provider",
+  );
 
-  const data = await handleResponse<EmpresaInfo>(response);
+  const data = await handleResponse<EmpresaInfo>(response, "Erro na requisição");
   return normalizeEmpresa(data);
 }
 
 export async function requestTelegramLink(): Promise<{ link: string }> {
-  const response = await fetch(`${API_URL}/api/company/telegram/link`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      ...authHeaders(),
+  const response = await apiFetch(
+    "/api/company/telegram/link",
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        ...authHeaders(),
+      },
     },
-  });
+    "provider",
+  );
 
-  return handleResponse<{ link: string }>(response);
+  return handleResponse<{ link: string }>(response, "Erro na requisição");
 }
 
 export async function verifyTelegramLink(): Promise<{ chat_id: string }> {
-  const response = await fetch(`${API_URL}/api/company/telegram/link/verify`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      ...authHeaders(),
+  const response = await apiFetch(
+    "/api/company/telegram/link/verify",
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        ...authHeaders(),
+      },
     },
-  });
+    "provider",
+  );
 
-  return handleResponse<{ chat_id: string }>(response);
+  return handleResponse<{ chat_id: string }>(response, "Erro na requisição");
 }
