@@ -1,4 +1,5 @@
 import { useEffect, useState, ChangeEvent, useRef, useCallback } from "react";
+import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -725,7 +726,8 @@ export default function Configuracoes() {
         diasBloqueados: diasBloqueados.map((d) => format(d, "yyyy-MM-dd")),
         weeklySchedule: weeklySchedulePayload,
       });
-      setConfiguracoes(updated);
+      
+      setConfiguracoes(updated);      
       setHorarioInicio(updated.horarioInicio);
       setHorarioFim(updated.horarioFim);
       setIntervalo(updated.intervaloMinutos.toString());
