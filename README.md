@@ -37,7 +37,7 @@ php artisan serve
 
 - Frontend: build com `npm run build` e publicação via CDN, VPS ou serviço estático.
 - Backend: deploy Laravel em VPS ou plataforma compatível (PHP 8.3+), apontando para o mesmo banco da aplicação.
-- Configure `APP_URL` e `CORS_ALLOWED_ORIGINS` para refletirem os domínios de produção (`https://api-barberapp.syntaxweb.com.br`, `https://barberapp.syntaxweb.com.br`). 
+- Configure `APP_URL`, `FRONTEND_URL` e `CORS_ALLOWED_ORIGINS` para refletirem os domínios de produção. Hoje o projeto já usa domínios legados e atuais, como `https://api-barberapp.syntaxweb.com.br`, `https://barberapp.syntaxweb.com.br`, `https://syntaxatendimento.com.br` e `https://api-atendimento.syntaxatendimento.com.br`. 
 
 ## Suporte
 

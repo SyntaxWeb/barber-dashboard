@@ -9,13 +9,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { createCliente, fetchClienteHistory, fetchClientes, type Cliente, type ClienteHistory } from "@/services/clientesService";
 import { useAuth } from "@/contexts/AuthContext";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
+import { buildWhatsAppUrl, openWhatsAppChat } from "@/lib/whatsapp";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Clientes() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,6 +127,19 @@ export default function Clientes() {
       .finally(() => setHistoryLoading(false));
   };
 
+  const handleWhatsAppContact = (cliente: Cliente) => {
+    const message = `Olá ${cliente.nome}! Aqui é da ${companyName}.`;
+    const opened = openWhatsAppChat(cliente.telefone, message);
+
+    if (!opened) {
+      toast({
+        title: "WhatsApp indisponível",
+        description: "Não foi possível abrir a conversa. Verifique o telefone do cliente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCreateCliente = async (event: FormEvent) => {
     event.preventDefault();
     if (!nome.trim() || !email.trim() || !telefone.trim()) {
@@ -187,6 +205,25 @@ export default function Clientes() {
       return value;
     }
   };
+
+  const handleHistoryDialogChange = (open: boolean) => {
+    setHistoryDialogOpen(open);
+    if (!open) {
+      setHistoryData(null);
+      setHistoryError(null);
+    }
+  };
+
+  const renderHistoryContent = (mobileView: boolean) => (
+    <HistoryContent
+      historyLoading={historyLoading}
+      historyError={historyError}
+      historyData={historyData}
+      formatDateTime={formatDateTime}
+      formatAppointmentDate={formatAppointmentDate}
+      isMobile={mobileView}
+    />
+  );
 
   return (
     <Layout>
@@ -310,6 +347,44 @@ export default function Clientes() {
                 <p className="font-medium">Nenhum cliente encontrado</p>
                 <p className="text-sm">Cadastre um novo cliente ou refine sua busca.</p>
               </div>
+            ) : isMobile ? (
+              <div className="space-y-3">
+                {filteredClientes.map((cliente) => (
+                  <div key={cliente.id} className="rounded-xl border border-border/60 bg-background p-4 shadow-sm">
+                    <div className="space-y-1">
+                      <p className="font-medium">{cliente.nome}</p>
+                      {cliente.observacoes ? (
+                        <p className="text-xs text-muted-foreground">{cliente.observacoes}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-4 space-y-2 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Mail className="h-4 w-4" />
+                        <span className="min-w-0 break-all">{cliente.email || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Phone className="h-4 w-4" />
+                        <span>{cliente.telefone || "—"}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Cliente desde {formatCreatedAt(cliente)}</p>
+                    </div>
+
+                    <div className="mt-4 flex flex-col gap-2">
+                      {buildWhatsAppUrl(cliente.telefone) ? (
+                        <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => handleWhatsAppContact(cliente)}>
+                          <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
+                          WhatsApp
+                        </Button>
+                      ) : null}
+                      <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => handleOpenHistory(cliente)}>
+                        <Eye className="h-4 w-4" />
+                        Ver histórico
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <Table>
                 <TableHeader>
@@ -344,10 +419,18 @@ export default function Clientes() {
                       </TableCell>
                       <TableCell>{formatCreatedAt(cliente)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" className="gap-2" onClick={() => handleOpenHistory(cliente)}>
-                          <Eye className="h-4 w-4" />
-                          Ver histórico
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          {buildWhatsAppUrl(cliente.telefone) ? (
+                            <Button variant="outline" size="sm" className="gap-2" onClick={() => handleWhatsAppContact(cliente)}>
+                              <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
+                              WhatsApp
+                            </Button>
+                          ) : null}
+                          <Button variant="outline" size="sm" className="gap-2" onClick={() => handleOpenHistory(cliente)}>
+                            <Eye className="h-4 w-4" />
+                            Ver histórico
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -357,169 +440,237 @@ export default function Clientes() {
           </CardContent>
         </Card>
 
-        <Dialog open={historyDialogOpen} onOpenChange={(open) => {
-          setHistoryDialogOpen(open);
-          if (!open) {
-            setHistoryData(null);
-            setHistoryError(null);
-          }
-        }}>
-          <DialogContent className="max-w-5xl">
-            <DialogHeader>
-              <DialogTitle>Histórico do cliente</DialogTitle>
-              <DialogDescription>
-                {historyData?.client?.nome ? `${historyData.client.nome} - resumo de fidelidade e atendimentos.` : "Resumo de fidelidade e atendimentos."}
-              </DialogDescription>
-            </DialogHeader>
-
-            {historyLoading ? (
-              <div className="py-6 text-center text-muted-foreground">Carregando histórico...</div>
-            ) : historyError ? (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {historyError}
-              </div>
-            ) : historyData ? (
-              <div className="space-y-6">
-                <div className="grid items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-                  <div className="space-y-4 lg:sticky lg:top-0">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Pontos disponíveis</CardTitle>
-                      <CardDescription>Saldo atual de fidelidade.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="text-5xl font-bold leading-none text-primary">{historyData.loyalty.points_balance}</div>
-                      <p className="text-sm text-muted-foreground">
-                        {historyData.loyalty.points_balance === 1
-                          ? "1 ponto acumulado neste cliente."
-                          : `${historyData.loyalty.points_balance} pontos acumulados neste cliente.`}
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Recompensas disponíveis</CardTitle>
-                      <CardDescription>Benefícios que este cliente já pode resgatar agora.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {historyData.loyalty.available_rewards.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          Ainda não há recompensas disponíveis com o saldo atual deste cliente.
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          {historyData.loyalty.available_rewards.map((reward) => (
-                            <div
-                              key={reward.id}
-                              className={`rounded-xl border px-4 py-3 ${
-                                reward.available
-                                  ? "border-amber-300/70 bg-amber-50"
-                                  : "border-border/60 bg-muted/20"
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="font-medium">{reward.name}</p>
-                                  {reward.description ? (
-                                    <p className="mt-1 text-sm text-muted-foreground">{reward.description}</p>
-                                  ) : null}
-                                </div>
-                                <div className="shrink-0 text-right">
-                                  <p className="text-sm font-semibold text-primary">{reward.points_cost} pts</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {reward.available ? "Disponível" : "Indisponível"}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                  </div>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Últimas movimentações</CardTitle>
-                      <CardDescription>Até 20 registros recentes.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {historyData.loyalty.transactions.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Nenhuma movimentação registrada.</p>
-                      ) : (
-                        <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1 text-sm">
-                          {historyData.loyalty.transactions.map((transaction) => (
-                            <div
-                              key={transaction.id}
-                              className="flex items-start justify-between gap-4 rounded-xl border border-border/60 bg-muted/20 px-3 py-3"
-                            >
-                              <div className="min-w-0">
-                                <p className="font-medium leading-tight">{transaction.reason ?? "Movimentação de pontos"}</p>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                  {formatDateTime(transaction.created_at)}
-                                </p>
-                              </div>
-                              <span
-                                className={`shrink-0 text-sm font-semibold ${
-                                  transaction.points >= 0 ? "text-emerald-600" : "text-rose-600"
-                                }`}
-                              >
-                                {transaction.points >= 0 ? "+" : ""}{transaction.points}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Atendimentos recentes</CardTitle>
-                    <CardDescription>Últimos horários registrados para este cliente.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {historyData.appointments.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Nenhum atendimento registrado.</p>
-                    ) : (
-                      <div className="overflow-hidden rounded-xl border border-border/60">
-                        <div className="max-h-[340px] overflow-auto">
-                          <Table>
-                            <TableHeader className="sticky top-0 bg-background">
-                              <TableRow>
-                                <TableHead>Data</TableHead>
-                                <TableHead>Hora</TableHead>
-                                <TableHead>Serviço</TableHead>
-                                <TableHead>Status</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {historyData.appointments.map((appointment) => (
-                                <TableRow key={appointment.id}>
-                                  <TableCell>{formatAppointmentDate(appointment.data)}</TableCell>
-                                  <TableCell>{appointment.horario ?? "—"}</TableCell>
-                                  <TableCell>{appointment.servico ?? "—"}</TableCell>
-                                  <TableCell className="capitalize">{appointment.status ?? "—"}</TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            ) : null}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setHistoryDialogOpen(false)}>
-                Fechar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {isMobile ? (
+          <Sheet open={historyDialogOpen} onOpenChange={handleHistoryDialogChange}>
+            <SheetContent side="bottom" className="h-[92vh] rounded-t-2xl px-0 pb-0 pt-6">
+              <SheetHeader className="px-4 text-left">
+                <SheetTitle>Histórico do cliente</SheetTitle>
+                <SheetDescription>
+                  {historyData?.client?.nome ? `${historyData.client.nome} - resumo de fidelidade e atendimentos.` : "Resumo de fidelidade e atendimentos."}
+                </SheetDescription>
+              </SheetHeader>
+              {renderHistoryContent(true)}
+              <SheetFooter className="border-t px-4 py-4">
+                <Button variant="outline" onClick={() => setHistoryDialogOpen(false)}>
+                  Fechar
+                </Button>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
+        ) : (
+          <Dialog open={historyDialogOpen} onOpenChange={handleHistoryDialogChange}>
+            <DialogContent className="max-h-[calc(100vh-2rem)] max-w-5xl overflow-hidden p-0">
+              <DialogHeader className="px-6 pb-0 pt-6">
+                <DialogTitle>Histórico do cliente</DialogTitle>
+                <DialogDescription>
+                  {historyData?.client?.nome ? `${historyData.client.nome} - resumo de fidelidade e atendimentos.` : "Resumo de fidelidade e atendimentos."}
+                </DialogDescription>
+              </DialogHeader>
+              {renderHistoryContent(false)}
+              <DialogFooter className="px-6 pb-6 pt-0">
+                <Button variant="outline" onClick={() => setHistoryDialogOpen(false)}>
+                  Fechar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </Layout>
+  );
+}
+
+interface HistoryContentProps {
+  historyLoading: boolean;
+  historyError: string | null;
+  historyData: ClienteHistory | null;
+  formatDateTime: (value?: string | null) => string;
+  formatAppointmentDate: (value?: string | null) => string;
+  isMobile: boolean;
+}
+
+function HistoryContent({
+  historyLoading,
+  historyError,
+  historyData,
+  formatDateTime,
+  formatAppointmentDate,
+  isMobile,
+}: HistoryContentProps) {
+  if (historyLoading) {
+    return <div className="px-4 py-6 text-center text-muted-foreground sm:px-6">Carregando histórico...</div>;
+  }
+
+  if (historyError) {
+    return (
+      <div className="mx-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive sm:mx-6">
+        {historyError}
+      </div>
+    );
+  }
+
+  if (!historyData) return null;
+
+  return (
+    <div className="max-h-[calc(100%-7rem)] overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6">
+      <div className="space-y-6">
+        <div className="grid items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="space-y-4 lg:sticky lg:top-0">
+            <Card>
+              <CardHeader>
+                <CardTitle>Pontos disponíveis</CardTitle>
+                <CardDescription>Saldo atual de fidelidade.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-5xl font-bold leading-none text-primary">{historyData.loyalty.points_balance}</div>
+                <p className="text-sm text-muted-foreground">
+                  {historyData.loyalty.points_balance === 1
+                    ? "1 ponto acumulado neste cliente."
+                    : `${historyData.loyalty.points_balance} pontos acumulados neste cliente.`}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Recompensas disponíveis</CardTitle>
+                <CardDescription>Benefícios que este cliente já pode resgatar agora.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {historyData.loyalty.available_rewards.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Ainda não há recompensas disponíveis com o saldo atual deste cliente.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {historyData.loyalty.available_rewards.map((reward) => (
+                      <div
+                        key={reward.id}
+                        className={`rounded-xl border px-4 py-3 ${
+                          reward.available
+                            ? "border-amber-300/70 bg-amber-50"
+                            : "border-border/60 bg-muted/20"
+                        }`}
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="font-medium">{reward.name}</p>
+                            {reward.description ? (
+                              <p className="mt-1 text-sm text-muted-foreground">{reward.description}</p>
+                            ) : null}
+                          </div>
+                          <div className="shrink-0 text-left sm:text-right">
+                            <p className="text-sm font-semibold text-primary">{reward.points_cost} pts</p>
+                            <p className="text-xs text-muted-foreground">
+                              {reward.available ? "Disponível" : "Indisponível"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Últimas movimentações</CardTitle>
+              <CardDescription>Até 20 registros recentes.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {historyData.loyalty.transactions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma movimentação registrada.</p>
+              ) : (
+                <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1 text-sm">
+                  {historyData.loyalty.transactions.map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="flex flex-col gap-2 rounded-xl border border-border/60 bg-muted/20 px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium leading-tight">{transaction.reason ?? "Movimentação de pontos"}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {formatDateTime(transaction.created_at)}
+                        </p>
+                      </div>
+                      <span
+                        className={`shrink-0 text-sm font-semibold ${
+                          transaction.points >= 0 ? "text-emerald-600" : "text-rose-600"
+                        }`}
+                      >
+                        {transaction.points >= 0 ? "+" : ""}{transaction.points}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Atendimentos recentes</CardTitle>
+            <CardDescription>Últimos horários registrados para este cliente.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {historyData.appointments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum atendimento registrado.</p>
+            ) : isMobile ? (
+              <div className="space-y-3">
+                {historyData.appointments.map((appointment) => (
+                  <div key={appointment.id} className="rounded-xl border border-border/60 bg-muted/20 p-4">
+                    <div className="grid gap-2 text-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">Data</span>
+                        <span className="font-medium">{formatAppointmentDate(appointment.data)}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">Hora</span>
+                        <span className="font-medium">{appointment.horario ?? "—"}</span>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-muted-foreground">Serviço</span>
+                        <span className="max-w-[65%] text-right font-medium">{appointment.servico ?? "—"}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">Status</span>
+                        <span className="font-medium capitalize">{appointment.status ?? "—"}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-border/60">
+                <div className="max-h-[340px] overflow-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-background">
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">Data</TableHead>
+                        <TableHead className="whitespace-nowrap">Hora</TableHead>
+                        <TableHead className="min-w-[180px]">Serviço</TableHead>
+                        <TableHead className="whitespace-nowrap">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {historyData.appointments.map((appointment) => (
+                        <TableRow key={appointment.id}>
+                          <TableCell className="whitespace-nowrap">{formatAppointmentDate(appointment.data)}</TableCell>
+                          <TableCell className="whitespace-nowrap">{appointment.horario ?? "—"}</TableCell>
+                          <TableCell>{appointment.servico ?? "—"}</TableCell>
+                          <TableCell className="whitespace-nowrap capitalize">{appointment.status ?? "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }

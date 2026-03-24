@@ -3,9 +3,11 @@ import { Phone, Calendar, Clock, Scissors, FileText, Check, Trash2, Star, Messag
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { Agendamento } from "@/data/mockData";
 import { formatarData, formatarPreco, cancelarAgendamento, concluirAgendamento } from "@/services/agendaService";
 import { useToast } from "@/hooks/use-toast";
+import { buildWhatsAppUrl, openWhatsAppChat } from "@/lib/whatsapp";
 
 interface AppointmentModalProps {
   agendamento: Agendamento | null;
@@ -70,6 +72,20 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
     }
   };
 
+  const handleWhatsAppContact = () => {
+    console.log(agendamento)
+    const message = `Olá ${agendamento.cliente}! Aqui é da equipe da ${agendamento.company.nome}. Estou entrando em contato sobre seu atendimento do dia ${formatarData(agendamento.data)} às ${agendamento.horario}.`;
+    const opened = openWhatsAppChat(agendamento.telefone, message);
+
+    if (!opened) {
+      toast({
+        title: "WhatsApp indisponível",
+        description: "Não foi possível abrir a conversa. Verifique o telefone do cliente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -120,6 +136,13 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
               </div>
               <span className="font-bold text-primary">{formatarPreco(agendamento.preco)}</span>
             </div>
+
+            {buildWhatsAppUrl(agendamento.telefone) ? (
+              <Button variant="outline" className="w-full gap-2" onClick={handleWhatsAppContact}>
+                <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
+                Chamar no WhatsApp
+              </Button>
+            ) : null}
 
             {Boolean(agendamento.loyalty?.available_rewards_count) && (
               <div className="rounded-lg border border-amber-300/60 bg-amber-50 p-3">
