@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Phone, Calendar as CalendarIcon, Clock, Scissors, FileText, Save } from "lucide-react";
+import { ArrowLeft, User, Phone, Calendar as CalendarIcon, ChevronDown, Clock, Scissors, FileText, Save } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Layout } from "@/components/layout/Layout";
 import { Servico, ConfiguracoesBarbearia } from "@/data/mockData";
 import {
@@ -45,7 +46,7 @@ export default function NovoAgendamento() {
   const [clienteSugestoes, setClienteSugestoes] = useState<ClienteInfo[]>([]);
   const [buscandoClientes, setBuscandoClientes] = useState(false);
   const [clienteSelecionado, setClienteSelecionado] = useState<ClienteInfo | null>(null);
-  const [servicoId, setServicoId] = useState("");
+  const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([]);
   const [data, setData] = useState<Date | undefined>(new Date());
   const [hora, setHora] = useState("");
   const [minuto, setMinuto] = useState("");
@@ -62,19 +63,19 @@ export default function NovoAgendamento() {
   }, []);
 
   useEffect(() => {
-    if (!data || !configuracoes || !servicoId) {
+    if (!data || !configuracoes || selectedServiceIds.length === 0) {
       setAvailability({ horarios: [], horas: [], minutosPorHora: {} });
       setHora("");
       setMinuto("");
       return;
     }
     const dataStr = format(data, "yyyy-MM-dd");
-    fetchHorariosDisponiveis(dataStr, Number(servicoId), undefined, companySlug)
+    fetchHorariosDisponiveis(dataStr, selectedServiceIds[0], undefined, selectedServiceIds, companySlug)
       .then((dataResponse) => {
         setAvailability(dataResponse);
       })
       .catch(() => setAvailability({ horarios: [], horas: [], minutosPorHora: {} }));
-  }, [data, configuracoes, servicoId, companySlug]);
+  }, [data, configuracoes, selectedServiceIds, companySlug]);
 
   useEffect(() => {
     if (!hora) {
@@ -157,9 +158,11 @@ export default function NovoAgendamento() {
     setClienteSugestoes([]);
   };
 
-  const servicoSelecionado = servicos.find((s) => s.id.toString() === servicoId);
+  const servicosSelecionados = servicos.filter((servico) => selectedServiceIds.includes(servico.id));
   const horarioSelecionado = joinHorario(hora, minuto);
   const minutosDisponiveis = hora ? availability.minutosPorHora[hora] ?? [] : [];
+  const precoTotal = servicosSelecionados.reduce((total, servico) => total + servico.preco, 0);
+  const duracaoTotal = servicosSelecionados.reduce((total, servico) => total + servico.duracao, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,8 +175,8 @@ export default function NovoAgendamento() {
       toast({ title: "Telefone é obrigatório", variant: "destructive" });
       return;
     }
-    if (!servicoId) {
-      toast({ title: "Selecione um serviço", variant: "destructive" });
+    if (selectedServiceIds.length === 0) {
+      toast({ title: "Selecione ao menos um serviço", variant: "destructive" });
       return;
     }
     if (!data) {
@@ -193,8 +196,9 @@ export default function NovoAgendamento() {
         telefone: telefone.trim(),
         data: format(data, "yyyy-MM-dd"),
         horario: horarioSelecionado,
-        service_id: servicoSelecionado!.id,
-        preco: servicoSelecionado!.preco,
+        service_id: selectedServiceIds[0],
+        service_ids: selectedServiceIds,
+        preco: precoTotal,
         observacoes: observacoes.trim() || undefined,
       });
 
@@ -299,29 +303,56 @@ export default function NovoAgendamento() {
 
               {/* Serviço */}
               <div className="space-y-2">
-                <Label>Serviço</Label>
-                <Select value={servicoId} onValueChange={setServicoId}>
-                  <SelectTrigger className="w-full">
-                    <div className="flex items-center gap-2">
-                      <Scissors className="h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Selecione um serviço" />
+                <Label>Serviços</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between font-normal">
+                      <span className="flex items-center gap-2 truncate">
+                        <Scissors className="h-4 w-4 text-muted-foreground" />
+                        {servicosSelecionados.length > 0
+                          ? servicosSelecionados.map((servico) => servico.nome).join(", ")
+                          : "Selecione um ou mais serviços"}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2" align="start">
+                    <div className="space-y-1">
+                      {servicos.map((servico) => {
+                        const selected = selectedServiceIds.includes(servico.id);
+                        return (
+                          <button
+                            key={servico.id}
+                            type="button"
+                            onClick={() =>
+                              setSelectedServiceIds((prev) =>
+                                prev.includes(servico.id)
+                                  ? prev.filter((id) => id !== servico.id)
+                                  : [...prev, servico.id],
+                              )
+                            }
+                            className="flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-muted"
+                          >
+                            <div className="flex min-w-0 items-start gap-3">
+                              <Checkbox checked={selected} className="mt-0.5" />
+                              <div className="min-w-0">
+                                <p className="font-medium text-foreground">{servico.nome}</p>
+                                <p className="text-xs text-muted-foreground">{servico.duracao} minutos</p>
+                              </div>
+                            </div>
+                            <span className="shrink-0 text-sm font-medium text-primary">{formatarPreco(servico.preco)}</span>
+                          </button>
+                        );
+                      })}
                     </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {servicos.map((servico) => (
-                      <SelectItem key={servico.id} value={servico.id.toString()}>
-                        <div className="flex items-center justify-between w-full gap-4">
-                          <span>{servico.nome}</span>
-                          <span className="text-primary font-medium">{formatarPreco(servico.preco)}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {servicoSelecionado && (
+                  </PopoverContent>
+                </Popover>
+                {servicosSelecionados.length > 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Duração: {servicoSelecionado.duracao} minutos • {formatarPreco(servicoSelecionado.preco)}
+                    Duração total: {duracaoTotal} minutos • {formatarPreco(precoTotal)}
                   </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Selecione um ou mais serviços para montar o agendamento.</p>
                 )}
               </div>
 
@@ -361,7 +392,7 @@ export default function NovoAgendamento() {
                         setHora(value);
                         setMinuto("");
                       }}
-                      disabled={!data || !servicoId}
+                      disabled={!data || selectedServiceIds.length === 0}
                     >
                       <SelectTrigger className="w-full">
                         <div className="flex items-center gap-2">
@@ -370,8 +401,8 @@ export default function NovoAgendamento() {
                         </div>
                       </SelectTrigger>
                       <SelectContent>
-                        {!servicoId ? (
-                          <div className="p-2 text-sm text-muted-foreground">Selecione um serviço primeiro</div>
+                        {selectedServiceIds.length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground">Selecione ao menos um serviço primeiro</div>
                         ) : availability.horas.length === 0 ? (
                           <div className="p-2 text-sm text-muted-foreground">Nenhuma hora disponível</div>
                         ) : (

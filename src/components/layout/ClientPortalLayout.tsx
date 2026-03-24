@@ -3,9 +3,11 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
+  AlertTriangle,
   CalendarCheck,
   NotebookPen,
   UserRound,
@@ -178,7 +180,24 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
           <nav className="space-y-3">{renderNav("desktop")}</nav>
         </aside>
         <main className="flex-1">
-          <div className="rounded-[32px] p-4 sm:p-6 lg:p-8">{children}</div>
+          <div className="rounded-[32px] p-4 sm:p-6 lg:p-8">
+            {!client?.avatar_url ? (
+              <Alert className="mb-6 border-amber-300/70 bg-amber-50 text-amber-950">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertTitle>Adicione sua foto de perfil</AlertTitle>
+                <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span>
+                    Sua conta está sem foto de perfil. Envie uma imagem para deixar seu cadastro completo e facilitar seu
+                    atendimento.
+                  </span>
+                  <Button asChild size="sm" className="shadow-gold">
+                    <Link to="/cliente/perfil">Enviar foto agora</Link>
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+            {children}
+          </div>
 
         </main>
       </div>

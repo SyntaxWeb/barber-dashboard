@@ -1,4 +1,5 @@
 import { secureStorage } from "@/lib/secureStorage";
+import { resolveMediaUrl } from "@/lib/media";
 import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME, sanitizeTheme } from "@/lib/theme";
 import { apiFetch, handleResponse } from "@/services/api";
 
@@ -32,13 +33,13 @@ export interface EmpresaInfo {
 const normalizeEmpresa = (empresa: EmpresaInfo): EmpresaInfo => {
   const galleryPhotos = Array.isArray(empresa.gallery_photos)
     ? empresa.gallery_photos
-        .map((photo) => photo ?? photo)
+        .map((photo) => resolveMediaUrl(photo))
         .filter((photo): photo is string => Boolean(photo))
     : [];
 
   return {
     ...empresa,
-    icon_url: empresa.icon_url ?? empresa.icon_url,
+    icon_url: resolveMediaUrl(empresa.icon_url),
     gallery_photos: galleryPhotos,
     dashboard_theme: sanitizeTheme(empresa.dashboard_theme, DEFAULT_DASHBOARD_THEME),
     client_theme: sanitizeTheme(empresa.client_theme, DEFAULT_CLIENT_THEME),

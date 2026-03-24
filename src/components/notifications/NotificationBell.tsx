@@ -19,6 +19,8 @@ const getActionTitle = (action?: string) => {
       return "Agendamento atualizado";
     case "cancelled":
       return "Agendamento cancelado";
+    case "reward_redeemed":
+      return "Recompensa resgatada";
     default:
       return "Novo agendamento";
   }
@@ -30,6 +32,8 @@ const getActionLabel = (action?: string) => {
       return "Atualizado";
     case "cancelled":
       return "Cancelado";
+    case "reward_redeemed":
+      return "Resgate";
     default:
       return "Novo";
   }
@@ -53,7 +57,10 @@ export function NotificationBell() {
         const latest = data[0];
         toast({
           title: getActionTitle(latest.data.action),
-          description: `${latest.data.cliente} · ${latest.data.data} às ${latest.data.horario}`,
+          description:
+            latest.data.action === "reward_redeemed"
+              ? `${latest.data.cliente ?? "Cliente"} resgatou ${latest.data.reward_name ?? "uma recompensa"}`
+              : `${latest.data.cliente} · ${latest.data.data} às ${latest.data.horario}`,
         });
         lastSeenNotificationId.current = latest.id;
       } else if (!lastSeenNotificationId.current && data.length > 0) {
@@ -146,15 +153,29 @@ export function NotificationBell() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <p className="text-sm font-semibold">{notification.data.cliente}</p>
+                  <p className="text-sm font-semibold">
+                    {notification.data.action === "reward_redeemed"
+                      ? notification.data.reward_name ?? "Recompensa resgatada"
+                      : notification.data.cliente}
+                  </p>
                   <span className="text-xs text-muted-foreground">{getActionTitle(notification.data.action)}</span>
                 </div>
-                <Badge variant={notification.data.action === "cancelled" ? "destructive" : "secondary"}>
+                <Badge
+                  variant={
+                    notification.data.action === "cancelled"
+                      ? "destructive"
+                      : notification.data.action === "reward_redeemed"
+                        ? "outline"
+                        : "secondary"
+                  }
+                >
                   {getActionLabel(notification.data.action)}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                {notification.data.data} às {notification.data.horario} · {notification.data.service ?? "Serviço"}
+                {notification.data.action === "reward_redeemed"
+                  ? `${notification.data.cliente ?? "Cliente"} resgatou ${notification.data.reward_name ?? "uma recompensa"}`
+                  : `${notification.data.data} às ${notification.data.horario} · ${notification.data.service ?? "Serviço"}`}
               </p>
             </button>
           ))}

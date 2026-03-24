@@ -67,6 +67,15 @@ export interface ClienteLoyaltyTransaction {
   created_at?: string | null;
 }
 
+export interface ClienteAvailableReward {
+  id: number;
+  name: string;
+  description?: string | null;
+  image_url?: string | null;
+  points_cost: number;
+  available: boolean;
+}
+
 export interface ClienteAppointmentHistory {
   id: number;
   data?: string | null;
@@ -81,6 +90,7 @@ export interface ClienteHistory {
   loyalty: {
     points_balance: number;
     transactions: ClienteLoyaltyTransaction[];
+    available_rewards: ClienteAvailableReward[];
   };
   appointments: ClienteAppointmentHistory[];
 }

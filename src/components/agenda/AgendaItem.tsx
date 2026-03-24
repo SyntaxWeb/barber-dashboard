@@ -1,4 +1,4 @@
-import { Clock, User, Scissors, Star, MessageSquareText } from "lucide-react";
+import { Clock, Gift, User, Scissors, Star, MessageSquareText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Agendamento } from "@/data/mockData";
@@ -76,6 +76,20 @@ export function AgendaItem({ agendamento, onClick }: AgendaItemProps) {
             </div>
           </div>
         </div>
+
+        {Boolean(agendamento.loyalty?.available_rewards_count) && (
+          <div className="mt-3 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            <div className="flex items-center gap-2 font-medium">
+              <Gift className="h-4 w-4 text-amber-600" />
+              Cliente com recompensa disponível
+            </div>
+            <p className="mt-1 text-xs text-amber-800">
+              {agendamento.loyalty?.available_rewards_count === 1
+                ? "1 recompensa já pode ser resgatada."
+                : `${agendamento.loyalty?.available_rewards_count} recompensas já podem ser resgatadas.`}
+            </p>
+          </div>
+        )}
 
         {agendamento.observacoes && (
           <p className="mt-3 text-sm text-muted-foreground italic border-t border-border pt-3">

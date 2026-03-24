@@ -174,6 +174,9 @@ export default function Configuracoes() {
     description: "",
     pointsCost: "",
     active: true,
+    grantsFreeAppointment: false,
+    imageFile: null,
+    imagePreview: null,
   });
 
   const themeFields: Array<{ key: keyof BrandTheme; label: string; description: string }> = [
@@ -852,6 +855,15 @@ export default function Configuracoes() {
     setRewardDraft((prev) => ({ ...prev, ...patch }));
   };
 
+  const handleRewardDraftImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setRewardDraft((prev) => ({
+      ...prev,
+      imageFile: file,
+      imagePreview: file ? URL.createObjectURL(file) : null,
+    }));
+  };
+
   const handleCreateReward = async () => {
     const name = rewardDraft.name.trim();
     const pointsCost = Number.parseInt(rewardDraft.pointsCost, 10);
@@ -872,9 +884,19 @@ export default function Configuracoes() {
         description: rewardDraft.description.trim() || undefined,
         points_cost: pointsCost,
         active: rewardDraft.active,
+        grants_free_appointment: rewardDraft.grantsFreeAppointment,
+        image: rewardDraft.imageFile,
       });
       setLoyaltyRewards((prev) => [...prev, reward].sort((a, b) => a.points_cost - b.points_cost));
-      setRewardDraft({ name: "", description: "", pointsCost: "", active: true });
+      setRewardDraft({
+        name: "",
+        description: "",
+        pointsCost: "",
+        active: true,
+        grantsFreeAppointment: false,
+        imageFile: null,
+        imagePreview: null,
+      });
       toast({ title: "Recompensa adicionada", description: "A recompensa foi criada." });
     } catch (error) {
       toast({ title: "Erro ao criar", description: getApiErrorMessage(error), variant: "destructive" });
@@ -885,6 +907,37 @@ export default function Configuracoes() {
 
   const handleRewardChange = (id: number, patch: Partial<LoyaltyReward>) => {
     setLoyaltyRewards((prev) => prev.map((reward) => (reward.id === id ? { ...reward, ...patch } : reward)));
+  };
+
+  const handleRewardImageChange = (id: number, event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setLoyaltyRewards((prev) =>
+      prev.map((reward) =>
+        reward.id === id
+          ? {
+              ...reward,
+              image_file: file,
+              image_preview: file ? URL.createObjectURL(file) : reward.image_url ?? null,
+              remove_image: false,
+            }
+          : reward,
+      ),
+    );
+  };
+
+  const handleRewardImageRemove = (id: number) => {
+    setLoyaltyRewards((prev) =>
+      prev.map((reward) =>
+        reward.id === id
+          ? {
+              ...reward,
+              image_file: null,
+              image_preview: null,
+              remove_image: true,
+            }
+          : reward,
+      ),
+    );
   };
 
   const handleSaveReward = async (reward: LoyaltyReward) => {
@@ -903,6 +956,9 @@ export default function Configuracoes() {
         description: reward.description ?? undefined,
         points_cost: reward.points_cost,
         active: reward.active,
+        grants_free_appointment: reward.grants_free_appointment,
+        image: reward.image_file,
+        remove_image: reward.remove_image,
       });
       setLoyaltyRewards((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       toast({ title: "Recompensa atualizada", description: "Os dados foram salvos." });
@@ -1053,6 +1109,9 @@ export default function Configuracoes() {
             onDeleteReward={handleDeleteReward}
             rewardDraft={rewardDraft}
             onRewardDraftChange={handleRewardDraftChange}
+            onRewardDraftImageChange={handleRewardDraftImageChange}
+            onRewardImageChange={handleRewardImageChange}
+            onRewardImageRemove={handleRewardImageRemove}
             onCreateReward={handleCreateReward}
             creatingReward={rewardCreating}
           />

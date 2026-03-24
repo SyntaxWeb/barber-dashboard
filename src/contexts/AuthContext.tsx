@@ -62,12 +62,12 @@ const normalizeCompany = (company?: CompanyInfo | null): CompanyInfo | null => {
   const clientTheme = sanitizeTheme(company.client_theme, DEFAULT_CLIENT_THEME);
   const galleryPhotos = Array.isArray(company.gallery_photos)
     ? company.gallery_photos
-        .map((photo) => photo ?? photo)
+        .map((photo) => resolveMediaUrl(photo))
         .filter((photo): photo is string => Boolean(photo))
     : [];
   return {
     ...company,
-    icon_url: company.icon_url ?? null,
+    icon_url: resolveMediaUrl(company.icon_url),
     gallery_photos: galleryPhotos,
     dashboard_theme: dashboardTheme,
     client_theme: clientTheme,

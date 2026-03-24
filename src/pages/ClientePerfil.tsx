@@ -1,12 +1,13 @@
 import { useEffect, useState, ChangeEvent } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { updateClientProfile } from "@/services/profileService";
-import { Camera, Upload, Save } from "lucide-react";
+import { AlertTriangle, Camera, Upload, Save } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ClientPortalLayout } from "@/components/layout/ClientPortalLayout";
 
@@ -88,6 +89,16 @@ export default function ClientePerfil() {
           </CardHeader>
           <CardContent>
             <form className="space-y-5" onSubmit={handleSubmit}>
+              {!client?.avatar_url && !avatarPreview ? (
+                <Alert className="border-amber-300/70 bg-amber-50 text-amber-950">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertTitle>Falta sua foto de perfil</AlertTitle>
+                  <AlertDescription>
+                    Envie sua foto antes de sair desta tela para manter seu cadastro completo.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+
               <div className="flex items-center gap-4">
                 <div className="h-20 w-20 rounded-full border border-dashed border-border flex items-center justify-center overflow-hidden bg-muted">
                   {avatarPreview ? (

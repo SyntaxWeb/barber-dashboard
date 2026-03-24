@@ -8,17 +8,38 @@ export interface AppointmentFeedback {
   average_rating?: number | null;
 }
 
+export interface LoyaltyRewardAvailability {
+  id: number;
+  name: string;
+  description?: string | null;
+  points_cost: number;
+}
+
 export interface Agendamento {
   id: number;
+  user_id?: number | null;
   cliente: string;
   telefone: string;
   data: string;
   horario: string;
   servico: string;
+  service_id?: number;
+  service_ids?: number[];
+  services?: Array<{
+    id: number;
+    nome: string;
+    preco: number;
+    duracao: number;
+  }>;
   preco: number;
   status: "confirmado" | "concluido" | "cancelado";
   observacoes?: string;
   feedback?: AppointmentFeedback | null;
+  loyalty?: {
+    points_balance: number;
+    available_rewards_count: number;
+    available_rewards: LoyaltyRewardAvailability[];
+  } | null;
 }
 
 export interface Servico {

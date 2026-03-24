@@ -9,14 +9,19 @@ const authHeaders = () => {
 export interface AppNotification {
   id: string;
   data: {
-    appointment_id: number;
-    cliente: string;
-    telefone: string;
-    data: string;
-    horario: string;
+    type?: string;
+    appointment_id?: number;
+    cliente?: string;
+    telefone?: string;
+    data?: string;
+    horario?: string;
     service?: string;
     preco?: number;
     action?: string;
+    reward_id?: number;
+    reward_name?: string;
+    reward_points_cost?: number;
+    redemption_id?: number;
     company?: {
       id?: number;
       nome?: string;

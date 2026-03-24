@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { EmpresaInfo, fetchEmpresaPublic } from "@/services/companyService";
+import { resolveMediaUrl } from "@/lib/media";
 import { DEFAULT_CLIENT_THEME } from "@/lib/theme";
 import { useTheme } from "./ThemeContext";
 import { secureStorage } from "@/lib/secureStorage";
@@ -47,7 +48,7 @@ const normalizeClientUser = (data: any): ClientUser => ({
   name: data?.name ?? "",
   email: data?.email ?? "",
   telefone: data?.telefone ?? null,
-  avatar_url: data?.avatar_url,
+  avatar_url: resolveMediaUrl(data?.avatar_url),
 });
 
 export function ClientAuthProvider({ children }: { children: ReactNode }) {

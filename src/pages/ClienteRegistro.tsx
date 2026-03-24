@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Mail, User, Phone, Lock, ArrowRight } from "lucide-react";
+import { Mail, User, Phone, Lock, ArrowRight, Camera, Upload } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,13 @@ import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import defaultLogo from "@/assets/syntax-logo.svg";
 import { GoogleClientButton } from "@/components/auth/GoogleClientButton";
+import { updateClientProfile } from "@/services/profileService";
 
 export default function ClienteRegistro() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { register, loginWithGoogle, companySlug, setCompanySlug, companyInfo } = useClientAuth();
+  const { register, loginWithGoogle, companySlug, setCompanySlug, companyInfo, updateClient } = useClientAuth();
   const { palettes } = useTheme();
   const clientTheme = palettes.client;
   const companyFromUrl = searchParams.get("company");
@@ -37,6 +38,8 @@ export default function ClienteRegistro() {
   const [telefone, setTelefone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -58,13 +61,19 @@ export default function ClienteRegistro() {
     }
   }, [prefillPhone]);
 
+  const handleAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setAvatar(file);
+    setAvatarPreview(file ? URL.createObjectURL(file) : null);
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!name || !email || !telefone || !password || !confirmPassword) {
+    if (!name || !email || !telefone || !password || !confirmPassword || !avatar) {
       toast({
         title: "Complete o formulário",
-        description: "Todos os campos são obrigatórios.",
+        description: "Todos os campos são obrigatórios, incluindo a foto de perfil.",
         variant: "destructive",
       });
       return;
@@ -110,9 +119,28 @@ export default function ClienteRegistro() {
       return;
     }
 
+    try {
+      const updatedProfile = await updateClientProfile({
+        name,
+        email,
+        telefone,
+        avatar,
+      });
+      updateClient(updatedProfile);
+    } catch (error) {
+      toast({
+        title: "Conta criada, mas falta concluir sua foto",
+        description:
+          error instanceof Error ? error.message : "Abra seu perfil e envie sua foto para concluir o cadastro.",
+        variant: "destructive",
+      });
+      navigate(`/cliente/perfil${companyQuery}`);
+      return;
+    }
+
     toast({
       title: "Bem-vindo!",
-      description: "Agora você pode agendar seus serviços.",
+      description: "Sua conta foi criada com a foto de perfil pronta para os próximos agendamentos.",
     });
     navigate(`/cliente${companyQuery}`);
   };
@@ -174,6 +202,28 @@ export default function ClienteRegistro() {
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="space-y-3 rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-border bg-muted">
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Prévia da foto de perfil" className="h-full w-full object-cover" />
+                  ) : (
+                    <Camera className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <input id="clienteRegistroAvatar" type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                  <Label htmlFor="clienteRegistroAvatar" className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-primary">
+                    <Upload className="h-4 w-4" />
+                    {avatarPreview ? "Trocar foto de perfil" : "Adicionar foto de perfil"}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    A foto de perfil e obrigatória para concluir o cadastro. PNG ou JPG até 2MB.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="nome">Nome completo</Label>
               <div className="relative">

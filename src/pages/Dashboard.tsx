@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-import { Calendar, Clock, Users, TrendingUp, Plus, ArrowRight } from "lucide-react";
+import { Calendar, Clock, Users, TrendingUp, Plus, ArrowRight, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,9 +19,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import defaultLogo from "@/assets/syntax-logo.svg";
 
+const productUpdates = [
+  "Programa de fidelidade com recompensas, imagens e histórico mais claro para acompanhar cada cliente.",
+  "Resgate de recompensa com aviso para o prestador e suporte a agendamento grátis quando a recompensa permitir.",
+  "Agendamentos com múltiplos serviços, somando duração e valor automaticamente.",
+  "Fluxos de agendamento e conclusão mais estáveis, sem travar a operação por falha de e-mail.",
+];
+
+const PRODUCT_UPDATES_DISMISSED_KEY = "dashboard:product-updates:dismissed:v2";
+
 export default function Dashboard() {
   const [agendamentosHoje, setAgendamentosHoje] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showProductUpdates, setShowProductUpdates] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem(PRODUCT_UPDATES_DISMISSED_KEY) !== "1";
+  });
   const { user } = useAuth();
   const { toast } = useToast();
   const company = user?.company;
@@ -61,6 +74,13 @@ export default function Dashboard() {
     }
     loadData();
   }, [hoje]);
+
+  const handleDismissProductUpdates = () => {
+    setShowProductUpdates(false);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(PRODUCT_UPDATES_DISMISSED_KEY, "1");
+    }
+  };
 
   const agendamentosConfirmados = agendamentosHoje.filter(a => a.status === 'confirmado');
   const agendamentosConcluidos = agendamentosHoje.filter(a => a.status === 'concluido');
@@ -139,6 +159,28 @@ export default function Dashboard() {
             </Card>
           ))}
         </div>
+
+        {showProductUpdates ? (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle>Novidades da plataforma</CardTitle>
+                <CardDescription>Apenas as atualizações mais importantes para sua operação.</CardDescription>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleDismissProductUpdates}>
+                <X className="h-4 w-4" />
+                <span className="sr-only">Ocultar novidades</span>
+              </Button>
+            </CardHeader>
+            <CardContent className="grid gap-2 text-sm text-foreground/90">
+              {productUpdates.map((item) => (
+                <div key={item} className="rounded-xl border border-primary/10 bg-background/80 px-3 py-2">
+                  {item}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
 
         {/* Próximo Cliente Card */}
         {proximoCliente && (

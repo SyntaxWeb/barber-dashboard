@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Phone, Calendar, Clock, Scissors, FileText, Check, Trash2, Star, MessageSquareText } from "lucide-react";
+import { Phone, Calendar, Clock, Scissors, FileText, Check, Trash2, Star, MessageSquareText, Gift } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -120,6 +120,27 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
               </div>
               <span className="font-bold text-primary">{formatarPreco(agendamento.preco)}</span>
             </div>
+
+            {Boolean(agendamento.loyalty?.available_rewards_count) && (
+              <div className="rounded-lg border border-amber-300/60 bg-amber-50 p-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-amber-950">
+                  <Gift className="h-4 w-4 text-amber-600" />
+                  Recompensa disponível para este cliente
+                </div>
+                <p className="mt-1 text-sm text-amber-900">
+                  {agendamento.loyalty?.available_rewards_count === 1
+                    ? "Este cliente já pode resgatar 1 recompensa."
+                    : `Este cliente já pode resgatar ${agendamento.loyalty?.available_rewards_count} recompensas.`}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {agendamento.loyalty?.available_rewards.map((reward) => (
+                    <Badge key={reward.id} variant="outline" className="border-amber-300 bg-white text-amber-900">
+                      {reward.name} • {reward.points_cost} pts
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {agendamento.observacoes && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">

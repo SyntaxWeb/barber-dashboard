@@ -63,7 +63,8 @@ type AppointmentPayload = {
   telefone: string;
   data: string;
   horario: string;
-  service_id: number;
+  service_id?: number;
+  service_ids?: number[];
   preco?: number;
   observacoes?: string;
 };
@@ -233,6 +234,7 @@ export async function fetchHorariosDisponiveis(
   data: string,
   serviceId?: number,
   appointmentId?: number,
+  serviceIds?: number[],
   companySlug?: string,
 ): Promise<AvailabilityData> {
   const params = new URLSearchParams({ date: data });
@@ -244,6 +246,9 @@ export async function fetchHorariosDisponiveis(
   }
   if (appointmentId) {
     params.set("appointment_id", appointmentId.toString());
+  }
+  if (serviceIds && serviceIds.length > 0) {
+    params.set("service_ids", serviceIds.join(","));
   }
   const result = await api<{
     horarios?: string[];

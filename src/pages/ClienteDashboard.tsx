@@ -3,15 +3,18 @@ import {
   Building2,
   CalendarDays,
   Clock3,
+  Gift,
   Mail,
   MessageCircle,
   NotebookPen,
+  PartyPopper,
   ShieldCheck,
   Sparkles,
   Star,
   StarHalf,
   UserRound,
 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,11 +29,13 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { clientFetchFeedbackSummary, CompanyFeedbackSummary } from "@/services/clientPortalService";
+import { ClientLoyaltyReward, ClientLoyaltySummary, fetchClientLoyalty, redeemClientReward } from "@/services/clientLoyaltyService";
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
 
 const quickActions = [
   {
@@ -54,7 +59,8 @@ const quickActions = [
 ];
 
 export default function ClienteDashboard() {
-  const { companyInfo } = useClientAuth();
+  const { companyInfo, client } = useClientAuth();
+  const { toast } = useToast();
 
   const companyName = companyInfo?.nome ?? "Barbearia";
   const companyDescription =
@@ -68,6 +74,9 @@ export default function ClienteDashboard() {
   const slugLabel = companyInfo?.slug ? `/${companyInfo.slug}` : null;
   const [feedbackSummary, setFeedbackSummary] = useState<CompanyFeedbackSummary | null>(null);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [loyaltySummary, setLoyaltySummary] = useState<ClientLoyaltySummary | null>(null);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+  const [redeemingRewardId, setRedeemingRewardId] = useState<number | null>(null);
 
 
   useEffect(() => {
@@ -81,6 +90,49 @@ export default function ClienteDashboard() {
       .catch(() => setFeedbackSummary(null))
       .finally(() => setFeedbackLoading(false));
   }, [companyInfo]);
+
+  useEffect(() => {
+    if (!client) {
+      setLoyaltySummary(null);
+      return;
+    }
+    setLoyaltyLoading(true);
+    fetchClientLoyalty()
+      .then(setLoyaltySummary)
+      .catch(() => setLoyaltySummary(null))
+      .finally(() => setLoyaltyLoading(false));
+  }, [client]);
+
+  const availableRewards = (loyaltySummary?.rewards ?? []).filter(
+    (reward) => reward.active && (loyaltySummary?.points_balance ?? 0) >= reward.points_cost,
+  );
+  const pendingFreeAppointments = (loyaltySummary?.pending_redemptions ?? []).filter(
+    (item) => item.reward?.grants_free_appointment,
+  );
+  const nextRewards = (loyaltySummary?.rewards ?? []).filter(
+    (reward) => reward.active && (loyaltySummary?.points_balance ?? 0) < reward.points_cost,
+  );
+
+  const handleRedeemReward = async (reward: ClientLoyaltyReward) => {
+    setRedeemingRewardId(reward.id);
+    try {
+      await redeemClientReward(reward.id);
+      const refreshed = await fetchClientLoyalty();
+      setLoyaltySummary(refreshed);
+      toast({
+        title: "Recompensa resgatada",
+        description: `${reward.name} foi solicitada com sucesso.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Não foi possível resgatar",
+        description: error instanceof Error ? error.message : "Tente novamente em instantes.",
+        variant: "destructive",
+      });
+    } finally {
+      setRedeemingRewardId(null);
+    }
+  };
 
   const renderStars = (value?: number | null, size: "md" | "sm" = "md") => {
     const rating = Math.min(Math.max(value ?? 0, 0), 5);
@@ -118,6 +170,29 @@ export default function ClienteDashboard() {
   return (
     <ClientPortalLayout>
       <div className="space-y-8">
+        {availableRewards.length > 0 ? (
+          <Alert className="border-amber-300/70 bg-amber-50 text-amber-950">
+            <PartyPopper className="h-4 w-4 text-amber-600" />
+            <AlertTitle>Você tem recompensa disponível</AlertTitle>
+            <AlertDescription>
+              {availableRewards.length === 1
+                ? `Você já pode resgatar ${availableRewards[0].name}.`
+                : `Você já pode resgatar ${availableRewards.length} recompensas no seu saldo atual.`}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {pendingFreeAppointments.length > 0 ? (
+          <Alert className="border-emerald-300/70 bg-emerald-50 text-emerald-950">
+            <Gift className="h-4 w-4 text-emerald-600" />
+            <AlertTitle>Você tem agendamento grátis pendente</AlertTitle>
+            <AlertDescription>
+              {pendingFreeAppointments.length === 1
+                ? `Sua recompensa ${pendingFreeAppointments[0].reward.name} já pode ser usada em um novo horário.`
+                : `Você tem ${pendingFreeAppointments.length} recompensas prontas para marcar horários sem custo.`}
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
         <section className="grid gap-6 mb-2">
           <Card className="border-border/80 shadow-sm overflow-hidden">
@@ -213,6 +288,161 @@ export default function ClienteDashboard() {
                   atendimento!
                 </p>
               )}
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-6 mb-2 lg:grid-cols-[300px,minmax(0,1fr)]">
+          <div className="space-y-6">
+            <Card className="border-border/80 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gift className="h-5 w-5 text-primary" />
+                  Fidelidade
+                </CardTitle>
+                <CardDescription>Seu saldo atual e as recompensas prontas para resgate.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {loyaltyLoading ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-10 w-24" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
+                ) : loyaltySummary ? (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                      <div className="text-5xl font-bold leading-none text-primary">{loyaltySummary.points_balance}</div>
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        {loyaltySummary.points_balance === 1
+                          ? "1 ponto disponível para usar."
+                          : `${loyaltySummary.points_balance} pontos disponíveis para usar.`}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {availableRewards.length > 0 ? (
+                        <Badge className="bg-amber-500 text-amber-950 hover:bg-amber-500">
+                          {availableRewards.length} recompensa{availableRewards.length > 1 ? "s" : ""} disponível{availableRewards.length > 1 ? "eis" : ""}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">Nenhuma recompensa liberada ainda</Badge>
+                      )}
+                    </div>
+                    {availableRewards.length > 0 ? (
+                      <div className="rounded-2xl border border-amber-300/70 bg-amber-50 p-4">
+                        <p className="text-sm font-semibold text-amber-950">Pronto para resgatar</p>
+                        <div className="mt-3 space-y-2">
+                          {availableRewards.slice(0, 2).map((reward) => (
+                            <div key={reward.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/80 px-3 py-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-foreground">{reward.name}</p>
+                                <p className="text-xs text-muted-foreground">{reward.points_cost} pts</p>
+                              </div>
+                              <Badge className="bg-amber-500 text-amber-950 hover:bg-amber-500">Liberada</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {pendingFreeAppointments.length > 0 ? (
+                      <div className="rounded-2xl border border-emerald-300/70 bg-emerald-50 p-4">
+                        <p className="text-sm font-semibold text-emerald-950">Agendamento grátis pendente</p>
+                        <div className="mt-3 space-y-2">
+                          {pendingFreeAppointments.slice(0, 2).map((item) => (
+                            <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/80 px-3 py-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-foreground">{item.reward.name}</p>
+                                <p className="text-xs text-muted-foreground">Use ao marcar seu próximo horário</p>
+                              </div>
+                              <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Pronta</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Não foi possível carregar seu saldo de fidelidade agora.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border-border/80 shadow-sm">
+            <CardHeader>
+              <CardTitle>Recompensas para resgate</CardTitle>
+              <CardDescription>Use seus pontos sempre que alcançar o saldo necessário.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loyaltyLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              ) : !loyaltySummary || loyaltySummary.rewards.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Esta barbearia ainda não cadastrou recompensas de fidelidade.
+                </p>
+              ) : (
+                <div className="grid gap-4">
+                  {loyaltySummary.rewards.map((reward) => {
+                    const available = loyaltySummary.points_balance >= reward.points_cost;
+                    return (
+                      <div
+                        key={reward.id}
+                        className={`rounded-2xl border p-4 ${
+                          available ? "border-amber-300/70 bg-amber-50" : "border-border/60 bg-muted/20"
+                        }`}
+                      >
+                        <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                          <div className="flex h-28 w-full shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border/60 bg-background md:w-32">
+                            {reward.image_url ? (
+                              <img src={reward.image_url} alt={reward.name} className="h-full w-full object-cover" />
+                            ) : (
+                              <Gift className="h-6 w-6 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-3">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-lg font-semibold leading-tight">{reward.name}</p>
+                                {reward.description ? (
+                                  <p className="mt-1 text-sm text-muted-foreground">{reward.description}</p>
+                                ) : null}
+                              </div>
+                              <Badge variant={available ? "default" : "outline"} className="shrink-0">
+                                {reward.points_cost} pts
+                              </Badge>
+                            </div>
+                            <div className="flex flex-col gap-3 border-t border-border/50 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                              <p className="text-sm text-muted-foreground">
+                                {available
+                                  ? "Disponível para resgate agora."
+                                  : `${reward.points_cost - loyaltySummary.points_balance} ponto(s) para liberar.`}
+                              </p>
+                              <Button
+                                size="sm"
+                                className="w-full sm:w-auto"
+                                disabled={!available || redeemingRewardId === reward.id}
+                                onClick={() => handleRedeemReward(reward)}
+                              >
+                                {redeemingRewardId === reward.id ? "Resgatando..." : "Resgatar"}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {!loyaltyLoading && nextRewards.length > 0 ? (
+                <p className="mt-4 text-xs text-muted-foreground">
+                  Continue acumulando pontos para liberar as próximas recompensas.
+                </p>
+              ) : null}
             </CardContent>
           </Card>
         </section>

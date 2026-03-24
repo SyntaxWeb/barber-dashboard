@@ -77,6 +77,7 @@ export async function clientFetchHorarios(
   companySlug: string,
   serviceId?: number,
   appointmentId?: number,
+  serviceIds?: number[],
 ): Promise<AvailabilityData> {
   if (!companySlug) throw new Error("companySlug is required");
   const params = new URLSearchParams({
@@ -89,6 +90,9 @@ export async function clientFetchHorarios(
   if (appointmentId) {
     params.set("appointment_id", appointmentId.toString());
   }
+  if (serviceIds && serviceIds.length > 0) {
+    params.set("service_ids", serviceIds.join(","));
+  }
   const result = await publicGet<{
     horarios?: string[];
     horas?: string[];
@@ -98,10 +102,12 @@ export async function clientFetchHorarios(
 }
 
 interface ClientAppointmentPayload {
-  service_id: number;
+  service_id?: number;
+  service_ids?: number[];
   data: string;
   horario: string;
   observacoes?: string;
+  loyalty_redemption_id?: number;
 }
 
 export async function clientCreateAgendamento(
@@ -132,6 +138,8 @@ export interface AppointmentFeedback {
 export interface ClientAppointment {
   id: number;
   service_id: number;
+  service_ids?: number[];
+  services?: Array<{ id: number; nome: string; preco?: number; duracao?: number }>;
   servico: string;
   preco?: number;
   data: string;
@@ -144,12 +152,23 @@ export interface ClientAppointment {
     slug?: string;
   } | null;
   feedback?: AppointmentFeedback | null;
+  loyalty_redemption?: {
+    id: number;
+    status: string;
+    reward?: {
+      id: number;
+      name: string;
+      grants_free_appointment?: boolean;
+    } | null;
+  } | null;
 }
 
 type ApiClientAppointment = {
   id: number;
   service_id?: number;
+  service_ids?: number[];
   service?: { id: number; nome: string; preco?: number };
+  services?: Array<{ id: number; nome: string; preco?: number; duracao?: number }>;
   servico?: string;
   preco?: number;
   data: string;
@@ -162,11 +181,22 @@ type ApiClientAppointment = {
     slug?: string;
   } | null;
   feedback?: AppointmentFeedback | null;
+  loyalty_redemption?: {
+    id: number;
+    status: string;
+    reward?: {
+      id: number;
+      name: string;
+      grants_free_appointment?: boolean;
+    } | null;
+  } | null;
 };
 
 const normalizeClientAppointment = (appointment: ApiClientAppointment): ClientAppointment => ({
   id: appointment.id,
   service_id: appointment.service?.id ?? appointment.service_id ?? 0,
+  service_ids: appointment.service_ids ?? appointment.services?.map((service) => service.id) ?? (appointment.service_id ? [appointment.service_id] : []),
+  services: appointment.services ?? (appointment.service ? [appointment.service] : []),
   servico: appointment.service?.nome ?? appointment.servico ?? "Serviço",
   preco: appointment.service?.preco ?? appointment.preco,
   data: appointment.data,
@@ -175,6 +205,7 @@ const normalizeClientAppointment = (appointment: ApiClientAppointment): ClientAp
   observacoes: appointment.observacoes ?? null,
   company: appointment.company ?? null,
   feedback: appointment.feedback ?? null,
+  loyalty_redemption: appointment.loyalty_redemption ?? null,
 });
 
 export async function clientFetchAgendamentos(token: string): Promise<ClientAppointment[]> {

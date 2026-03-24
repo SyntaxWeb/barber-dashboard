@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Calendar as CalendarIcon,
+  ChevronDown,
   Clock,
   Scissors,
   NotebookPen,
@@ -17,9 +18,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { clientCreateAgendamento, clientFetchHorarios, clientFetchServicos } from "@/services/clientPortalService";
+import { fetchClientLoyalty } from "@/services/clientLoyaltyService";
 import { Servico } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { ClientPortalLayout } from "@/components/layout/ClientPortalLayout";
@@ -34,7 +37,7 @@ export default function ClienteAgendamento() {
   const activeCompany = queryCompany ?? companySlug ?? null;
 
   const [servicos, setServicos] = useState<Servico[]>([]);
-  const [servicoId, setServicoId] = useState("");
+  const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([]);
   const [data, setData] = useState<Date | undefined>(new Date());
   const [availability, setAvailability] = useState<AvailabilityData>({
     horarios: [],
@@ -44,6 +47,16 @@ export default function ClienteAgendamento() {
   const [hora, setHora] = useState("");
   const [minuto, setMinuto] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [loyaltyRedemptionId, setLoyaltyRedemptionId] = useState("none");
+  const [pendingRedemptions, setPendingRedemptions] = useState<Array<{
+    id: number;
+    reward: {
+      id: number;
+      name: string;
+      points_cost: number;
+      grants_free_appointment?: boolean;
+    };
+  }>>([]);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
     if (queryCompany && queryCompany !== companySlug) {
@@ -59,19 +72,19 @@ export default function ClienteAgendamento() {
   }, [activeCompany, toast]);
 
   useEffect(() => {
-    if (!data || !activeCompany || !servicoId) {
+    if (!data || !activeCompany || selectedServiceIds.length === 0) {
       setAvailability({ horarios: [], horas: [], minutosPorHora: {} });
       setHora("");
       setMinuto("");
       return;
     }
     const dataStr = format(data, "yyyy-MM-dd");
-    clientFetchHorarios(dataStr, activeCompany, Number(servicoId))
+    clientFetchHorarios(dataStr, activeCompany, selectedServiceIds[0], undefined, selectedServiceIds)
       .then((dataResponse) => {
         setAvailability(dataResponse);
       })
       .catch(() => setAvailability({ horarios: [], horas: [], minutosPorHora: {} }));
-  }, [data, activeCompany, servicoId]);
+  }, [data, activeCompany, selectedServiceIds]);
 
   useEffect(() => {
     if (!hora) {
@@ -89,9 +102,37 @@ export default function ClienteAgendamento() {
     }
   }, [availability, hora, minuto]);
 
-  const servicoSelecionado = servicos.find((item) => item.id.toString() === servicoId);
+  useEffect(() => {
+    if (!token) {
+      setPendingRedemptions([]);
+      setLoyaltyRedemptionId("none");
+      return;
+    }
+
+    fetchClientLoyalty()
+      .then((summary) => {
+        const pending = (summary.pending_redemptions ?? []).filter((item) => item.reward?.grants_free_appointment);
+        setPendingRedemptions(
+          pending.map((item) => ({
+            id: item.id,
+            reward: {
+              id: item.reward.id,
+              name: item.reward.name,
+              points_cost: item.reward.points_cost,
+              grants_free_appointment: item.reward.grants_free_appointment,
+            },
+          })),
+        );
+      })
+      .catch(() => setPendingRedemptions([]));
+  }, [token]);
+
+  const servicosSelecionados = servicos.filter((item) => selectedServiceIds.includes(item.id));
   const horarioSelecionado = joinHorario(hora, minuto);
   const minutosDisponiveis = hora ? availability.minutosPorHora[hora] ?? [] : [];
+  const selectedPendingRedemption = pendingRedemptions.find((item) => item.id.toString() === loyaltyRedemptionId);
+  const totalPrecoSelecionado = servicosSelecionados.reduce((total, servico) => total + servico.preco, 0);
+  const totalDuracaoSelecionada = servicosSelecionados.reduce((total, servico) => total + servico.duracao, 0);
 
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -112,10 +153,10 @@ export default function ClienteAgendamento() {
       return;
     }
 
-    if (!servicoSelecionado || !data || !horarioSelecionado) {
+    if (servicosSelecionados.length === 0 || !data || !horarioSelecionado) {
       toast({
         title: "Preencha todos os campos",
-        description: "Escolha serviço, data e horário disponíveis.",
+        description: "Escolha ao menos um serviço, data e horário disponíveis.",
         variant: "destructive",
       });
       return;
@@ -125,10 +166,12 @@ export default function ClienteAgendamento() {
     try {
       await clientCreateAgendamento(
         {
-          service_id: servicoSelecionado.id,
+          service_id: selectedServiceIds[0],
+          service_ids: selectedServiceIds,
           data: format(data, "yyyy-MM-dd"),
           horario: horarioSelecionado,
           observacoes: observacoes.trim() || undefined,
+          loyalty_redemption_id: loyaltyRedemptionId !== "none" ? Number(loyaltyRedemptionId) : undefined,
         },
         token,
         activeCompany,
@@ -136,12 +179,14 @@ export default function ClienteAgendamento() {
 
       toast({
         title: "Agendamento confirmado!",
-        description: `${servicoSelecionado.nome} em ${format(data, "dd/MM/yyyy")} às ${horarioSelecionado}`,
+        description: `${servicosSelecionados.map((servico) => servico.nome).join(" + ")} em ${format(data, "dd/MM/yyyy")} às ${horarioSelecionado}`,
       });
-      setServicoId("");
+      setSelectedServiceIds([]);
       setObservacoes("");
       setHora("");
       setMinuto("");
+      setLoyaltyRedemptionId("none");
+      setPendingRedemptions((prev) => prev.filter((item) => item.id.toString() !== loyaltyRedemptionId));
     } catch (error) {
       toast({
         title: "Horário indisponível",
@@ -189,28 +234,88 @@ export default function ClienteAgendamento() {
           <CardContent>
             <form className="space-y-5" onSubmit={handleSubmit}>
               <div className="space-y-2">
-                <Label>Serviço</Label>
-                <Select value={servicoId} onValueChange={setServicoId}>
-                  <SelectTrigger>
-                    <div className="flex items-center gap-2">
-                      <Scissors className="h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Selecione um serviço" />
+                <Label>Serviços</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between font-normal">
+                      <span className="flex items-center gap-2 truncate">
+                        <Scissors className="h-4 w-4 text-muted-foreground" />
+                        {servicosSelecionados.length > 0
+                          ? servicosSelecionados.map((servico) => servico.nome).join(", ")
+                          : "Selecione um ou mais serviços"}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2" align="start">
+                    <div className="space-y-1">
+                      {servicos.map((servico) => {
+                        const selected = selectedServiceIds.includes(servico.id);
+                        return (
+                          <button
+                            key={servico.id}
+                            type="button"
+                            onClick={() =>
+                              setSelectedServiceIds((prev) =>
+                                prev.includes(servico.id)
+                                  ? prev.filter((id) => id !== servico.id)
+                                  : [...prev, servico.id],
+                              )
+                            }
+                            className="flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-muted"
+                          >
+                            <div className="flex min-w-0 items-start gap-3">
+                              <Checkbox checked={selected} className="mt-0.5" />
+                              <div className="min-w-0">
+                                <p className="font-medium text-foreground">{servico.nome}</p>
+                                <p className="text-xs text-muted-foreground">{servico.duracao} min</p>
+                              </div>
+                            </div>
+                            <span className="shrink-0 text-sm font-medium text-primary">
+                              {servico.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {servicos.map((servico) => (
-                      <SelectItem key={servico.id} value={servico.id.toString()}>
-                        <div className="flex items-center justify-between gap-4">
-                          <span>{servico.nome}</span>
-                          <span className="text-primary font-medium">
-                            {servico.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  </PopoverContent>
+                </Popover>
+                {servicosSelecionados.length > 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {servicosSelecionados.length} serviço(s) selecionado(s).
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Escolha um ou mais serviços para calcular o tempo total.</p>
+                )}
               </div>
+
+              {pendingRedemptions.length > 0 ? (
+                <div className="space-y-2">
+                  <Label>Usar recompensa</Label>
+                  <Select value={loyaltyRedemptionId} onValueChange={setLoyaltyRedemptionId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma recompensa de agendamento gratis" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nao usar recompensa agora</SelectItem>
+                      {pendingRedemptions.map((item) => (
+                        <SelectItem key={item.id} value={item.id.toString()}>
+                          {item.reward.name} - horario gratis
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedPendingRedemption ? (
+                    <p className="text-sm text-emerald-700">
+                      Esta recompensa sera aplicada neste agendamento e o valor do servico ficara zerado.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Se preferir, voce pode guardar sua recompensa para usar em outro horario.
+                    </p>
+                  )}
+                </div>
+              ) : null}
 
               <div className="flex flex-col gap-4 md:flex-row">
                 <div className="flex-1 space-y-2">
@@ -243,7 +348,7 @@ export default function ClienteAgendamento() {
                         setHora(value);
                         setMinuto("");
                       }}
-                      disabled={!data || !servicoId}
+                      disabled={!data || selectedServiceIds.length === 0}
                     >
                       <SelectTrigger>
                         <div className="flex items-center gap-2">
@@ -252,10 +357,10 @@ export default function ClienteAgendamento() {
                         </div>
                       </SelectTrigger>
                       <SelectContent>
-                        {!servicoId && (
-                          <div className="px-3 py-2 text-sm text-muted-foreground">Selecione um serviço primeiro</div>
+                        {selectedServiceIds.length === 0 && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">Selecione ao menos um serviço primeiro</div>
                         )}
-                        {servicoId && availability.horas.length === 0 && (
+                        {selectedServiceIds.length > 0 && availability.horas.length === 0 && (
                           <div className="px-3 py-2 text-sm text-muted-foreground">Nenhuma hora livre</div>
                         )}
                         {availability.horas.map((item) => (
@@ -303,6 +408,25 @@ export default function ClienteAgendamento() {
                     rows={4}
                   />
                 </div>
+              </div>
+
+              <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">Resumo do agendamento</p>
+                <p>
+                  {servicosSelecionados.length > 0
+                    ? servicosSelecionados.map((servico) => servico.nome).join(" + ")
+                    : "Escolha um ou mais serviços"}
+                </p>
+                <p>{data ? format(data, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "Escolha uma data"}</p>
+                <p>{horarioSelecionado || "Escolha um horário"}</p>
+                <p>{servicosSelecionados.length > 0 ? `Duração total: ${totalDuracaoSelecionada} min` : "A duração total aparecerá aqui"}</p>
+                <p className="mt-2 font-medium text-foreground">
+                  {servicosSelecionados.length > 0
+                    ? selectedPendingRedemption
+                      ? "Valor final: gratis"
+                      : `Valor: ${totalPrecoSelecionado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`
+                    : "Valor do serviço será exibido aqui"}
+                </p>
               </div>
 
               <Button type="submit" className="w-full shadow-gold" disabled={loading}>
