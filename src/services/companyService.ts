@@ -30,6 +30,8 @@ export interface EmpresaInfo {
   client_theme: BrandTheme;
 }
 
+const publicCompanyRequestCache = new Map<string, Promise<EmpresaInfo>>();
+
 const normalizeEmpresa = (empresa: EmpresaInfo): EmpresaInfo => {
   const galleryPhotos = Array.isArray(empresa.gallery_photos)
     ? empresa.gallery_photos
@@ -67,22 +69,37 @@ export async function fetchEmpresaPublic(slug: string): Promise<EmpresaInfo> {
     throw new Error("slug is required");
   }
 
-  const response = await apiFetch(`/api/companies/${encodeURIComponent(slug)}`, {
-    headers: {
-      Accept: "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    if (response.status === 429) {
-      throw new Error("429 Too Many Requests");
-    }
-    const text = await response.text();
-    throw new Error(text || "Erro na requisição");
+  const cachedRequest = publicCompanyRequestCache.get(slug);
+  if (cachedRequest) {
+    return cachedRequest;
   }
 
-  const data = await handleResponse<EmpresaInfo>(response, "Erro na requisição");
-  return normalizeEmpresa(data);
+  const request = (async () => {
+    const response = await apiFetch(`/api/companies/${encodeURIComponent(slug)}`, {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error("429 Too Many Requests");
+      }
+      const text = await response.text();
+      throw new Error(text || "Erro na requisição");
+    }
+
+    const data = await handleResponse<EmpresaInfo>(response, "Erro na requisição");
+    return normalizeEmpresa(data);
+  })();
+
+  publicCompanyRequestCache.set(slug, request);
+
+  try {
+    return await request;
+  } finally {
+    publicCompanyRequestCache.delete(slug);
+  }
 }
 
 interface UpdateEmpresaPayload {
