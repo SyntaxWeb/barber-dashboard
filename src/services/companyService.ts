@@ -73,6 +73,14 @@ export async function fetchEmpresaPublic(slug: string): Promise<EmpresaInfo> {
     },
   });
 
+  if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error("429 Too Many Requests");
+    }
+    const text = await response.text();
+    throw new Error(text || "Erro na requisição");
+  }
+
   const data = await handleResponse<EmpresaInfo>(response, "Erro na requisição");
   return normalizeEmpresa(data);
 }

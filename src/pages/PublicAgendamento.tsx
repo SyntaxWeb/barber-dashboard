@@ -51,10 +51,13 @@ export default function PublicAgendamento() {
         setEmpresa(data);
         setCompanySlug(slug, data);
       })
-      .catch(() => {
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : "";
         toast({
-          title: "Empresa não encontrada",
-          description: "Verifique se o link foi digitado corretamente.",
+          title: message.includes("429") ? "Muitas tentativas" : "Empresa não encontrada",
+          description: message.includes("429")
+            ? "Tente novamente em alguns instantes."
+            : "Verifique se o link foi digitado corretamente.",
           variant: "destructive",
         });
       })
