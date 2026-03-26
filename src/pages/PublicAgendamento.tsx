@@ -14,7 +14,7 @@ export default function PublicAgendamento() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAuthenticated, setCompanySlug } = useClientAuth();
+  const { isAuthenticated, setCompanySlug, companyInfo } = useClientAuth();
   const { palettes } = useTheme();
   const clientTheme = palettes.client;
 
@@ -42,6 +42,11 @@ export default function PublicAgendamento() {
 
   useEffect(() => {
     if (!slug) return;
+    if (companyInfo?.slug === slug) {
+      setEmpresa(companyInfo);
+      setLoading(false);
+      return;
+    }
     if (!shouldFetch(slug)) {
       return;
     }
@@ -62,7 +67,7 @@ export default function PublicAgendamento() {
         });
       })
       .finally(() => setLoading(false));
-  }, [setCompanySlug, shouldFetch, slug, toast]);
+  }, [companyInfo, setCompanySlug, shouldFetch, slug, toast]);
 
   const goTo = (path: string) => {
     if (!slug) return;

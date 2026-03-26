@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { EmpresaInfo, fetchEmpresaPublic } from "@/services/companyService";
 import { resolveMediaUrl } from "@/lib/media";
 import { DEFAULT_CLIENT_THEME } from "@/lib/theme";
@@ -76,7 +76,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_USER, JSON.stringify(normalized));
   }, []);
 
-  const persistCompanySlug = (slug: string | null, info?: EmpresaInfo | null) => {
+  const persistCompanySlug = useCallback((slug: string | null, info?: EmpresaInfo | null) => {
     setCompanySlugState(slug);
     if (slug) {
       localStorage.setItem(STORAGE_COMPANY, slug);
@@ -93,7 +93,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
       setPalette("client", DEFAULT_CLIENT_THEME);
       activatePalette("dashboard");
     }
-  };
+  }, [activatePalette, setPalette]);
 
   const resolveCompanyForAuth = (override?: string): string | null => override ?? companySlug;
 
@@ -266,21 +266,37 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     };
   }, [companySlug, companyInfo?.slug, setPalette, activatePalette]);
 
+  const value = useMemo(
+    () => ({
+      client,
+      token,
+      isAuthenticated: !!client && !!token,
+      companySlug,
+      companyInfo,
+      register,
+      login,
+      loginWithGoogle,
+      logout,
+      setCompanySlug: persistCompanySlug,
+      updateClient: applyClientUpdate,
+    }),
+    [
+      client,
+      token,
+      companySlug,
+      companyInfo,
+      register,
+      login,
+      loginWithGoogle,
+      logout,
+      persistCompanySlug,
+      applyClientUpdate,
+    ],
+  );
+
   return (
     <ClientAuthContext.Provider
-      value={{
-        client,
-        token,
-        isAuthenticated: !!client && !!token,
-        companySlug,
-        companyInfo,
-        register,
-        login,
-        loginWithGoogle,
-        logout,
-        setCompanySlug: persistCompanySlug,
-        updateClient: applyClientUpdate,
-      }}
+      value={value}
     >
       {children}
     </ClientAuthContext.Provider>

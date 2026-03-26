@@ -30,7 +30,30 @@ export interface EmpresaInfo {
   client_theme: BrandTheme;
 }
 
+const PUBLIC_COMPANY_CACHE_TTL_MS = 5 * 60 * 1000;
 const publicCompanyRequestCache = new Map<string, Promise<EmpresaInfo>>();
+const publicCompanyDataCache = new Map<string, { data: EmpresaInfo; expiresAt: number }>();
+
+const getCachedPublicCompany = (slug: string): EmpresaInfo | null => {
+  const cached = publicCompanyDataCache.get(slug);
+  if (!cached) {
+    return null;
+  }
+
+  if (cached.expiresAt <= Date.now()) {
+    publicCompanyDataCache.delete(slug);
+    return null;
+  }
+
+  return cached.data;
+};
+
+const setCachedPublicCompany = (slug: string, data: EmpresaInfo) => {
+  publicCompanyDataCache.set(slug, {
+    data,
+    expiresAt: Date.now() + PUBLIC_COMPANY_CACHE_TTL_MS,
+  });
+};
 
 const normalizeEmpresa = (empresa: EmpresaInfo): EmpresaInfo => {
   const galleryPhotos = Array.isArray(empresa.gallery_photos)
@@ -69,6 +92,11 @@ export async function fetchEmpresaPublic(slug: string): Promise<EmpresaInfo> {
     throw new Error("slug is required");
   }
 
+  const cachedData = getCachedPublicCompany(slug);
+  if (cachedData) {
+    return cachedData;
+  }
+
   const cachedRequest = publicCompanyRequestCache.get(slug);
   if (cachedRequest) {
     return cachedRequest;
@@ -90,7 +118,9 @@ export async function fetchEmpresaPublic(slug: string): Promise<EmpresaInfo> {
     }
 
     const data = await handleResponse<EmpresaInfo>(response, "Erro na requisição");
-    return normalizeEmpresa(data);
+    const normalized = normalizeEmpresa(data);
+    setCachedPublicCompany(slug, normalized);
+    return normalized;
   })();
 
   publicCompanyRequestCache.set(slug, request);
