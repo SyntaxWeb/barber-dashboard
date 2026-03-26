@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback, ReactNode } from "react";
 import {
   BrandTheme,
   DEFAULT_CLIENT_THEME,
@@ -56,8 +56,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>(() => readStoredMode());
   const [palettes, setPalettes] = useState<Record<ThemeKind, BrandTheme>>(getDefaultPalettes);
   const [activeKind, setActiveKind] = useState<ThemeKind>("dashboard");
+  const palettesRef = useRef(palettes);
 
   const activePalette = useMemo(() => palettes[activeKind] ?? DEFAULT_DASHBOARD_THEME, [palettes, activeKind]);
+
+  useEffect(() => {
+    palettesRef.current = palettes;
+  }, [palettes]);
 
   const syncCssVariables = useCallback(() => {
     const root = document.documentElement;
@@ -100,13 +105,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   const setPalette = useCallback((kind: ThemeKind, palette?: Partial<BrandTheme> | null) => {
-    setPalettes((current) => ({
-      ...current,
-      [kind]:
+    setPalettes((current) => {
+      const nextPalette =
         kind === "dashboard"
           ? sanitizeTheme(palette, DEFAULT_DASHBOARD_THEME)
-          : sanitizeTheme(palette, DEFAULT_CLIENT_THEME),
-    }));
+          : sanitizeTheme(palette, DEFAULT_CLIENT_THEME);
+
+      const currentPalette = current[kind];
+      if (JSON.stringify(currentPalette) === JSON.stringify(nextPalette)) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [kind]: nextPalette,
+      };
+    });
   }, []);
 
   const activatePalette = useCallback(
@@ -116,22 +130,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         return;
       }
       requestAnimationFrame(() => {
-        const palette = kind === "dashboard" ? palettes.dashboard : palettes.client;
+        const palette = kind === "dashboard" ? palettesRef.current.dashboard : palettesRef.current.client;
         applyCssVariables(palette);
       });
     },
-    [mode, palettes],
+    [mode],
   );
 
-  const value = {
-    mode,
-    toggleMode,
-    setMode,
-    setPalette,
-    activatePalette,
-    palettes,
-    activeKind,
-  };
+  const value = useMemo(
+    () => ({
+      mode,
+      toggleMode,
+      setMode,
+      setPalette,
+      activatePalette,
+      palettes,
+      activeKind,
+    }),
+    [mode, setPalette, activatePalette, palettes, activeKind],
+  );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
