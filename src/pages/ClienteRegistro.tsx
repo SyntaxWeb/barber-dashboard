@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Mail, User, Phone, Lock, ArrowRight, Camera, Upload } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -145,7 +145,7 @@ export default function ClienteRegistro() {
     navigate(`/cliente${companyQuery}`);
   };
 
-  const handleGoogleCredential = async (credential: string) => {
+  const handleGoogleCredential = useCallback(async (credential: string) => {
     if (!targetCompany) {
       toast({
         title: "Link inválido",
@@ -173,7 +173,7 @@ export default function ClienteRegistro() {
       description: "Agora você pode agendar serviços sem preencher tudo novamente.",
     });
     navigate(`/cliente${companyQuery}`);
-  };
+  }, [companyQuery, loginWithGoogle, navigate, targetCompany, toast]);
 
   return (
     <div

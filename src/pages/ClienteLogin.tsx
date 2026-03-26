@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Mail, Lock, LogIn } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,7 +72,7 @@ export default function ClienteLogin() {
     navigate(`/cliente${companyQuery}`);
   };
 
-  const handleGoogleCredential = async (credential: string) => {
+  const handleGoogleCredential = useCallback(async (credential: string) => {
     if (!targetCompany) {
       toast({
         title: "Link inválido",
@@ -97,7 +97,7 @@ export default function ClienteLogin() {
 
     toast({ title: "Login realizado com Google" });
     navigate(`/cliente${companyQuery}`);
-  };
+  }, [companyQuery, loginWithGoogle, navigate, targetCompany, toast]);
 
   return (
     <div

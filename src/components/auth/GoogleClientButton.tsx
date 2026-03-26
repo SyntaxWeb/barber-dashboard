@@ -40,8 +40,14 @@ const GOOGLE_SCRIPT_ID = "google-client-script";
 
 export function GoogleClientButton({ onCredential, context = "signin", className }: GoogleClientButtonProps) {
   const buttonContainerRef = useRef<HTMLDivElement>(null);
+  const onCredentialRef = useRef(onCredential);
+  const initializedRef = useRef(false);
   const [scriptReady, setScriptReady] = useState(false);
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  useEffect(() => {
+    onCredentialRef.current = onCredential;
+  }, [onCredential]);
 
   useEffect(() => {
     if (!clientId) return;
@@ -85,17 +91,20 @@ export function GoogleClientButton({ onCredential, context = "signin", className
     const google = window.google;
     if (!google?.accounts?.id) return;
 
-    google.accounts.id.initialize({
-      client_id: clientId,
-      callback: (response) => {
-        if (response.credential) {
-          onCredential(response.credential);
-        }
-      },
-      ux_mode: "popup",
-      context,
-      cancel_on_tap_outside: false,
-    });
+    if (!initializedRef.current) {
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (response) => {
+          if (response.credential) {
+            onCredentialRef.current(response.credential);
+          }
+        },
+        ux_mode: "popup",
+        context,
+        cancel_on_tap_outside: false,
+      });
+      initializedRef.current = true;
+    }
 
     buttonContainerRef.current.innerHTML = "";
     google.accounts.id.renderButton(buttonContainerRef.current, {
@@ -106,7 +115,7 @@ export function GoogleClientButton({ onCredential, context = "signin", className
       width: 320,
       logo_alignment: "center",
     });
-  }, [scriptReady, clientId, onCredential, context]);
+  }, [scriptReady, clientId, context]);
 
   if (!clientId) {
     return (

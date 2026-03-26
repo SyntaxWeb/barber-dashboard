@@ -95,9 +95,9 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     }
   }, [activatePalette, setPalette]);
 
-  const resolveCompanyForAuth = (override?: string): string | null => override ?? companySlug;
+  const resolveCompanyForAuth = useCallback((override?: string): string | null => override ?? companySlug, [companySlug]);
 
-  const register = async (payload: ClientRegisterPayload, overrideSlug?: string): Promise<boolean> => {
+  const register = useCallback(async (payload: ClientRegisterPayload, overrideSlug?: string): Promise<boolean> => {
     const targetSlug = resolveCompanyForAuth(overrideSlug);
     if (!targetSlug) {
       return false;
@@ -122,9 +122,9 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     persistSession(data.user, data.token);
     persistCompanySlug(targetSlug);
     return true;
-  };
+  }, [persistCompanySlug, persistSession, resolveCompanyForAuth]);
 
-  const login = async (email: string, password: string, overrideSlug?: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string, overrideSlug?: string): Promise<boolean> => {
     const targetSlug = resolveCompanyForAuth(overrideSlug);
     if (!targetSlug) {
       return false;
@@ -146,9 +146,9 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     persistSession(data.user, data.token);
     persistCompanySlug(targetSlug);
     return true;
-  };
+  }, [persistCompanySlug, persistSession, resolveCompanyForAuth]);
 
-  const loginWithGoogle = async (credential: string, overrideSlug?: string): Promise<boolean> => {
+  const loginWithGoogle = useCallback(async (credential: string, overrideSlug?: string): Promise<boolean> => {
     const targetSlug = resolveCompanyForAuth(overrideSlug);
     if (!targetSlug) {
       return false;
@@ -170,7 +170,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     persistSession(data.user, data.token);
     persistCompanySlug(targetSlug);
     return true;
-  };
+  }, [persistCompanySlug, persistSession, resolveCompanyForAuth]);
 
   const logout = useCallback(() => {
     setClient(null);
