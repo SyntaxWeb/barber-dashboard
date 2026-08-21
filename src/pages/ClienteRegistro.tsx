@@ -178,7 +178,7 @@ export default function ClienteRegistro() {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4 py-10"
-      style={{ background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 70%, #ffffff 100%)` }}
+      style={{ background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 100%)` }}
     >
       <Card className="w-full max-w-lg border-border shadow-gold">
         <CardHeader className="space-y-3 text-center">

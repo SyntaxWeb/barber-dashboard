@@ -111,48 +111,122 @@ export const hexToHslString = (hex: string): string => {
 
 const clamp = (value: number, min = 0, max = 100) => Math.min(Math.max(value, min), max);
 
+const hslToString = ({ h, s, l }: HslColor): string => `${h} ${s}% ${l}%`;
+
 const adjustLightness = (hex: string, amount: number): string => {
   const { h, s, l } = hexToHsl(hex);
   return `${h} ${s}% ${clamp(l + amount)}%`;
 };
 
-const contrastColor = (hex: string): string => {
-  const { l } = hexToHsl(hex);
-  return l > 60 ? "#0F172A" : "#FFFFFF";
+const relativeLuminance = (hex: string): number => {
+  const { r, g, b } = hexToRgb(hex);
+  const channel = (value: number) => {
+    const normalized = value / 255;
+    return normalized <= 0.03928 ? normalized / 12.92 : Math.pow((normalized + 0.055) / 1.055, 2.4);
+  };
+
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+};
+
+export const contrastRatio = (foreground: string, background: string): number => {
+  const lighter = Math.max(relativeLuminance(foreground), relativeLuminance(background));
+  const darker = Math.min(relativeLuminance(foreground), relativeLuminance(background));
+  return (lighter + 0.05) / (darker + 0.05);
+};
+
+export const bestReadableColor = (background: string, options = ["#0F172A", "#FFFFFF"]): string => {
+  return options.reduce((best, current) =>
+    contrastRatio(current, background) > contrastRatio(best, background) ? current : best,
+  );
+};
+
+export const ensureReadableColor = (foreground: string, background: string, minimumRatio = 4.5): string => {
+  const normalizedForeground = normalizeHex(foreground, "#0F172A");
+  const normalizedBackground = normalizeHex(background, "#FFFFFF");
+
+  if (contrastRatio(normalizedForeground, normalizedBackground) >= minimumRatio) {
+    return normalizedForeground;
+  }
+
+  return bestReadableColor(normalizedBackground);
+};
+
+const readableMutedColor = (text: string, background: string): string => {
+  const readableText = ensureReadableColor(text, background);
+  const { h, s, l } = hexToHsl(readableText);
+  const bgLightness = hexToHsl(background).l;
+
+  return hslToString({
+    h,
+    s: clamp(s, 8, 40),
+    l: bgLightness > 55 ? clamp(l + 24, 25, 48) : clamp(l - 18, 68, 92),
+  });
+};
+
+const adaptiveBorder = (surface: string, background: string): string => {
+  const surfaceHsl = hexToHsl(surface);
+  const backgroundHsl = hexToHsl(background);
+  const direction = surfaceHsl.l > 52 ? -16 : 18;
+  const amount = Math.abs(surfaceHsl.l - backgroundHsl.l) < 8 ? direction * 1.4 : direction;
+
+  return `${surfaceHsl.h} ${clamp(surfaceHsl.s, 8, 45)}% ${clamp(surfaceHsl.l + amount, 12, 88)}%`;
+};
+
+export const getThemeReadabilityIssues = (theme: BrandTheme): string[] => {
+  const palette = sanitizeTheme(theme);
+  const issues: string[] = [];
+
+  if (contrastRatio(palette.text, palette.background) < 4.5) {
+    issues.push("Texto com baixo contraste no fundo principal");
+  }
+  if (contrastRatio(palette.text, palette.surface) < 4.5) {
+    issues.push("Texto com baixo contraste nos cards");
+  }
+  if (contrastRatio(bestReadableColor(palette.primary), palette.primary) < 4.5) {
+    issues.push("Cor primária muito próxima dos tons de texto padrão");
+  }
+  if (contrastRatio(bestReadableColor(palette.accent), palette.accent) < 3) {
+    issues.push("Realce com pouco contraste");
+  }
+
+  return issues;
 };
 
 export const themeToCssVars = (theme: BrandTheme): Record<string, string> => {
   const palette = sanitizeTheme(theme);
-  const primaryFore = hexToHslString(contrastColor(palette.primary));
-  const secondaryFore = hexToHslString(contrastColor(palette.secondary));
-  const accentFore = hexToHslString(contrastColor(palette.accent));
-  const surfaceForeground = hexToHslString(palette.text);
+  const foreground = ensureReadableColor(palette.text, palette.background);
+  const surfaceForeground = ensureReadableColor(palette.text, palette.surface);
+  const primaryFore = bestReadableColor(palette.primary);
+  const secondaryFore = bestReadableColor(palette.secondary);
+  const accentFore = bestReadableColor(palette.accent);
+  const muted = adjustLightness(palette.background, hexToHsl(palette.background).l > 55 ? -5 : 8);
+  const border = adaptiveBorder(palette.surface, palette.background);
 
   return {
     "--background": hexToHslString(palette.background),
-    "--foreground": hexToHslString(palette.text),
+    "--foreground": hexToHslString(foreground),
     "--card": hexToHslString(palette.surface),
-    "--card-foreground": surfaceForeground,
+    "--card-foreground": hexToHslString(surfaceForeground),
     "--popover": hexToHslString(palette.surface),
-    "--popover-foreground": surfaceForeground,
+    "--popover-foreground": hexToHslString(surfaceForeground),
     "--primary": hexToHslString(palette.primary),
-    "--primary-foreground": primaryFore,
+    "--primary-foreground": hexToHslString(primaryFore),
     "--secondary": hexToHslString(palette.secondary),
-    "--secondary-foreground": secondaryFore,
+    "--secondary-foreground": hexToHslString(secondaryFore),
     "--accent": hexToHslString(palette.accent),
-    "--accent-foreground": accentFore,
-    "--muted": adjustLightness(palette.background, -5),
-    "--muted-foreground": hexToHslString(palette.text),
-    "--border": adjustLightness(palette.surface, -20),
-    "--input": adjustLightness(palette.surface, -15),
+    "--accent-foreground": hexToHslString(accentFore),
+    "--muted": muted,
+    "--muted-foreground": readableMutedColor(palette.text, palette.background),
+    "--border": border,
+    "--input": border,
     "--ring": hexToHslString(palette.primary),
     "--sidebar-background": hexToHslString(palette.surface),
-    "--sidebar-foreground": surfaceForeground,
+    "--sidebar-foreground": hexToHslString(surfaceForeground),
     "--sidebar-primary": hexToHslString(palette.primary),
-    "--sidebar-primary-foreground": primaryFore,
+    "--sidebar-primary-foreground": hexToHslString(primaryFore),
     "--sidebar-accent": hexToHslString(palette.accent),
-    "--sidebar-accent-foreground": accentFore,
-    "--sidebar-border": adjustLightness(palette.surface, -15),
+    "--sidebar-accent-foreground": hexToHslString(accentFore),
+    "--sidebar-border": border,
     "--sidebar-ring": hexToHslString(palette.primary),
   };
 };

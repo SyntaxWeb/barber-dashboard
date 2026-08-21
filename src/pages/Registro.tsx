@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import defaultLogo from "@/assets/syntax-logo.svg";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:4002";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8001";
 
 const highlights = [
   {

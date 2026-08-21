@@ -102,11 +102,11 @@ export default function ClienteLogin() {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4 py-10"
-      style={{ background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 70%, #ffffff 100%)` }}
+      style={{ background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 100%)` }}
     >
       <Card className="w-full max-w-md border-border shadow-gold">
         <CardHeader className="text-center space-y-3">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white border border-border overflow-hidden">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-card border border-border overflow-hidden">
             <img src={companyInfo?.icon_url ?? defaultLogo} alt="SyntaxAtendimento" className="h-full w-full object-cover" />
           </div>
           <div>

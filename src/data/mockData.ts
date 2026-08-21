@@ -40,6 +40,11 @@ export interface Agendamento {
     available_rewards_count: number;
     available_rewards: LoyaltyRewardAvailability[];
   } | null;
+  sale?: {
+    id: number;
+    status: "open" | "closed" | "cancelled";
+    total: number;
+  } | null;
 }
 
 export interface Servico {

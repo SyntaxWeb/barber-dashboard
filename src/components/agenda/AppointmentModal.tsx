@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Phone, Calendar, Clock, Scissors, FileText, Check, Trash2, Star, MessageSquareText, Gift } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Phone, Calendar, Clock, Scissors, FileText, Check, Trash2, Star, MessageSquareText, Gift, ShoppingCart, Plus, Minus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,10 @@ import { Agendamento } from "@/data/mockData";
 import { formatarData, formatarPreco, cancelarAgendamento, concluirAgendamento } from "@/services/agendaService";
 import { useToast } from "@/hooks/use-toast";
 import { buildWhatsAppUrl, openWhatsAppChat } from "@/lib/whatsapp";
+import { closeAppointmentSale, fetchAppointmentSale, fetchProducts, type Product, type Sale } from "@/services/inventoryService";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AppointmentModalProps {
   agendamento: Agendamento | null;
@@ -18,7 +22,51 @@ interface AppointmentModalProps {
 
 export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: AppointmentModalProps) {
   const [loading, setLoading] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [sale, setSale] = useState<Sale | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [selectedQuantity, setSelectedQuantity] = useState("1");
+  const [consumedProducts, setConsumedProducts] = useState<Array<{ product: Product; quantity: number }>>([]);
+  const [discount, setDiscount] = useState("0");
+  const [addition, setAddition] = useState("0");
+  const [paymentMethod, setPaymentMethod] = useState("dinheiro");
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!open || !agendamento || !checkoutOpen) return;
+
+    setCheckoutLoading(true);
+    Promise.all([fetchAppointmentSale(agendamento.id), fetchProducts()])
+      .then(([saleData, productData]) => {
+        setSale(saleData);
+        setProducts(productData);
+        setConsumedProducts(
+          saleData.items
+            .filter((item) => item.type === "product" && item.product_id)
+            .map((item) => ({
+              product: productData.find((product) => product.id === item.product_id) ?? {
+                id: item.product_id ?? 0,
+                name: item.description,
+                sale_price: item.unit_price,
+                stock_quantity: item.quantity,
+                minimum_stock: 0,
+                active: true,
+                low_stock: false,
+              },
+              quantity: item.quantity,
+            })),
+        );
+        setDiscount(String(saleData.discount || 0));
+        setAddition(String(saleData.addition || 0));
+        setPaymentMethod(saleData.payment_method || "dinheiro");
+      })
+      .catch((error) => {
+        toast({ title: "Erro ao abrir caixa", description: error instanceof Error ? error.message : "Tente novamente.", variant: "destructive" });
+      })
+      .finally(() => setCheckoutLoading(false));
+  }, [open, agendamento?.id, checkoutOpen, toast]);
 
   if (!agendamento) return null;
 
@@ -29,6 +77,57 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
   };
 
   const status = statusConfig[agendamento.status];
+
+  const currencyValue = (value: string) => Number(value.replace(",", ".")) || 0;
+  const productsTotal = consumedProducts.reduce((total, item) => total + item.product.sale_price * item.quantity, 0);
+  const servicesTotal = sale?.services_total ?? agendamento.preco;
+  const checkoutTotal = Math.max(0, servicesTotal + productsTotal + currencyValue(addition) - currencyValue(discount));
+  const saleClosed = sale?.status === "closed" || agendamento.status === "concluido";
+
+  const addConsumedProduct = () => {
+    const product = products.find((item) => item.id.toString() === selectedProductId);
+    const quantity = Math.max(1, Math.round(currencyValue(selectedQuantity)));
+    if (!product) return;
+    if (quantity > product.stock_quantity) {
+      toast({ title: "Estoque insuficiente", description: `${product.name} tem ${product.stock_quantity} unidade(s).`, variant: "destructive" });
+      return;
+    }
+    setConsumedProducts((current) => {
+      const existing = current.find((item) => item.product.id === product.id);
+      if (existing) {
+        return current.map((item) => item.product.id === product.id ? { ...item, quantity: item.quantity + quantity } : item);
+      }
+      return [...current, { product, quantity }];
+    });
+    setSelectedProductId("");
+    setSelectedQuantity("1");
+  };
+
+  const updateConsumedQuantity = (productId: number, delta: number) => {
+    setConsumedProducts((current) => current
+      .map((item) => item.product.id === productId ? { ...item, quantity: item.quantity + delta } : item)
+      .filter((item) => item.quantity > 0));
+  };
+
+  const handleCloseSale = async () => {
+    setCheckoutLoading(true);
+    try {
+      const closedSale = await closeAppointmentSale(agendamento.id, {
+        products: consumedProducts.map((item) => ({ product_id: item.product.id, quantity: item.quantity })),
+        discount: currencyValue(discount),
+        addition: currencyValue(addition),
+        payment_method: paymentMethod,
+      });
+      setSale(closedSale);
+      toast({ title: "Atendimento fechado", description: `Total recebido: ${formatarPreco(closedSale.total)}.` });
+      onUpdate();
+      onOpenChange(false);
+    } catch (error) {
+      toast({ title: "Erro ao fechar atendimento", description: error instanceof Error ? error.message : "Tente novamente.", variant: "destructive" });
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
 
   const handleConcluir = async () => {
     setLoading(true);
@@ -73,7 +172,6 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
   };
 
   const handleWhatsAppContact = () => {
-    console.log(agendamento)
     const message = `Olá ${agendamento.cliente}! Aqui é da equipe da ${agendamento.company.nome}. Estou entrando em contato sobre seu atendimento do dia ${formatarData(agendamento.data)} às ${agendamento.horario}.`;
     const opened = openWhatsAppChat(agendamento.telefone, message);
 
@@ -88,7 +186,7 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between pr-8">
             <span>Detalhes do Agendamento</span>
@@ -172,6 +270,66 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
                   <p className="text-xs text-muted-foreground">Observações</p>
                   <p className="text-sm">{agendamento.observacoes}</p>
                 </div>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-border p-3">
+            <Button variant="outline" className="w-full justify-between" onClick={() => setCheckoutOpen((value) => !value)}>
+              <span className="flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> Caixa do atendimento</span>
+              <Badge variant={saleClosed ? "secondary" : "outline"}>{saleClosed ? "Fechado" : "Abrir"}</Badge>
+            </Button>
+
+            {checkoutOpen && (
+              <div className="mt-4 space-y-4">
+                {checkoutLoading && !sale ? <p className="text-sm text-muted-foreground">Carregando caixa...</p> : null}
+                <div className="rounded-md bg-muted/40 p-3 text-sm">
+                  <div className="flex justify-between"><span>Serviços</span><strong>{formatarPreco(servicesTotal)}</strong></div>
+                  <div className="flex justify-between"><span>Produtos</span><strong>{formatarPreco(productsTotal)}</strong></div>
+                  <div className="flex justify-between"><span>Acréscimos</span><strong>{formatarPreco(currencyValue(addition))}</strong></div>
+                  <div className="flex justify-between"><span>Descontos</span><strong>- {formatarPreco(currencyValue(discount))}</strong></div>
+                  <div className="mt-2 flex justify-between border-t border-border pt-2 text-base"><span>Total</span><strong className="text-primary">{formatarPreco(checkoutTotal)}</strong></div>
+                </div>
+
+                {!saleClosed && (
+                  <>
+                    <div className="grid gap-2 sm:grid-cols-[1fr_80px_auto]">
+                      <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                        <SelectTrigger><SelectValue placeholder="Adicionar produto consumido" /></SelectTrigger>
+                        <SelectContent>
+                          {products.map((product) => (
+                            <SelectItem key={product.id} value={product.id.toString()} disabled={product.stock_quantity <= 0}>
+                              {product.name} • {formatarPreco(product.sale_price)} • est. {product.stock_quantity}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input value={selectedQuantity} onChange={(event) => setSelectedQuantity(event.target.value)} />
+                      <Button type="button" onClick={addConsumedProduct}><Plus className="h-4 w-4" /></Button>
+                    </div>
+
+                    {consumedProducts.map((item) => (
+                      <div key={item.product.id} className="flex items-center justify-between rounded-md border border-border p-2 text-sm">
+                        <div><p className="font-medium">{item.product.name}</p><p className="text-muted-foreground">{item.quantity} x {formatarPreco(item.product.sale_price)}</p></div>
+                        <div className="flex items-center gap-1">
+                          <Button size="icon" variant="ghost" onClick={() => updateConsumedQuantity(item.product.id, -1)}><Minus className="h-4 w-4" /></Button>
+                          <span className="w-8 text-center">{item.quantity}</span>
+                          <Button size="icon" variant="ghost" onClick={() => updateConsumedQuantity(item.product.id, 1)}><Plus className="h-4 w-4" /></Button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-1"><Label>Desconto</Label><Input value={discount} onChange={(event) => setDiscount(event.target.value)} /></div>
+                      <div className="space-y-1"><Label>Acréscimo</Label><Input value={addition} onChange={(event) => setAddition(event.target.value)} /></div>
+                      <div className="space-y-1"><Label>Pagamento</Label><Select value={paymentMethod} onValueChange={setPaymentMethod}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="dinheiro">Dinheiro</SelectItem><SelectItem value="pix">Pix</SelectItem><SelectItem value="cartao_credito">Cartão crédito</SelectItem><SelectItem value="cartao_debito">Cartão débito</SelectItem></SelectContent></Select></div>
+                    </div>
+
+                    <Button className="w-full" onClick={handleCloseSale} disabled={checkoutLoading}>
+                      <Check className="mr-2 h-4 w-4" /> Fechar atendimento
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </div>

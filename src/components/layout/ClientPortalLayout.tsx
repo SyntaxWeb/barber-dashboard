@@ -94,7 +94,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
           className={cn(
             "w-full rounded-xl border p-3 text-left transition-all",
             active
-              ? "border-primary/50 bg-white/60 text-primary"
+              ? "border-primary/50 bg-card/60 text-primary"
               : "border-transparent hover:border-border hover:bg-muted/60",
           )}
         >
@@ -113,11 +113,11 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
     <div
       className="min-h-screen"
       style={{
-        background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 65%, #f6f6f6 100%)`,
+        background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 100%)`,
       }}
     >
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <header className="sticky top-0 z-30 border-b border-border/60 bg-white/90 backdrop-blur">
+        <header className="sticky top-0 z-30 border-b border-border/60 bg-card/90 backdrop-blur">
           <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 md:px-8">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(true)}>
@@ -127,7 +127,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
                 to="/cliente"
                 className="flex items-center gap-3 rounded-full px-4 py-1 transition hover:bg-muted/80 md:px-0 md:py-0"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm dark:bg-muted">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-sm dark:bg-muted">
                   <img src={companyIcon} className="h-8 w-8 object-contain rounded-full" />
                 </div>
                 <div className="hidden text-left md:block">
@@ -153,7 +153,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
           </div>
         </header>
 
-        <SheetContent side="left" className="w-80 bg-white p-0">
+        <SheetContent side="left" className="w-80 bg-card p-0">
           <div className="h-full overflow-y-auto p-4">
             <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/40 p-3">
               <Sparkles className="h-4 w-4 text-primary" />
@@ -173,7 +173,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
 
       <div className="mx-auto flex w-full max-w-6xl gap-4 px-4 pb-10 pt-6 md:gap-6 md:px-8">
         <aside className="sticky top-24 hidden w-64 flex-shrink-0 flex-col gap-4 md:flex">
-          <div className="rounded-2xl border border-border/60 bg-white/90 p-4 shadow-sm">
+          <div className="rounded-2xl border border-border/60 bg-card/90 p-4 shadow-sm">
             <p className="text-sm font-semibold text-foreground">{companyName}</p>
             <p className="text-xs text-muted-foreground">Escolha uma opção:</p>
           </div>

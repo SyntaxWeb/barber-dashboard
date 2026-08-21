@@ -25,7 +25,14 @@ import {
 import { fetchWhatsappSession, logoutWhatsappSession, startWhatsappSession } from "@/services/whatsappService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME, sanitizeTheme, isValidHexColor } from "@/lib/theme";
+import {
+  BrandTheme,
+  DEFAULT_CLIENT_THEME,
+  DEFAULT_DASHBOARD_THEME,
+  getThemeReadabilityIssues,
+  sanitizeTheme,
+  isValidHexColor,
+} from "@/lib/theme";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ConfiguracoesEmpresaTab } from "@/pages/configuracoes/ConfiguracoesEmpresaTab";
 import { ConfiguracoesAgendaTab } from "@/pages/configuracoes/ConfiguracoesAgendaTab";
@@ -192,29 +199,40 @@ export default function Configuracoes() {
     setPalette(type, theme);
   };
 
-  const renderThemeGrid = (type: "dashboard" | "client", theme: BrandTheme) => (
-    <div className="grid gap-4 lg:grid-cols-2">
-      {themeFields.map((field) => (
-        <div key={`${type}-${field.key}`} className="space-y-2">
-          <Label>{field.label}</Label>
-          <div className="flex items-center gap-3">
-            <Input
-              type="color"
-              value={theme[field.key]}
-              onChange={(event) => handleThemeColorChange(type, field.key, event.target.value)}
-              className="h-10 w-16 cursor-pointer rounded-md border p-1"
-            />
-            <Input
-              value={theme[field.key]}
-              onChange={(event) => handleThemeTextChange(type, field.key, event.target.value)}
-              placeholder="#000000"
-            />
+  const renderThemeGrid = (type: "dashboard" | "client", theme: BrandTheme) => {
+    const readabilityIssues = getThemeReadabilityIssues(theme);
+
+    return (
+      <div className="space-y-4">
+        {readabilityIssues.length > 0 && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+            O sistema vai adaptar automaticamente textos e contornos para manter a leitura confortável.
           </div>
-          <p className="text-xs text-muted-foreground">{field.description}</p>
+        )}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {themeFields.map((field) => (
+            <div key={`${type}-${field.key}`} className="space-y-2">
+              <Label>{field.label}</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="color"
+                  value={theme[field.key]}
+                  onChange={(event) => handleThemeColorChange(type, field.key, event.target.value)}
+                  className="h-10 w-16 cursor-pointer rounded-md border p-1"
+                />
+                <Input
+                  value={theme[field.key]}
+                  onChange={(event) => handleThemeTextChange(type, field.key, event.target.value)}
+                  placeholder="#000000"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">{field.description}</p>
+            </div>
+          ))}
         </div>
-      ))}
-    </div>
-  );
+      </div>
+    );
+  };
 
   const handleThemeColorChange = (type: "dashboard" | "client", key: keyof BrandTheme, value: string) => {
     const normalized = value.toUpperCase();

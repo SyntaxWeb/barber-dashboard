@@ -25,6 +25,8 @@ import ClientePerfil from "./pages/ClientePerfil";
 import ClienteDashboard from "./pages/ClienteDashboard";
 import FeedbackPublico from "./pages/FeedbackPublico";
 import Relatorios from "./pages/Relatorios";
+import Estoque from "./pages/Estoque";
+import Caixa from "./pages/Caixa";
 import Assinatura from "./pages/Assinatura";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import AdminLogs from "./pages/AdminLogs";
@@ -117,6 +119,22 @@ const App = () => (
                   element={
                     <ProviderOrAdminRoute>
                       <Relatorios />
+                    </ProviderOrAdminRoute>
+                  }
+                />
+                <Route
+                  path="/estoque"
+                  element={
+                    <ProviderOrAdminRoute>
+                      <Estoque />
+                    </ProviderOrAdminRoute>
+                  }
+                />
+                <Route
+                  path="/caixa"
+                  element={
+                    <ProviderOrAdminRoute>
+                      <Caixa />
                     </ProviderOrAdminRoute>
                   }
                 />

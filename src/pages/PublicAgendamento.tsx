@@ -154,7 +154,7 @@ export default function PublicAgendamento() {
     <div
       className="min-h-screen py-10 px-4"
       style={{
-        background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 60%, #ffffff 100%)`,
+        background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 100%)`,
       }}
     >
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
@@ -166,7 +166,7 @@ export default function PublicAgendamento() {
         <Card className="border-border shadow-gold/40">
           <CardContent className="flex flex-col gap-6 p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white border border-border shadow-inner overflow-hidden">
+              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-card border border-border shadow-inner overflow-hidden">
                 <img src={empresa.icon_url ?? defaultLogo} alt={empresa.nome} className="h-full w-full object-cover" />
               </div>
               <div>
@@ -177,7 +177,7 @@ export default function PublicAgendamento() {
                 </p>
               </div>
             </div>
-            <div className="rounded-2xl bg-gradient-to-r from-white to-muted/50 p-5 space-y-5">
+            <div className="rounded-2xl bg-gradient-to-r from-card to-muted/50 p-5 space-y-5">
               <div className="flex flex-col gap-4 lg:flex-row">
                 <div className="flex flex-1 flex-col gap-2 p-2 rounded-2xl bg-primary/10 p-5 text-sm text-primary">
                   <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">Comece por aqui</p>
@@ -194,7 +194,7 @@ export default function PublicAgendamento() {
                   </Button>
                   <Button
                     variant="secondary"
-                    className="w-full py-5 text-base font-semibold border border-primary/30 bg-white text-primary shadow"
+                    className="w-full py-5 text-base font-semibold border border-primary/30 bg-card text-primary shadow"
                     onClick={() => goTo("/cliente/registro")}
                   >
                     Criar minha conta
@@ -226,7 +226,7 @@ export default function PublicAgendamento() {
           {onboardingCards.map((card) => {
             const Icon = card.icon;
             return (
-              <Card key={card.title} className="border-border/70 bg-white shadow-sm">
+              <Card key={card.title} className="border-border/70 bg-card shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <Icon className="h-5 w-5 text-primary" />

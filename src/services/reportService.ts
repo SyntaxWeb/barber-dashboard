@@ -53,6 +53,9 @@ export interface CompanyReport {
     completed: number;
     upcoming_week: number;
     revenue_month: number;
+    services_revenue_month?: number;
+    products_revenue_month?: number;
+    closed_sales_month?: number;
   };
   feedback: {
     average: number | null;
@@ -68,6 +71,12 @@ export interface CompanyReport {
   services: Array<{
     service_id: number | null;
     servico: string;
+    total: number;
+    revenue: number;
+  }>;
+  products?: Array<{
+    product_id: number | null;
+    produto: string;
     total: number;
     revenue: number;
   }>;

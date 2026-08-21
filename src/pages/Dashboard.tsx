@@ -15,6 +15,7 @@ import {
 import { Layout } from "@/components/layout/Layout";
 import { Agendamento } from "@/data/mockData";
 import { fetchAgendamentosPorData, formatarPreco } from "@/services/agendaService";
+import { fetchSales, type Sale } from "@/services/inventoryService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import defaultLogo from "@/assets/syntax-logo.svg";
@@ -30,6 +31,7 @@ const PRODUCT_UPDATES_DISMISSED_KEY = "dashboard:product-updates:dismissed:v2";
 
 export default function Dashboard() {
   const [agendamentosHoje, setAgendamentosHoje] = useState<Agendamento[]>([]);
+  const [salesHoje, setSalesHoje] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [showProductUpdates, setShowProductUpdates] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -66,8 +68,9 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadData() {
       try {
-        const data = await fetchAgendamentosPorData(hoje);
+        const [data, sales] = await Promise.all([fetchAgendamentosPorData(hoje), fetchSales({ status: "closed", from: hoje, to: hoje })]);
         setAgendamentosHoje(data);
+        setSalesHoje(sales);
       } finally {
         setLoading(false);
       }
@@ -87,7 +90,7 @@ export default function Dashboard() {
   const proximoCliente = agendamentosConfirmados
     .sort((a, b) => a.horario.localeCompare(b.horario))[0];
 
-  const faturamentoHoje = agendamentosConcluidos.reduce((acc, a) => acc + a.preco, 0);
+  const faturamentoHoje = salesHoje.reduce((acc, sale) => acc + sale.total, 0);
   const horariosLivres = 20 - agendamentosHoje.filter(a => a.status !== 'cancelado').length;
 
   const stats = [
@@ -113,7 +116,7 @@ export default function Dashboard() {
       title: 'Faturamento',
       value: formatarPreco(faturamentoHoje),
       icon: TrendingUp,
-      description: 'Hoje',
+      description: `${salesHoje.length} caixa${salesHoje.length !== 1 ? 's' : ''} fechado${salesHoje.length !== 1 ? 's' : ''} hoje`,
       isHighlight: true
     }
   ];

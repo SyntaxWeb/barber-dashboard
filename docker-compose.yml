@@ -1,0 +1,12 @@
+services:
+  app:
+    container_name: barber_dashboard
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8001}
+        VITE_GOOGLE_CLIENT_ID: 
+    restart: unless-stopped
+    ports:
+      - 4002:80

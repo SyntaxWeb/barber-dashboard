@@ -291,18 +291,19 @@ export default function Relatorios() {
             icon={<BarChart3 className="h-5 w-5 text-primary" />}
           />
           <SummaryCard
-            title="Confirmados"
-            value={loading ? "..." : report?.summary.confirmed ?? "--"}
-            description="No pipeline"
+            title="Caixas fechados"
+            value={loading ? "..." : report?.summary.closed_sales_month ?? "--"}
+            description="No mês atual"
           />
           <SummaryCard
-            title="Concluídos"
-            value={loading ? "..." : report?.summary.completed ?? "--"}
-            description="Histórico geral"
+            title="Produtos no mês"
+            value={loading ? "..." : formatarPreco(report?.summary.products_revenue_month ?? 0)}
+            description="Vendas no caixa"
           />
           <SummaryCard
             title="Receita do mês"
             value={loading ? "..." : formatarPreco(report?.summary.revenue_month ?? 0)}
+            description={`Serviços ${formatSystemRevenue(report?.summary.services_revenue_month)}`}
             icon={<TrendingUp className="h-5 w-5 text-primary" />}
           />
         </section>
@@ -433,6 +434,41 @@ export default function Relatorios() {
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground">Nenhum serviço encontrado.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Produtos vendidos</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Carregando...</p>
+              ) : report?.products?.length ? (
+                report.products.map((product) => (
+                  <div key={product.product_id ?? product.produto} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{product.produto}</span>
+                      <span className="text-muted-foreground">{product.total} un.</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Receita: <span className="font-semibold">{formatarPreco(product.revenue ?? 0)}</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted">
+                      <div
+                        className="h-1.5 rounded-full bg-primary/70"
+                        style={{
+                          width: `${
+                            report.products?.[0]?.revenue ? (product.revenue / report.products[0].revenue) * 100 : 0
+                          }%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">Nenhum produto vendido ainda.</p>
               )}
             </CardContent>
           </Card>
