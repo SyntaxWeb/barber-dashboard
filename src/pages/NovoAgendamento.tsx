@@ -269,7 +269,7 @@ export default function NovoAgendamento() {
                             <div>
                               <p className="font-medium leading-tight">{item.nome}</p>
                               <p className="text-xs text-muted-foreground">
-                                {item.telefone || "Sem telefone"} • {item.email}
+                                {item.telefone || "Sem telefone"} • {item.email || "Sem e-mail"}
                               </p>
                             </div>
                           </button>
@@ -280,7 +280,7 @@ export default function NovoAgendamento() {
                 </div>
                 {clienteSelecionado && (
                   <p className="text-xs text-muted-foreground">
-                    Cliente selecionado • {clienteSelecionado.email}
+                    Cliente selecionado • {clienteSelecionado.email || "Sem e-mail"}
                   </p>
                 )}
               </div>

@@ -77,7 +77,9 @@ export default function Clientes() {
       url.searchParams.set("company", companySlug);
     }
     url.searchParams.set("nome", cliente.nome);
-    url.searchParams.set("email", cliente.email);
+    if (cliente.email) {
+      url.searchParams.set("email", cliente.email);
+    }
     if (cliente.telefone) {
       url.searchParams.set("telefone", cliente.telefone);
     }
@@ -142,10 +144,10 @@ export default function Clientes() {
 
   const handleCreateCliente = async (event: FormEvent) => {
     event.preventDefault();
-    if (!nome.trim() || !email.trim() || !telefone.trim()) {
+    if (!nome.trim() || !telefone.trim()) {
       toast({
         title: "Preencha os dados obrigatórios",
-        description: "Nome, email e telefone são necessários para enviar o convite.",
+        description: "Nome e telefone são necessários para cadastrar o cliente.",
         variant: "destructive",
       });
       return;
@@ -155,7 +157,7 @@ export default function Clientes() {
     try {
       const novo = await createCliente({
         nome: nome.trim(),
-        email: email.trim(),
+        email: email.trim() || undefined,
         telefone: telefone.trim(),
         observacoes: observacoes.trim() || undefined,
       });
@@ -273,11 +275,11 @@ export default function Clientes() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cliente-email">Email</Label>
+                    <Label htmlFor="cliente-email">Email <span className="text-xs font-normal text-muted-foreground">(opcional)</span></Label>
                     <Input
                       id="cliente-email"
                       type="email"
-                      placeholder="cliente@email.com"
+                      placeholder="cliente@email.com (opcional)"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />

@@ -45,7 +45,7 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
 export interface Cliente {
   id: number;
   nome: string;
-  email: string;
+  email?: string | null;
   telefone?: string | null;
   observacoes?: string | null;
   created_at?: string;
@@ -54,7 +54,7 @@ export interface Cliente {
 
 export interface CreateClientePayload {
   nome: string;
-  email: string;
+  email?: string;
   telefone: string;
   observacoes?: string;
 }
