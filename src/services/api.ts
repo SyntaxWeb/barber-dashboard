@@ -1,6 +1,6 @@
 export type AuthScope = "provider" | "client" | "any";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8001";
+const API_URL = import.meta.env.VITE_API_URL || "https://api-atendimento.syntaxatendimento.com.br";
 const AUTH_EXPIRED_EVENT = "auth:expired";
 
 export const apiFetch = async (path: string, options: RequestInit = {}, scope: AuthScope = "any") => {

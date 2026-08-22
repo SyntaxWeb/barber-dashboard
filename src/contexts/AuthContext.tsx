@@ -55,7 +55,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8001";
+const API_URL = import.meta.env.VITE_API_URL || "https://api-atendimento.syntaxatendimento.com.br";
 const normalizeCompany = (company?: CompanyInfo | null): CompanyInfo | null => {
   if (!company) return null;
   const dashboardTheme = sanitizeTheme(company.dashboard_theme, DEFAULT_DASHBOARD_THEME);
