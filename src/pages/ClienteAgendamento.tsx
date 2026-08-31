@@ -10,6 +10,8 @@ import {
   NotebookPen,
   CheckCircle2,
   ArrowRight,
+  Copy,
+  CreditCard,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +23,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
-import { clientCreateAgendamento, clientFetchHorarios, clientFetchServicos } from "@/services/clientPortalService";
+import {
+  clientCreateAgendamento,
+  clientCreatePixPayment,
+  clientFetchHorarios,
+  clientFetchServicos,
+  type PixPaymentResponse,
+} from "@/services/clientPortalService";
 import { fetchClientLoyalty } from "@/services/clientLoyaltyService";
 import { Servico } from "@/data/mockData";
 import { cn } from "@/lib/utils";
@@ -57,6 +65,8 @@ export default function ClienteAgendamento() {
       grants_free_appointment?: boolean;
     };
   }>>([]);
+  const [paymentMode, setPaymentMode] = useState<"local" | "pix">("local");
+  const [pixPayment, setPixPayment] = useState<PixPaymentResponse | null>(null);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
     if (queryCompany && queryCompany !== companySlug) {
@@ -163,8 +173,9 @@ export default function ClienteAgendamento() {
     }
 
     setLoading(true);
+    setPixPayment(null);
     try {
-      await clientCreateAgendamento(
+      const appointment = await clientCreateAgendamento(
         {
           service_id: selectedServiceIds[0],
           service_ids: selectedServiceIds,
@@ -177,15 +188,34 @@ export default function ClienteAgendamento() {
         activeCompany,
       );
 
-      toast({
-        title: "Agendamento confirmado!",
-        description: `${servicosSelecionados.map((servico) => servico.nome).join(" + ")} em ${format(data, "dd/MM/yyyy")} às ${horarioSelecionado}`,
-      });
-      setSelectedServiceIds([]);
-      setObservacoes("");
-      setHora("");
-      setMinuto("");
-      setLoyaltyRedemptionId("none");
+      if (paymentMode === "pix" && !selectedPendingRedemption) {
+        try {
+          const payment = await clientCreatePixPayment(appointment.id, token);
+          setPixPayment(payment);
+          toast({
+            title: "Agendamento confirmado",
+            description: "Use o QR Code Pix para concluir o pagamento.",
+          });
+        } catch (paymentError) {
+          toast({
+            title: "Agendamento confirmado",
+            description: paymentError instanceof Error ? paymentError.message : "O pagamento online nao esta disponivel para este prestador.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Agendamento confirmado!",
+          description: `${servicosSelecionados.map((servico) => servico.nome).join(" + ")} em ${format(data, "dd/MM/yyyy")} às ${horarioSelecionado}`,
+        });
+      }
+      if (paymentMode !== "pix" || selectedPendingRedemption) {
+        setSelectedServiceIds([]);
+        setObservacoes("");
+        setHora("");
+        setMinuto("");
+        setLoyaltyRedemptionId("none");
+      }
       setPendingRedemptions((prev) => prev.filter((item) => item.id.toString() !== loyaltyRedemptionId));
     } catch (error) {
       toast({
@@ -396,6 +426,42 @@ export default function ClienteAgendamento() {
               </div>
 
               <div className="space-y-2">
+                <Label>Pagamento</Label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMode("local")}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md border p-3 text-left text-sm transition",
+                      paymentMode === "local" ? "border-primary bg-primary/5" : "hover:bg-muted",
+                    )}
+                  >
+                    <CreditCard className="h-4 w-4 text-primary" />
+                    <span>
+                      <span className="block font-medium text-foreground">Pagar no local</span>
+                      <span className="text-xs text-muted-foreground">Combine o pagamento no atendimento.</span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMode("pix")}
+                    disabled={Boolean(selectedPendingRedemption)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md border p-3 text-left text-sm transition",
+                      paymentMode === "pix" ? "border-primary bg-primary/5" : "hover:bg-muted",
+                      selectedPendingRedemption && "cursor-not-allowed opacity-60",
+                    )}
+                  >
+                    <CreditCard className="h-4 w-4 text-primary" />
+                    <span>
+                      <span className="block font-medium text-foreground">Pix online</span>
+                      <span className="text-xs text-muted-foreground">Gere QR Code depois de confirmar.</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="observacoes">Observações</Label>
                 <div className="relative">
                   <NotebookPen className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -443,6 +509,47 @@ export default function ClienteAgendamento() {
             </form>
           </CardContent>
       </Card>
+
+      {pixPayment ? (
+        <Card className="mb-3 border-primary/30">
+          <CardHeader>
+            <CardTitle>Pagamento Pix</CardTitle>
+            <CardDescription>Escaneie o QR Code ou use o Pix Copia e Cola.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {pixPayment.pix.qr_code_base64 ? (
+              <div className="flex justify-center">
+                <img
+                  src={`data:image/png;base64,${pixPayment.pix.qr_code_base64}`}
+                  alt="QR Code Pix"
+                  className="h-56 w-56 rounded-md border bg-white p-2"
+                />
+              </div>
+            ) : null}
+            {pixPayment.pix.qr_code ? (
+              <div className="space-y-2">
+                <Label>Pix Copia e Cola</Label>
+                <div className="flex gap-2">
+                  <Textarea readOnly value={pixPayment.pix.qr_code} rows={4} className="text-xs" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => navigator.clipboard.writeText(pixPayment.pix.qr_code ?? "")}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            {pixPayment.pix.ticket_url ? (
+              <Button type="button" variant="outline" className="w-full" onClick={() => window.open(pixPayment.pix.ticket_url ?? "", "_blank")}>
+                Abrir pagamento
+              </Button>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
           <CardHeader>

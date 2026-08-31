@@ -114,14 +114,35 @@ export async function clientCreateAgendamento(
   payload: ClientAppointmentPayload,
   token: string,
   companySlug: string,
-): Promise<void> {
+): Promise<ClientAppointment> {
   if (!companySlug) throw new Error("companySlug is required");
-  await privateRequest("/api/appointments", token, {
+  const appointment = await privateRequest<ApiClientAppointment>("/api/appointments", token, {
     method: "POST",
     body: JSON.stringify({
       ...payload,
       company_slug: companySlug,
     }),
+  });
+  return normalizeClientAppointment(appointment);
+}
+
+export type PixPaymentResponse = {
+  id: number;
+  provider: string;
+  status: string;
+  amount: number;
+  payment_method: string;
+  external_reference: string;
+  pix: {
+    qr_code?: string | null;
+    qr_code_base64?: string | null;
+    ticket_url?: string | null;
+  };
+};
+
+export async function clientCreatePixPayment(appointmentId: number, token: string): Promise<PixPaymentResponse> {
+  return privateRequest<PixPaymentResponse>(`/api/clients/appointments/${appointmentId}/payments`, token, {
+    method: "POST",
   });
 }
 

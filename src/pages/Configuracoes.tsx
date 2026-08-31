@@ -1,6 +1,6 @@
 import { useEffect, useState, ChangeEvent, useRef, useCallback } from "react";
 import { format } from "date-fns";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { ConfiguracoesEmpresaTab } from "@/pages/configuracoes/ConfiguracoesEmpresaTab";
 import { ConfiguracoesAgendaTab } from "@/pages/configuracoes/ConfiguracoesAgendaTab";
 import { ConfiguracoesServicosTab } from "@/pages/configuracoes/ConfiguracoesServicosTab";
+import { ConfiguracoesIntegracoesTab } from "@/pages/configuracoes/ConfiguracoesIntegracoesTab";
 import {
   ConfiguracoesFidelidadeTab,
   type LoyaltyRewardDraft,
@@ -53,6 +54,12 @@ import {
   updateLoyaltyReward,
   updateLoyaltySettings,
 } from "@/services/loyaltyService";
+import {
+  connectIntegration,
+  disconnectIntegration,
+  fetchIntegrations,
+  type IntegrationSummary,
+} from "@/services/integrationService";
 
 const minutesFromTime = (value?: string | null) => {
   if (!value) return 0;
@@ -114,6 +121,7 @@ const getApiErrorMessage = (error: unknown) => {
 
 export default function Configuracoes() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { updateCompany } = useAuth();
   const { setPalette } = useTheme();
@@ -174,6 +182,9 @@ export default function Configuracoes() {
     expirationDays: "180",
   });
   const [loyaltyRewards, setLoyaltyRewards] = useState<LoyaltyReward[]>([]);
+  const [integrations, setIntegrations] = useState<IntegrationSummary[]>([]);
+  const [integrationsLoading, setIntegrationsLoading] = useState(false);
+  const [integrationActionProvider, setIntegrationActionProvider] = useState<string | null>(null);
   const [loyaltySaving, setLoyaltySaving] = useState(false);
   const [rewardCreating, setRewardCreating] = useState(false);
   const [rewardDraft, setRewardDraft] = useState<LoyaltyRewardDraft>({
@@ -383,15 +394,31 @@ export default function Configuracoes() {
     }
   }, [refreshWhatsappStatus, toast]);
 
+  const refreshIntegrations = useCallback(async () => {
+    setIntegrationsLoading(true);
+    try {
+      setIntegrations(await fetchIntegrations());
+    } catch (error) {
+      toast({
+        title: "Erro ao carregar integrações",
+        description: getApiErrorMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setIntegrationsLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     async function loadData() {
       try {
-        const [servicosData, configData, empresaData, loyaltySettingsData, loyaltyRewardsData] = await Promise.all([
+        const [servicosData, configData, empresaData, loyaltySettingsData, loyaltyRewardsData, integrationsData] = await Promise.all([
           fetchServicos(),
           fetchConfiguracoes(),
           fetchEmpresa(),
           fetchLoyaltySettings(),
           fetchLoyaltyRewards(),
+          fetchIntegrations(),
         ]);
         setServicos(servicosData);
         setConfiguracoes(configData);
@@ -434,6 +461,7 @@ export default function Configuracoes() {
         setGalleryRemoved([]);
         clearGalleryPending();
         setLoyaltyRewards(loyaltyRewardsData);
+        setIntegrations(integrationsData);
         setLoyaltySettings({
           enabled: loyaltySettingsData.enabled,
           ruleType: loyaltySettingsData.rule_type,
@@ -823,6 +851,38 @@ export default function Configuracoes() {
     setLoyaltySettings((prev) => ({ ...prev, ...patch }));
   };
 
+  const handleConnectIntegration = async (provider: string) => {
+    setIntegrationActionProvider(provider);
+    try {
+      const { authorization_url } = await connectIntegration(provider);
+      window.location.href = authorization_url;
+    } catch (error) {
+      toast({
+        title: "Erro ao conectar",
+        description: getApiErrorMessage(error),
+        variant: "destructive",
+      });
+      setIntegrationActionProvider(null);
+    }
+  };
+
+  const handleDisconnectIntegration = async (provider: string) => {
+    setIntegrationActionProvider(provider);
+    try {
+      await disconnectIntegration(provider);
+      await refreshIntegrations();
+      toast({ title: "Integração desconectada", description: "Novas cobranças online foram bloqueadas." });
+    } catch (error) {
+      toast({
+        title: "Erro ao desconectar",
+        description: getApiErrorMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setIntegrationActionProvider(null);
+    }
+  };
+
   const handleSaveLoyaltySettings = async () => {
     const amountCents = amountToCents(loyaltySettings.spendAmount);
     const pointsPerVisit = Number.parseInt(loyaltySettings.pointsPerVisit, 10);
@@ -1019,8 +1079,8 @@ export default function Configuracoes() {
           </div>
         </div>
 
-        <Tabs defaultValue="empresa" className="space-y-6">
-          <TabsList className="flex w-full flex-col gap-2 h-auto sm:h-10 sm:flex-row sm:gap-2">
+        <Tabs defaultValue={searchParams.get("tab") ?? "empresa"} className="space-y-6">
+          <TabsList className="flex h-auto w-full flex-col gap-2 overflow-x-auto sm:grid sm:grid-cols-5">
             <TabsTrigger value="empresa" className="w-full flex-1 whitespace-normal text-center sm:whitespace-nowrap">
               Marca & canais
             </TabsTrigger>
@@ -1032,6 +1092,9 @@ export default function Configuracoes() {
             </TabsTrigger>
             <TabsTrigger value="fidelidade" className="w-full flex-1 whitespace-normal text-center sm:whitespace-nowrap">
               Fidelidade
+            </TabsTrigger>
+            <TabsTrigger value="integracoes" className="w-full flex-1 whitespace-normal text-center sm:whitespace-nowrap">
+              Integrações
             </TabsTrigger>
           </TabsList>
 
@@ -1132,6 +1195,15 @@ export default function Configuracoes() {
             onRewardImageRemove={handleRewardImageRemove}
             onCreateReward={handleCreateReward}
             creatingReward={rewardCreating}
+          />
+
+          <ConfiguracoesIntegracoesTab
+            integrations={integrations}
+            loading={integrationsLoading}
+            actionProvider={integrationActionProvider}
+            onConnect={handleConnectIntegration}
+            onDisconnect={handleDisconnectIntegration}
+            onRefresh={refreshIntegrations}
           />
         </Tabs>
       </div>
