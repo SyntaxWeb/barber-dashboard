@@ -65,6 +65,24 @@ export type SaleItem = {
   total: number;
 };
 
+
+export type SalePayment = {
+  id: number;
+  provider: string;
+  sale_id?: number | null;
+  status: string;
+  amount: number;
+  payment_method: string;
+  external_reference: string;
+  provider_status?: string | null;
+  paid_at?: string | null;
+  pix?: {
+    qr_code?: string | null;
+    qr_code_base64?: string | null;
+    ticket_url?: string | null;
+  };
+};
+
 export type Sale = {
   id: number;
   appointment_id?: number | null;
@@ -79,6 +97,7 @@ export type Sale = {
   payment_method?: string | null;
   notes?: string | null;
   closed_at?: string | null;
+  latest_payment?: SalePayment | null;
   items: SaleItem[];
 };
 

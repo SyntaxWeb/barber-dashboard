@@ -17,6 +17,7 @@ import {
   type ProductPayload,
 } from "@/services/inventoryService";
 import { formatarPreco } from "@/services/agendaService";
+import { resolveMediaUrl } from "@/lib/media";
 
 const emptyForm = {
   name: "",
@@ -88,7 +89,7 @@ export default function Estoque() {
       description: product.description ?? "",
     });
     setImageFile(null);
-    setImagePreview(product.image_url ?? null);
+    setImagePreview(resolveMediaUrl(product.image_url));
     setRemoveImage(false);
   };
 
@@ -241,7 +242,7 @@ export default function Estoque() {
               <div key={product.id} className="grid gap-3 rounded-lg border border-border p-4 md:grid-cols-[1fr_auto_auto] md:items-center">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted text-muted-foreground">
-                    {product.image_url ? <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" /> : <ImageIcon className="h-5 w-5" />}
+                    {product.image_url ? <img src={resolveMediaUrl(product.image_url) ?? undefined} alt={product.name} className="h-full w-full object-cover" /> : <ImageIcon className="h-5 w-5" />}
                   </div>
                   <div>
                   <div className="flex flex-wrap items-center gap-2">

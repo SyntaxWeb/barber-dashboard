@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { CalendarClock, Copy, CreditCard, ExternalLink, History, Minus, Plus, QrCode, ReceiptText, Search, ShoppingCart, Trash2, UserRound } from "lucide-react";
+import { CalendarClock, CheckCircle2, Copy, CreditCard, ExternalLink, History, Minus, Plus, QrCode, ReceiptText, Search, ShoppingCart, Trash2, UserRound } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { fetchAgendamentosPorData, fetchServicos, formatarData, formatarPreco } from "@/services/agendaService";
+import { resolveMediaUrl } from "@/lib/media";
 import {
   closeAppointmentSale,
   closeDirectSale,
@@ -102,10 +103,15 @@ export default function Caixa() {
     const interval = window.setInterval(async () => {
       try {
         const sale = await fetchSale(freePixPayment.sale_id!);
-        if (sale.status === "closed") {
+        if (sale.status === "closed" || sale.latest_payment?.status === "APPROVED") {
           window.clearInterval(interval);
+          setFreePixPayment((current) => current ? { ...current, status: "APPROVED" } : null);
+          setCart([]);
+          setCustomerName("");
+          setCustomerPhone("");
+          setDiscount("0");
+          setAddition("0");
           toast({ title: "Pagamento confirmado", description: `Venda #${sale.id} fechada automaticamente.` });
-          clearFreeSale();
           await loadData();
         }
       } catch {
@@ -120,13 +126,12 @@ export default function Caixa() {
     const interval = window.setInterval(async () => {
       try {
         const sale = await fetchAppointmentSale(selectedAppointment.id);
-        if (sale.status === "closed") {
+        if (sale.status === "closed" || sale.latest_payment?.status === "APPROVED") {
           window.clearInterval(interval);
-          toast({ title: "Pagamento confirmado", description: "Caixa do agendamento fechado automaticamente." });
-          setSelectedAppointment(null);
-          setAppointmentSale(null);
+          setAppointmentPixPayment((current) => current ? { ...current, status: "APPROVED" } : null);
+          setAppointmentSale(sale);
           setAppointmentProducts([]);
-          setAppointmentPixPayment(null);
+          toast({ title: "Pagamento confirmado", description: "Caixa do agendamento fechado automaticamente." });
           await loadData();
         }
       } catch {
@@ -505,7 +510,18 @@ export default function Caixa() {
                   ) : appointmentLoading ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">Carregando caixa do agendamento...</p>
                   ) : appointmentSale?.status === "closed" || selectedAppointment.status === "concluido" ? (
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">Este agendamento já está fechado.</div>
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">Este agendamento já está fechado.</div>
+                      {appointmentPixPayment?.status === "APPROVED" ? (
+                        <PixPaymentBox
+                          payment={appointmentPixPayment}
+                          generating={false}
+                          onGenerate={generateAppointmentPix}
+                          onCopy={copyAppointmentPix}
+                          disabled
+                        />
+                      ) : null}
+                    </div>
                   ) : (
                     <>
                       <div className="rounded-lg bg-muted/50 p-4 text-sm">
@@ -664,7 +680,7 @@ function ProductOption({ product }: { product: Product }) {
   return (
     <div className="flex min-w-0 items-center gap-3 py-1">
       {product.image_url ? (
-        <img src={product.image_url} alt={product.name} className="h-9 w-9 rounded-md border border-border object-cover" />
+        <img src={resolveMediaUrl(product.image_url) ?? undefined} alt={product.name} className="h-9 w-9 rounded-md border border-border object-cover" />
       ) : (
         <div className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-muted text-[10px] font-semibold text-muted-foreground">
           IMG
@@ -783,7 +799,15 @@ function PixPaymentBox({ payment, generating, onGenerate, onCopy, disabled }: {
         </Button>
       </div>
 
-      {payment && (
+      {payment?.status === "APPROVED" ? (
+        <div className="flex items-start gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
+            <p className="font-semibold">Pagamento efetuado com sucesso</p>
+            <p className="text-sm">O QR Code foi confirmado e o caixa foi fechado automaticamente.</p>
+          </div>
+        </div>
+      ) : payment ? (
         <div className="grid gap-4 md:grid-cols-[180px_1fr]">
           {payment.pix.qr_code_base64 ? (
             <img src={`data:image/png;base64,${payment.pix.qr_code_base64}`} alt="QR Code Pix" className="h-44 w-44 rounded-md border border-border bg-white p-2" />
