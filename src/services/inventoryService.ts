@@ -143,6 +143,10 @@ export function fetchAppointmentSale(appointmentId: number): Promise<Sale> {
   return api<Sale>(`/api/appointments/${appointmentId}/sale`);
 }
 
+export function fetchSale(saleId: number): Promise<Sale> {
+  return api<Sale>(`/api/sales/${saleId}`);
+}
+
 export function closeAppointmentSale(
   appointmentId: number,
   payload: {
@@ -173,6 +177,7 @@ export function closeDirectSale(payload: {
 export type PixPaymentResponse = {
   id: number;
   provider: string;
+  sale_id?: number | null;
   status: string;
   amount: number;
   payment_method: string;
@@ -186,9 +191,34 @@ export type PixPaymentResponse = {
 
 export function createAppointmentPixPayment(
   appointmentId: number,
-  payload: { amount?: number; description?: string; payer_email?: string } = {},
+  payload: {
+    amount?: number;
+    description?: string;
+    payer_email?: string;
+    products?: Array<{ product_id: number; quantity: number }>;
+    discount?: number;
+    addition?: number;
+  } = {},
 ): Promise<PixPaymentResponse> {
   return api<PixPaymentResponse>(`/api/appointments/${appointmentId}/payments`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createDirectPixPayment(payload: {
+  amount: number;
+  description?: string;
+  payer_email?: string;
+  payer_name?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  services?: Array<{ service_id: number; quantity?: number }>;
+  products?: Array<{ product_id: number; quantity: number }>;
+  discount?: number;
+  addition?: number;
+}): Promise<PixPaymentResponse> {
+  return api<PixPaymentResponse>("/api/sales/direct/payments", {
     method: "POST",
     body: JSON.stringify(payload),
   });

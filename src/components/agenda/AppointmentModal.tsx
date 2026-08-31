@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Phone, Calendar, Clock, Scissors, FileText, Check, Trash2, Star, MessageSquareText, Gift, ShoppingCart, Plus, Minus } from "lucide-react";
+import { Phone, Calendar, Clock, Scissors, FileText, Check, Trash2, Star, MessageSquareText, Gift, ShoppingCart, Plus, Minus, QrCode, Copy, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Agendamento } from "@/data/mockData";
 import { formatarData, formatarPreco, cancelarAgendamento, concluirAgendamento } from "@/services/agendaService";
 import { useToast } from "@/hooks/use-toast";
 import { buildWhatsAppUrl, openWhatsAppChat } from "@/lib/whatsapp";
-import { closeAppointmentSale, fetchAppointmentSale, fetchProducts, type Product, type Sale } from "@/services/inventoryService";
+import { closeAppointmentSale, createAppointmentPixPayment, fetchAppointmentSale, fetchProducts, type PixPaymentResponse, type Product, type Sale } from "@/services/inventoryService";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,6 +32,8 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
   const [discount, setDiscount] = useState("0");
   const [addition, setAddition] = useState("0");
   const [paymentMethod, setPaymentMethod] = useState("dinheiro");
+  const [pixPayment, setPixPayment] = useState<PixPaymentResponse | null>(null);
+  const [generatingPix, setGeneratingPix] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -61,12 +63,33 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
         setDiscount(String(saleData.discount || 0));
         setAddition(String(saleData.addition || 0));
         setPaymentMethod(saleData.payment_method || "dinheiro");
+        setPixPayment(null);
       })
       .catch((error) => {
         toast({ title: "Erro ao abrir caixa", description: error instanceof Error ? error.message : "Tente novamente.", variant: "destructive" });
       })
       .finally(() => setCheckoutLoading(false));
   }, [open, agendamento?.id, checkoutOpen, toast]);
+
+  useEffect(() => {
+    if (!open || !agendamento || !pixPayment || pixPayment.status === "APPROVED") return;
+    const interval = window.setInterval(async () => {
+      try {
+        const saleData = await fetchAppointmentSale(agendamento.id);
+        if (saleData.status === "closed") {
+          window.clearInterval(interval);
+          setSale(saleData);
+          setPixPayment(null);
+          toast({ title: "Pagamento confirmado", description: "Atendimento fechado automaticamente." });
+          onUpdate();
+          onOpenChange(false);
+        }
+      } catch {
+        // A consulta continua no próximo ciclo.
+      }
+    }, 5000);
+    return () => window.clearInterval(interval);
+  }, [open, agendamento?.id, pixPayment?.id, pixPayment?.status, toast, onUpdate, onOpenChange]);
 
   if (!agendamento) return null;
 
@@ -109,7 +132,39 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
       .filter((item) => item.quantity > 0));
   };
 
+  const generatePix = async () => {
+    if (!agendamento || checkoutTotal <= 0) return;
+    setGeneratingPix(true);
+    try {
+      const payment = await createAppointmentPixPayment(agendamento.id, {
+        amount: checkoutTotal,
+        description: `Caixa do atendimento #${agendamento.id}`,
+        products: consumedProducts.map((item) => ({ product_id: item.product.id, quantity: item.quantity })),
+        discount: currencyValue(discount),
+        addition: currencyValue(addition),
+      });
+      setPixPayment(payment);
+      toast({ title: "QR Code Pix gerado", description: "Mostre o QR Code para o cliente concluir o pagamento." });
+    } catch (error) {
+      toast({ title: "Erro ao gerar Pix", description: error instanceof Error ? error.message : "Tente novamente.", variant: "destructive" });
+    } finally {
+      setGeneratingPix(false);
+    }
+  };
+
+  const copyPix = async () => {
+    const code = pixPayment?.pix.qr_code;
+    if (!code) return;
+    await navigator.clipboard.writeText(code);
+    toast({ title: "Pix copia e cola copiado" });
+  };
+
   const handleCloseSale = async () => {
+    if (paymentMethod === "pix") {
+      await generatePix();
+      return;
+    }
+
     setCheckoutLoading(true);
     try {
       const closedSale = await closeAppointmentSale(agendamento.id, {
@@ -325,8 +380,42 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
                       <div className="space-y-1"><Label>Pagamento</Label><Select value={paymentMethod} onValueChange={setPaymentMethod}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="dinheiro">Dinheiro</SelectItem><SelectItem value="pix">Pix</SelectItem><SelectItem value="cartao_credito">Cartão crédito</SelectItem><SelectItem value="cartao_debito">Cartão débito</SelectItem></SelectContent></Select></div>
                     </div>
 
+                    {paymentMethod === "pix" && (
+                      <div className="space-y-3 rounded-lg border border-border p-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="font-semibold">Pix Mercado Pago</p>
+                            <p className="text-sm text-muted-foreground">Gere o QR Code com o total atual.</p>
+                          </div>
+                          <Button type="button" variant="outline" onClick={generatePix} disabled={generatingPix || checkoutTotal <= 0}>
+                            <QrCode className="mr-2 h-4 w-4" />
+                            {generatingPix ? "Gerando..." : "Gerar QR Code"}
+                          </Button>
+                        </div>
+                        {pixPayment && (
+                          <div className="grid gap-3 sm:grid-cols-[150px_1fr]">
+                            {pixPayment.pix.qr_code_base64 ? (
+                              <img src={`data:image/png;base64,${pixPayment.pix.qr_code_base64}`} alt="QR Code Pix" className="h-36 w-36 rounded-md border border-border bg-white p-2" />
+                            ) : null}
+                            <div className="space-y-2">
+                              <Label>Pix Copia e Cola</Label>
+                              <div className="flex gap-2">
+                                <Input readOnly value={pixPayment.pix.qr_code ?? ""} className="font-mono text-xs" />
+                                <Button type="button" variant="outline" size="icon" onClick={copyPix} disabled={!pixPayment.pix.qr_code}><Copy className="h-4 w-4" /></Button>
+                              </div>
+                              {pixPayment.pix.ticket_url ? (
+                                <Button type="button" variant="link" className="h-auto p-0" asChild>
+                                  <a href={pixPayment.pix.ticket_url} target="_blank" rel="noreferrer">Abrir pagamento <ExternalLink className="ml-1 h-3 w-3" /></a>
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <Button className="w-full" onClick={handleCloseSale} disabled={checkoutLoading}>
-                      <Check className="mr-2 h-4 w-4" /> Fechar atendimento
+                      <Check className="mr-2 h-4 w-4" /> {paymentMethod === "pix" ? "Gerar QR Code Pix" : "Fechar atendimento"}
                     </Button>
                   </>
                 )}

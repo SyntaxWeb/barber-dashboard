@@ -15,8 +15,10 @@ import {
   closeAppointmentSale,
   closeDirectSale,
   createAppointmentPixPayment,
+  createDirectPixPayment,
   fetchAppointmentSale,
   fetchProducts,
+  fetchSale,
   fetchSales,
   type PixPaymentResponse,
   type Product,
@@ -56,6 +58,8 @@ export default function Caixa() {
   const [addition, setAddition] = useState("0");
   const [paymentMethod, setPaymentMethod] = useState("pix");
   const [closingFree, setClosingFree] = useState(false);
+  const [freePixPayment, setFreePixPayment] = useState<PixPaymentResponse | null>(null);
+  const [generatingFreePix, setGeneratingFreePix] = useState(false);
 
   const [selectedAppointment, setSelectedAppointment] = useState<Agendamento | null>(null);
   const [appointmentSale, setAppointmentSale] = useState<Sale | null>(null);
@@ -93,6 +97,44 @@ export default function Caixa() {
   useEffect(() => {
     loadData();
   }, []);
+  useEffect(() => {
+    if (!freePixPayment?.sale_id || freePixPayment.status === "APPROVED") return;
+    const interval = window.setInterval(async () => {
+      try {
+        const sale = await fetchSale(freePixPayment.sale_id!);
+        if (sale.status === "closed") {
+          window.clearInterval(interval);
+          toast({ title: "Pagamento confirmado", description: `Venda #${sale.id} fechada automaticamente.` });
+          clearFreeSale();
+          await loadData();
+        }
+      } catch {
+        // A consulta continua no próximo ciclo.
+      }
+    }, 5000);
+    return () => window.clearInterval(interval);
+  }, [freePixPayment?.sale_id, freePixPayment?.status]);
+
+  useEffect(() => {
+    if (!appointmentPixPayment || !selectedAppointment || appointmentPixPayment.status === "APPROVED") return;
+    const interval = window.setInterval(async () => {
+      try {
+        const sale = await fetchAppointmentSale(selectedAppointment.id);
+        if (sale.status === "closed") {
+          window.clearInterval(interval);
+          toast({ title: "Pagamento confirmado", description: "Caixa do agendamento fechado automaticamente." });
+          setSelectedAppointment(null);
+          setAppointmentSale(null);
+          setAppointmentProducts([]);
+          setAppointmentPixPayment(null);
+          await loadData();
+        }
+      } catch {
+        // A consulta continua no próximo ciclo.
+      }
+    }, 5000);
+    return () => window.clearInterval(interval);
+  }, [appointmentPixPayment?.id, appointmentPixPayment?.status, selectedAppointment?.id]);
 
   const term = search.trim().toLowerCase();
   const filteredServices = services.filter((item) => item.nome.toLowerCase().includes(term));
@@ -161,9 +203,54 @@ export default function Caixa() {
     setAddition("0");
     setPaymentMethod("pix");
     setSearch("");
+    setFreePixPayment(null);
+  };
+
+  const generateFreePix = async () => {
+    if (cart.length === 0) {
+      toast({ title: "Carrinho vazio", description: "Adicione um serviço ou produto para gerar o Pix.", variant: "destructive" });
+      return;
+    }
+    if (total <= 0) {
+      toast({ title: "Valor inválido", description: "O total da venda precisa ser maior que zero.", variant: "destructive" });
+      return;
+    }
+
+    setGeneratingFreePix(true);
+    try {
+      const payment = await createDirectPixPayment({
+        amount: total,
+        description: "Venda livre do caixa",
+        payer_name: customerName.trim() || undefined,
+        customer_name: customerName.trim() || undefined,
+        customer_phone: customerPhone.trim() || undefined,
+        services: cart.filter((item) => item.type === "service").map((item) => ({ service_id: item.id, quantity: item.quantity })),
+        products: cart.filter((item) => item.type === "product").map((item) => ({ product_id: item.id, quantity: item.quantity })),
+        discount: numberValue(discount),
+        addition: numberValue(addition),
+      });
+      setFreePixPayment(payment);
+      toast({ title: "QR Code Pix gerado", description: "Mostre o QR Code para o cliente concluir o pagamento." });
+    } catch (error) {
+      toast({ title: "Erro ao gerar Pix", description: error instanceof Error ? error.message : "Tente novamente.", variant: "destructive" });
+    } finally {
+      setGeneratingFreePix(false);
+    }
+  };
+
+  const copyFreePix = async () => {
+    const code = freePixPayment?.pix.qr_code;
+    if (!code) return;
+    await navigator.clipboard.writeText(code);
+    toast({ title: "Pix copia e cola copiado" });
   };
 
   const finishFreeSale = async () => {
+    if (paymentMethod === "pix") {
+      await generateFreePix();
+      return;
+    }
+
     if (cart.length === 0) {
       toast({ title: "Carrinho vazio", description: "Adicione um serviço ou produto para finalizar.", variant: "destructive" });
       return;
@@ -251,6 +338,9 @@ export default function Caixa() {
       const payment = await createAppointmentPixPayment(selectedAppointment.id, {
         amount: appointmentTotal,
         description: `Caixa do agendamento #${selectedAppointment.id}`,
+        products: appointmentProducts.map((item) => ({ product_id: item.product.id, quantity: item.quantity })),
+        discount: numberValue(appointmentDiscount),
+        addition: numberValue(appointmentAddition),
       });
       setAppointmentPixPayment(payment);
       toast({ title: "QR Code Pix gerado", description: "Mostre o QR Code para o cliente concluir o pagamento." });
@@ -270,6 +360,10 @@ export default function Caixa() {
 
   const finishAppointmentSale = async () => {
     if (!selectedAppointment) return;
+    if (appointmentPaymentMethod === "pix") {
+      await generateAppointmentPix();
+      return;
+    }
     setClosingAppointment(true);
     try {
       const sale = await closeAppointmentSale(selectedAppointment.id, {
@@ -369,6 +463,10 @@ export default function Caixa() {
                 onFinish={finishFreeSale}
                 onClear={clearFreeSale}
                 closing={closingFree}
+                pixPayment={freePixPayment}
+                generatingPix={generatingFreePix}
+                onGeneratePix={generateFreePix}
+                onCopyPix={copyFreePix}
               />
             </div>
           </TabsContent>
@@ -458,55 +556,16 @@ export default function Caixa() {
                       />
 
                       {appointmentPaymentMethod === "pix" && (
-                        <div className="space-y-3 rounded-lg border border-border p-4">
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                              <p className="font-semibold">Pix Mercado Pago</p>
-                              <p className="text-sm text-muted-foreground">Gere o QR Code com o total atual do caixa.</p>
-                            </div>
-                            <Button type="button" variant="outline" onClick={generateAppointmentPix} disabled={generatingAppointmentPix || appointmentTotal <= 0}>
-                              <QrCode className="mr-2 h-4 w-4" />
-                              {generatingAppointmentPix ? "Gerando..." : "Gerar QR Code"}
-                            </Button>
-                          </div>
-
-                          {appointmentPixPayment && (
-                            <div className="grid gap-4 md:grid-cols-[180px_1fr]">
-                              {appointmentPixPayment.pix.qr_code_base64 ? (
-                                <img
-                                  src={`data:image/png;base64,${appointmentPixPayment.pix.qr_code_base64}`}
-                                  alt="QR Code Pix"
-                                  className="h-44 w-44 rounded-md border border-border bg-white p-2"
-                                />
-                              ) : null}
-                              <div className="space-y-3">
-                                <div>
-                                  <Label>Pix Copia e Cola</Label>
-                                  <div className="mt-1 flex gap-2">
-                                    <Input readOnly value={appointmentPixPayment.pix.qr_code ?? ""} className="font-mono text-xs" />
-                                    <Button type="button" variant="outline" size="icon" onClick={copyAppointmentPix} disabled={!appointmentPixPayment.pix.qr_code}>
-                                      <Copy className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                                  <Badge variant="secondary">{paymentLabel(appointmentPixPayment.status)}</Badge>
-                                  <span>{formatarPreco(appointmentPixPayment.amount)}</span>
-                                  {appointmentPixPayment.pix.ticket_url ? (
-                                    <Button type="button" variant="link" className="h-auto p-0" asChild>
-                                      <a href={appointmentPixPayment.pix.ticket_url} target="_blank" rel="noreferrer">
-                                        Abrir pagamento <ExternalLink className="ml-1 h-3 w-3" />
-                                      </a>
-                                    </Button>
-                                  ) : null}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        <PixPaymentBox
+                          payment={appointmentPixPayment}
+                          generating={generatingAppointmentPix}
+                          onGenerate={generateAppointmentPix}
+                          onCopy={copyAppointmentPix}
+                          disabled={appointmentTotal <= 0}
+                        />
                       )}
 
-                      <Button className="w-full gap-2" onClick={finishAppointmentSale} disabled={closingAppointment}><CreditCard className="h-4 w-4" /> Fechar caixa do agendamento</Button>
+                      <Button className="w-full gap-2" onClick={finishAppointmentSale} disabled={closingAppointment}><CreditCard className="h-4 w-4" /> {appointmentPaymentMethod === "pix" ? "Gerar QR Code Pix" : "Fechar caixa do agendamento"}</Button>
                     </>
                   )}
                 </CardContent>
@@ -641,6 +700,10 @@ function SaleSummary({
   onFinish,
   onClear,
   closing,
+  pixPayment,
+  generatingPix,
+  onGeneratePix,
+  onCopyPix,
 }: {
   title: string;
   description: string;
@@ -663,6 +726,10 @@ function SaleSummary({
   onFinish: () => void;
   onClear: () => void;
   closing: boolean;
+  pixPayment?: PixPaymentResponse | null;
+  generatingPix?: boolean;
+  onGeneratePix?: () => void;
+  onCopyPix?: () => void;
 }) {
   return (
     <Card className="h-fit xl:sticky xl:top-6">
@@ -681,9 +748,71 @@ function SaleSummary({
           ))}
         </div>
         <CheckoutTotals servicesTotal={servicesTotal} productsTotal={productsTotal} discount={discount} setDiscount={setDiscount} addition={addition} setAddition={setAddition} paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} total={total} />
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1"><Button className="gap-2" onClick={onFinish} disabled={closing || cart.length === 0}><CreditCard className="h-4 w-4" /> Finalizar venda</Button><Button variant="outline" onClick={onClear} disabled={closing}>Limpar</Button></div>
+        {paymentMethod === "pix" && onGeneratePix && onCopyPix ? (
+          <PixPaymentBox
+            payment={pixPayment ?? null}
+            generating={Boolean(generatingPix)}
+            onGenerate={onGeneratePix}
+            onCopy={onCopyPix}
+            disabled={cart.length === 0 || total <= 0}
+          />
+        ) : null}
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1"><Button className="gap-2" onClick={onFinish} disabled={closing || cart.length === 0}><CreditCard className="h-4 w-4" />{paymentMethod === "pix" ? "Gerar QR Code Pix" : "Finalizar venda"}</Button><Button variant="outline" onClick={onClear} disabled={closing}>Limpar</Button></div>
       </CardContent>
     </Card>
+  );
+}
+
+function PixPaymentBox({ payment, generating, onGenerate, onCopy, disabled }: {
+  payment: PixPaymentResponse | null;
+  generating: boolean;
+  onGenerate: () => void;
+  onCopy: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-3 rounded-lg border border-border p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-semibold">Pix Mercado Pago</p>
+          <p className="text-sm text-muted-foreground">Gere o QR Code com o total atual do caixa.</p>
+        </div>
+        <Button type="button" variant="outline" onClick={onGenerate} disabled={generating || disabled}>
+          <QrCode className="mr-2 h-4 w-4" />
+          {generating ? "Gerando..." : "Gerar QR Code"}
+        </Button>
+      </div>
+
+      {payment && (
+        <div className="grid gap-4 md:grid-cols-[180px_1fr]">
+          {payment.pix.qr_code_base64 ? (
+            <img src={`data:image/png;base64,${payment.pix.qr_code_base64}`} alt="QR Code Pix" className="h-44 w-44 rounded-md border border-border bg-white p-2" />
+          ) : null}
+          <div className="space-y-3">
+            <div>
+              <Label>Pix Copia e Cola</Label>
+              <div className="mt-1 flex gap-2">
+                <Input readOnly value={payment.pix.qr_code ?? ""} className="font-mono text-xs" />
+                <Button type="button" variant="outline" size="icon" onClick={onCopy} disabled={!payment.pix.qr_code}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant="secondary">{paymentLabel(payment.status)}</Badge>
+              <span>{formatarPreco(payment.amount)}</span>
+              {payment.pix.ticket_url ? (
+                <Button type="button" variant="link" className="h-auto p-0" asChild>
+                  <a href={payment.pix.ticket_url} target="_blank" rel="noreferrer">
+                    Abrir pagamento <ExternalLink className="ml-1 h-3 w-3" />
+                  </a>
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
