@@ -1,4 +1,4 @@
-import { CreditCard, ExternalLink, Link2Off, RefreshCw } from "lucide-react";
+import { AlertTriangle, CreditCard, ExternalLink, Link2Off, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +37,19 @@ export function ConfiguracoesIntegracoesTab({
         <Button variant="outline" size="icon" onClick={onRefresh} disabled={loading}>
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
         </Button>
+      </div>
+
+
+      <div className="flex gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+        <div className="space-y-1">
+          <p className="font-semibold">Atenção às taxas da integração</p>
+          <p>
+            Pagamentos processados por provedores externos podem ter tarifas, prazos de repasse, regras de
+            estorno e análise antifraude definidos pelo próprio provedor. O SyntaxAtendimento não adiciona
+            taxa extra sobre o Pix, mas as taxas do Mercado Pago podem ser aplicadas conforme sua conta.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

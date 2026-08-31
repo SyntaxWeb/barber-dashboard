@@ -10,7 +10,7 @@ import {
   Repeat,
   Users2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import defaultLogo from "@/assets/syntax-logo.svg";
 
@@ -230,6 +230,14 @@ const Landing = () => {
           </div>
         </div>
       </section>
+      <footer className="border-t border-white/10 bg-slate-950 px-6 py-8 text-sm text-slate-400">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <span>© 2026 SyntaxAtendimento</span>
+          <Link to="/politica-de-privacidade" className="font-medium text-slate-200 hover:text-amber-300">
+            Política de Privacidade
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 };

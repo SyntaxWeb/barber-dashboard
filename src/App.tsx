@@ -33,6 +33,7 @@ import AdminLogs from "./pages/AdminLogs";
 import AssinaturaSucesso from "./pages/AssinaturaSucesso";
 import AssinaturaPendente from "./pages/AssinaturaPendente";
 import AssinaturaErro from "./pages/AssinaturaErro";
+import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 
 const queryClient = new QueryClient();
 
@@ -105,6 +106,7 @@ const App = () => (
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/registro" element={<Registro />} />
+                <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
                 <Route
                   path="/dashboard"
                   element={
