@@ -169,3 +169,27 @@ export function closeDirectSale(payload: {
 }): Promise<Sale> {
   return api<Sale>("/api/sales/direct/close", { method: "POST", body: JSON.stringify(payload) });
 }
+
+export type PixPaymentResponse = {
+  id: number;
+  provider: string;
+  status: string;
+  amount: number;
+  payment_method: string;
+  external_reference: string;
+  pix: {
+    qr_code?: string | null;
+    qr_code_base64?: string | null;
+    ticket_url?: string | null;
+  };
+};
+
+export function createAppointmentPixPayment(
+  appointmentId: number,
+  payload: { amount?: number; description?: string; payer_email?: string } = {},
+): Promise<PixPaymentResponse> {
+  return api<PixPaymentResponse>(`/api/appointments/${appointmentId}/payments`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
