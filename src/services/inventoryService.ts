@@ -242,3 +242,7 @@ export function createDirectPixPayment(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+export function fetchPixPayment(paymentId: number): Promise<PixPaymentResponse> {
+  return api<PixPaymentResponse>(`/api/payments/${paymentId}`);
+}
