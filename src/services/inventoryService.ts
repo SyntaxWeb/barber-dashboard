@@ -211,7 +211,6 @@ export type PixPaymentResponse = {
 export function createAppointmentPixPayment(
   appointmentId: number,
   payload: {
-    amount?: number;
     description?: string;
     payer_email?: string;
     products?: Array<{ product_id: number; quantity: number }>;
@@ -226,7 +225,6 @@ export function createAppointmentPixPayment(
 }
 
 export function createDirectPixPayment(payload: {
-  amount: number;
   description?: string;
   payer_email?: string;
   payer_name?: string;

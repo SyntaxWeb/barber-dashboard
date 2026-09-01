@@ -225,7 +225,6 @@ export default function Caixa() {
     setGeneratingFreePix(true);
     try {
       const payment = await createDirectPixPayment({
-        amount: total,
         description: "Venda livre do caixa",
         payer_name: customerName.trim() || undefined,
         customer_name: customerName.trim() || undefined,
@@ -342,7 +341,6 @@ export default function Caixa() {
     setGeneratingAppointmentPix(true);
     try {
       const payment = await createAppointmentPixPayment(selectedAppointment.id, {
-        amount: appointmentTotal,
         description: `Caixa do agendamento #${selectedAppointment.id}`,
         products: appointmentProducts.map((item) => ({ product_id: item.product.id, quantity: item.quantity })),
         discount: numberValue(appointmentDiscount),

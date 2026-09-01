@@ -137,7 +137,6 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
     setGeneratingPix(true);
     try {
       const payment = await createAppointmentPixPayment(agendamento.id, {
-        amount: checkoutTotal,
         description: `Caixa do atendimento #${agendamento.id}`,
         products: consumedProducts.map((item) => ({ product_id: item.product.id, quantity: item.quantity })),
         discount: currencyValue(discount),
