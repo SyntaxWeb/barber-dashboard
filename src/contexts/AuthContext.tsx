@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { resolveMediaUrl } from "@/lib/media";
-import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME, sanitizeTheme } from "@/lib/theme";
+import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME } from "@/lib/theme";
 import { useTheme } from "./ThemeContext";
 import { secureStorage } from "@/lib/secureStorage";
 import { apiFetch } from "@/services/api";
@@ -58,8 +58,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const API_URL = import.meta.env.VITE_API_URL || "https://api-atendimento.syntaxatendimento.com.br";
 const normalizeCompany = (company?: CompanyInfo | null): CompanyInfo | null => {
   if (!company) return null;
-  const dashboardTheme = sanitizeTheme(company.dashboard_theme, DEFAULT_DASHBOARD_THEME);
-  const clientTheme = sanitizeTheme(company.client_theme, DEFAULT_CLIENT_THEME);
   const galleryPhotos = Array.isArray(company.gallery_photos)
     ? company.gallery_photos
         .map((photo) => resolveMediaUrl(photo))
@@ -69,8 +67,8 @@ const normalizeCompany = (company?: CompanyInfo | null): CompanyInfo | null => {
     ...company,
     icon_url: resolveMediaUrl(company.icon_url),
     gallery_photos: galleryPhotos,
-    dashboard_theme: dashboardTheme,
-    client_theme: clientTheme,
+    dashboard_theme: DEFAULT_DASHBOARD_THEME,
+    client_theme: DEFAULT_CLIENT_THEME,
     subscription_status: company.subscription_status ?? "pendente",
     subscription_plan: company.subscription_plan ?? "mensal",
   };
@@ -112,15 +110,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => getStoredUser());
   const [token, setToken] = useState<string | null>(() => secureStorage.getItem("barbeiro-token"));
   const { setPalette, activatePalette } = useTheme();
-  const dashboardThemeKey = JSON.stringify(user?.company?.dashboard_theme);
-
   useEffect(() => {
-    if (user?.company?.dashboard_theme) {
-      setPalette("dashboard", user.company.dashboard_theme);
-    } else {
-      setPalette("dashboard", DEFAULT_DASHBOARD_THEME);
-    }
-  }, [dashboardThemeKey, setPalette]);
+    setPalette("dashboard", DEFAULT_DASHBOARD_THEME);
+    setPalette("client", DEFAULT_CLIENT_THEME);
+  }, [setPalette]);
 
   useEffect(() => {
     if (user) {
@@ -163,12 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!data.token || !data.user) return false;
 
       persistUser(data.user, data.token);
-      if (data.user.company?.dashboard_theme) {
-        setPalette("dashboard", data.user.company.dashboard_theme);
-      }
-      if (data.user.company?.client_theme) {
-        setPalette("client", data.user.company.client_theme);
-      }
+      setPalette("dashboard", DEFAULT_DASHBOARD_THEME);
+      setPalette("client", DEFAULT_CLIENT_THEME);
       return true;
     } catch {
       return false;
@@ -201,12 +190,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("barbeiro-user", JSON.stringify(updated));
       return updated;
     });
-    if (normalized?.dashboard_theme) {
-      setPalette("dashboard", normalized.dashboard_theme);
-    }
-    if (normalized?.client_theme) {
-      setPalette("client", normalized.client_theme);
-    }
+    setPalette("dashboard", DEFAULT_DASHBOARD_THEME);
+    setPalette("client", DEFAULT_CLIENT_THEME);
   };
 
   const updateUser = useCallback(

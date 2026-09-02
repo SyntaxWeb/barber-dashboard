@@ -10,15 +10,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useSidebar } from "@/components/ui/sidebar";
 import defaultLogo from "@/assets/syntax-logo.svg";
-import { Menu, Moon, Sun, LogOut, UserRound, CreditCard } from "lucide-react";
+import { Menu, LogOut, UserRound, CreditCard } from "lucide-react";
 
 export function Header() {
-  const { mode, toggleMode } = useTheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { toggleSidebar } = useSidebar();
@@ -49,23 +47,23 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 shadow-[0_12px_40px_rgba(0,0,0,0.22)] backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="flex h-16 items-center gap-3 px-4">
         <div className="relative flex flex-1 items-center justify-center md:flex-none md:justify-start">
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleSidebar}
-            className="absolute left-0 h-11 w-11 rounded-full border border-border/60 bg-muted/60 text-muted-foreground hover:bg-muted md:static md:mr-3 md:h-10 md:w-10 md:bg-transparent"
+            className="absolute left-0 h-11 w-11 rounded-full border border-border/60 bg-secondary/80 text-muted-foreground hover:bg-primary/15 hover:text-primary md:static md:mr-3 md:h-10 md:w-10"
           >
             <Menu className="h-5 w-5" />
             <span className="sr-only">Abrir menu</span>
           </Button>
           <Link
             to="/dashboard"
-            className="flex items-center gap-3 rounded-full px-4 py-1 transition hover:bg-muted/80 md:px-0 md:py-0"
+            className="flex items-center gap-3 rounded-full px-4 py-1 transition hover:bg-secondary/80 md:px-0 md:py-0"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm dark:bg-muted">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/30 bg-card shadow-sm">
               <img src={companyIcon} className="h-8 w-8 object-contain rounded-full" />
             </div>
             <div className="hidden text-left md:block">
@@ -84,7 +82,7 @@ export function Header() {
           </div>
 
           <div className="hidden md:flex flex-col items-end gap-1 text-right">
-            <div className="flex items-center gap-3 rounded-full border border-border/60 bg-muted/40 px-3 py-1">
+            <div className="flex items-center gap-3 rounded-full border border-primary/25 bg-secondary/80 px-3 py-1 shadow-inner">
               <Badge variant={statusVariant}>{statusLabel}</Badge>
               <div className="flex flex-col text-xs leading-tight text-muted-foreground">
                 <span className="font-medium text-foreground">{subscriptionPlan}</span>
@@ -107,15 +105,10 @@ export function Header() {
 
           <NotificationBell />
 
-          <Button variant="ghost" size="icon" onClick={toggleMode} className="hidden h-9 w-9 sm:inline-flex">
-            {mode === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            <span className="sr-only">Alternar tema</span>
-          </Button>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="flex items-center gap-3 rounded-full border border-border/70 px-2 py-1 pl-1 pr-3">
-                <Avatar className="h-9 w-9 border border-border/70">
+              <Button className="flex items-center gap-3 rounded-full border border-primary/35 bg-secondary px-2 py-1 pl-1 pr-3 text-secondary-foreground shadow-[0_8px_30px_rgba(0,0,0,0.25)] hover:bg-secondary/80">
+                <Avatar className="h-9 w-9 border border-primary/40">
                   <AvatarImage src={user?.avatar_url ?? undefined} alt={user?.nome} />
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>

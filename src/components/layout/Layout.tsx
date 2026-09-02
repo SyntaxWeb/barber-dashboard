@@ -177,7 +177,7 @@ export function Layout({ children }: LayoutProps) {
     <SidebarProvider>
       <div className="w-full flex min-h-screen bg-background text-foreground">
         <AppSidebar user={user} />
-        <SidebarInset>
+        <SidebarInset className="bg-[radial-gradient(circle_at_top_left,_rgba(212,154,98,0.12),_transparent_32%),linear-gradient(180deg,_rgba(255,255,255,0.03),_transparent_260px)]">
           <Header />
           <div className="flex-1 px-4 pb-8 pt-6 md:px-8 md:pt-8">
             {mustBlockPanel ? (
@@ -254,13 +254,13 @@ function AppSidebar({ user }: { user: AuthUser }) {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar pb-4 text-sidebar-foreground">
-      <SidebarHeader className="border-b border-sidebar-border group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:pt-3">
+    <Sidebar collapsible="icon" className="border-r border-primary/20 bg-sidebar pb-4 text-sidebar-foreground shadow-[18px_0_60px_rgba(0,0,0,0.24)]">
+      <SidebarHeader className="border-b border-primary/15 bg-black/10 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:pt-3">
         <Link
           to="/dashboard"
-          className="flex items-center gap-3 rounded-xl px-2 py-1 transition hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-0"
+          className="flex items-center gap-3 rounded-xl px-2 py-1 transition hover:bg-primary/10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-0"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm dark:bg-muted">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/30 bg-card shadow-sm">
             <img src={companyIcon} className="h-8 w-8 rounded-full object-cover" />
           </div>
           <div className="space-y-0.5 group-data-[collapsible=icon]:hidden">
@@ -281,7 +281,7 @@ function AppSidebar({ user }: { user: AuthUser }) {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-primary/80">Menu principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {filteredMain.map((item) => {
@@ -333,9 +333,9 @@ function AppSidebar({ user }: { user: AuthUser }) {
       </SidebarContent>
 
       <SidebarFooter className="px-4 group-data-[collapsible=icon]:px-2">
-        <div className="rounded-2xl border border-sidebar-border/70 bg-sidebar-accent/40 p-3 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:border-none group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0">
+        <div className="rounded-2xl border border-primary/20 bg-secondary/70 p-3 shadow-inner group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:border-none group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0">
           <div className="flex items-center gap-3 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2">
-            <Avatar className="h-10 w-10 border border-sidebar-border/60 bg-background">
+            <Avatar className="h-10 w-10 border border-primary/30 bg-background">
               <AvatarImage src={user?.avatar_url ?? undefined} alt={user?.nome} />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
@@ -346,7 +346,7 @@ function AppSidebar({ user }: { user: AuthUser }) {
           </div>
           <Button
             variant="secondary"
-            className="mt-3 w-full group-data-[collapsible=icon]:mt-2 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:shadow-none"
+            className="mt-3 w-full border border-primary/20 bg-background/70 hover:bg-primary/15 hover:text-primary group-data-[collapsible=icon]:mt-2 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:shadow-none"
             onClick={goToProfile}
           >
             <UserRound className="mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0" />

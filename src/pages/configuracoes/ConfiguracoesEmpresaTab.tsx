@@ -1,5 +1,4 @@
 import { ChangeEvent } from "react";
-import type { ReactNode } from "react";
 import {
   Building2,
   Download,
@@ -7,10 +6,8 @@ import {
   Link2,
   Loader2,
   MessageCircle,
-  Palette,
   Save,
   Scissors,
-  Sparkles,
   Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +18,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { TabsContent } from "@/components/ui/tabs";
 import { normalizeQrCode } from "@/services/whatsappService";
-import type { BrandTheme } from "@/lib/theme";
 import type { EmpresaInfo } from "@/services/companyService";
 import type { ExistingGalleryPhoto, GalleryUpload, WhatsappInfo } from "@/pages/configuracoes/types";
 
@@ -66,9 +62,6 @@ type ConfiguracoesEmpresaTabProps = {
   galleryPending: GalleryUpload[];
   onRemovePendingPhoto: (id: string) => void;
   onGalleryUpload: (event: ChangeEvent<HTMLInputElement>) => void;
-  dashboardTheme: BrandTheme;
-  clientTheme: BrandTheme;
-  renderThemeGrid: (type: "dashboard" | "client", theme: BrandTheme) => ReactNode;
   onSaveEmpresa: () => void;
   salvandoEmpresa: boolean;
 };
@@ -114,9 +107,6 @@ export function ConfiguracoesEmpresaTab({
   galleryPending,
   onRemovePendingPhoto,
   onGalleryUpload,
-  dashboardTheme,
-  clientTheme,
-  renderThemeGrid,
   onSaveEmpresa,
   salvandoEmpresa,
 }: ConfiguracoesEmpresaTabProps) {
@@ -209,7 +199,7 @@ export function ConfiguracoesEmpresaTab({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Palette className="h-4 w-4 text-primary" />
+                <MessageCircle className="h-4 w-4 text-primary" />
                 Alertas automáticos
               </CardTitle>
               <CardDescription>Integre e-mails e Telegram para receber notificações.</CardDescription>
@@ -363,37 +353,6 @@ export function ConfiguracoesEmpresaTab({
               )}
             </CardContent>
           </Card>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Palette className="h-4 w-4 text-primary" />
-                  Painel interno
-                </CardTitle>
-                <CardDescription>Personalize o visual do prestador.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {renderThemeGrid("dashboard", dashboardTheme)}
-                <p className="text-xs text-muted-foreground">Impacta menu, botões e componentes internos.</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  Portal do cliente
-                </CardTitle>
-                <CardDescription>Defina a experiência para links públicos.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {renderThemeGrid("client", clientTheme)}
-                <p className="text-xs text-muted-foreground">
-                  Essas cores são usadas no portal público e no fluxo de agendamento.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
 
           <Button type="button" className="shadow-gold" onClick={onSaveEmpresa} disabled={salvandoEmpresa}>
             {salvandoEmpresa ? (

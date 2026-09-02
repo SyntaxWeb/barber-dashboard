@@ -8,53 +8,53 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 216 19% 6%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 215 16% 11%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 215 18% 10%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 30 56% 61%;
+    --primary-foreground: 217 28% 8%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 214 16% 16%;
+    --secondary-foreground: 210 40% 96%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 214 14% 18%;
+    --muted-foreground: 215 18% 68%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 24 57% 35%;
+    --accent-foreground: 35 50% 92%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 77% 57%;
     --destructive-foreground: 210 40% 98%;
     --success: 142 71% 45%;
     --success-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 214 13% 24%;
+    --input: 214 13% 24%;
+    --ring: 30 56% 61%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 216 21% 8%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-foreground: 210 31% 91%;
 
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary: 30 56% 61%;
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-primary-foreground: 217 28% 8%;
 
-    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent: 214 16% 16%;
 
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-accent-foreground: 30 65% 77%;
 
-    --sidebar-border: 220 13% 91%;
+    --sidebar-border: 214 13% 24%;
 
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 30 56% 61%;
   }
 
   .dark {
@@ -105,5 +105,26 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.28);
+    color: hsl(var(--foreground));
+  }
+
+  html {
+    background: hsl(var(--background));
+  }
+
+  body {
+    background:
+      radial-gradient(circle at top left, hsl(var(--primary) / 0.12), transparent 34rem),
+      linear-gradient(180deg, hsl(var(--background)), hsl(220 24% 4%));
+  }
+
+  input,
+  textarea,
+  select {
+    color-scheme: dark;
   }
 }

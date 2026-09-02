@@ -12,21 +12,21 @@ export type ThemeKind = "dashboard" | "client";
 export const THEME_FIELDS: Array<keyof BrandTheme> = ["primary", "secondary", "background", "surface", "text", "accent"];
 
 export const DEFAULT_DASHBOARD_THEME: BrandTheme = {
-  primary: "#0F172A",
-  secondary: "#1D4ED8",
-  background: "#F8FAFC",
-  surface: "#FFFFFF",
-  text: "#0F172A",
-  accent: "#F97316",
+  primary: "#D49A62",
+  secondary: "#1B2027",
+  background: "#0B0D10",
+  surface: "#14181D",
+  text: "#F8FAFC",
+  accent: "#8B4A26",
 };
 
 export const DEFAULT_CLIENT_THEME: BrandTheme = {
-  primary: "#111827",
-  secondary: "#DC2626",
-  background: "#FDF2F8",
-  surface: "#FFFFFF",
-  text: "#111827",
-  accent: "#FBBF24",
+  primary: "#D49A62",
+  secondary: "#1B2027",
+  background: "#101316",
+  surface: "#171B20",
+  text: "#F8FAFC",
+  accent: "#8B4A26",
 };
 
 const HEX_REGEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;

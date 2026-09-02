@@ -834,7 +834,7 @@ function PixPaymentBox({ payment, generating, onGenerate, onCopy, disabled }: {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

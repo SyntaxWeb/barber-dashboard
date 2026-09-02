@@ -27,10 +27,6 @@ const DEFAULT_MODE: ThemeMode = "brand";
 const STORAGE_KEY = "barbeiro-theme";
 
 const readStoredMode = (): ThemeMode => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === "dark" || stored === "brand" || stored === "light") {
-    return stored as ThemeMode;
-  }
   return DEFAULT_MODE;
 };
 
@@ -93,15 +89,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [activePalette, mode, syncCssVariables]);
 
   const toggleMode = () => {
-    setModeState((prev) => {
-      if (prev === "brand") return "dark";
-      if (prev === "dark") return "light";
-      return "brand";
-    });
+    setModeState(DEFAULT_MODE);
   };
 
   const setMode = (next: ThemeMode) => {
-    setModeState(next);
+    setModeState(DEFAULT_MODE);
   };
 
   const setPalette = useCallback((kind: ThemeKind, palette?: Partial<BrandTheme> | null) => {

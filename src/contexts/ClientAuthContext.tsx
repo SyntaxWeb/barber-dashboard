@@ -84,9 +84,8 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(STORAGE_COMPANY);
     }
     if (info) {
-      // aqui
       setCompanyInfo(info);
-      setPalette("client", info.client_theme);
+      setPalette("client", DEFAULT_CLIENT_THEME);
       activatePalette("client");
     } else if (!slug) {
       setCompanyInfo(null);
@@ -251,9 +250,8 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     fetchEmpresaPublic(companySlug)
       .then((info) => {
         if (cancelled) return;
-        // aqui
         setCompanyInfo(info);
-        setPalette("client", info.client_theme);
+        setPalette("client", DEFAULT_CLIENT_THEME);
         activatePalette("client");
       })
       .catch(() => {

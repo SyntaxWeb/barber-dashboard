@@ -1,6 +1,6 @@
 import { secureStorage } from "@/lib/secureStorage";
 import { resolveMediaUrl } from "@/lib/media";
-import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME, sanitizeTheme } from "@/lib/theme";
+import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME } from "@/lib/theme";
 import { apiFetch, handleResponse } from "@/services/api";
 
 const authHeaders = () => {
@@ -66,8 +66,8 @@ const normalizeEmpresa = (empresa: EmpresaInfo): EmpresaInfo => {
     ...empresa,
     icon_url: resolveMediaUrl(empresa.icon_url),
     gallery_photos: galleryPhotos,
-    dashboard_theme: sanitizeTheme(empresa.dashboard_theme, DEFAULT_DASHBOARD_THEME),
-    client_theme: sanitizeTheme(empresa.client_theme, DEFAULT_CLIENT_THEME),
+    dashboard_theme: DEFAULT_DASHBOARD_THEME,
+    client_theme: DEFAULT_CLIENT_THEME,
   };
 };
 

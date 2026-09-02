@@ -25,15 +25,6 @@ import {
 import { fetchWhatsappSession, logoutWhatsappSession, startWhatsappSession } from "@/services/whatsappService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import {
-  BrandTheme,
-  DEFAULT_CLIENT_THEME,
-  DEFAULT_DASHBOARD_THEME,
-  getThemeReadabilityIssues,
-  sanitizeTheme,
-  isValidHexColor,
-} from "@/lib/theme";
-import { useTheme } from "@/contexts/ThemeContext";
 import { ConfiguracoesEmpresaTab } from "@/pages/configuracoes/ConfiguracoesEmpresaTab";
 import { ConfiguracoesAgendaTab } from "@/pages/configuracoes/ConfiguracoesAgendaTab";
 import { ConfiguracoesServicosTab } from "@/pages/configuracoes/ConfiguracoesServicosTab";
@@ -124,7 +115,6 @@ export default function Configuracoes() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { updateCompany } = useAuth();
-  const { setPalette } = useTheme();
 
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [configuracoes, setConfiguracoes] = useState<ConfiguracoesBarbearia | null>(null);
@@ -165,8 +155,6 @@ export default function Configuracoes() {
   const [telegramLink, setTelegramLink] = useState<string | null>(null);
   const [telegramLinkLoading, setTelegramLinkLoading] = useState(false);
   const [telegramVerifyLoading, setTelegramVerifyLoading] = useState(false);
-  const [dashboardThemeState, setDashboardThemeState] = useState<BrandTheme>(DEFAULT_DASHBOARD_THEME);
-  const [clientThemeState, setClientThemeState] = useState<BrandTheme>(DEFAULT_CLIENT_THEME);
   const [whatsappStatus, setWhatsappStatus] = useState("desconectado");
   const [whatsappLoading, setWhatsappLoading] = useState(false);
   const [whatsappQrCode, setWhatsappQrCode] = useState<string | null>(null);
@@ -196,82 +184,6 @@ export default function Configuracoes() {
     imageFile: null,
     imagePreview: null,
   });
-
-  const themeFields: Array<{ key: keyof BrandTheme; label: string; description: string }> = [
-    { key: "primary", label: "Cor primária", description: "Botões, links e destaques" },
-    { key: "secondary", label: "Cor secundária", description: "Elementos de apoio e estados" },
-    { key: "background", label: "Fundo", description: "Plano de fundo principal" },
-    { key: "surface", label: "Cartões e superfícies", description: "Cards, modais e listas" },
-    { key: "text", label: "Texto", description: "Cor predominante de textos" },
-    { key: "accent", label: "Realces", description: "Bordas, badges e indicadores" },
-  ];
-
-  const applyThemePreview = (type: "dashboard" | "client", theme: BrandTheme) => {
-    setPalette(type, theme);
-  };
-
-  const renderThemeGrid = (type: "dashboard" | "client", theme: BrandTheme) => {
-    const readabilityIssues = getThemeReadabilityIssues(theme);
-
-    return (
-      <div className="space-y-4">
-        {readabilityIssues.length > 0 && (
-          <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-            O sistema vai adaptar automaticamente textos e contornos para manter a leitura confortável.
-          </div>
-        )}
-        <div className="grid gap-4 lg:grid-cols-2">
-          {themeFields.map((field) => (
-            <div key={`${type}-${field.key}`} className="space-y-2">
-              <Label>{field.label}</Label>
-              <div className="flex items-center gap-3">
-                <Input
-                  type="color"
-                  value={theme[field.key]}
-                  onChange={(event) => handleThemeColorChange(type, field.key, event.target.value)}
-                  className="h-10 w-16 cursor-pointer rounded-md border p-1"
-                />
-                <Input
-                  value={theme[field.key]}
-                  onChange={(event) => handleThemeTextChange(type, field.key, event.target.value)}
-                  placeholder="#000000"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const handleThemeColorChange = (type: "dashboard" | "client", key: keyof BrandTheme, value: string) => {
-    const normalized = value.toUpperCase();
-    if (type === "dashboard") {
-      const updated = { ...dashboardThemeState, [key]: normalized };
-      setDashboardThemeState(updated);
-      applyThemePreview("dashboard", updated);
-    } else {
-      const updated = { ...clientThemeState, [key]: normalized };
-      setClientThemeState(updated);
-      applyThemePreview("client", updated);
-    }
-  };
-
-  const handleThemeTextChange = (type: "dashboard" | "client", key: keyof BrandTheme, value: string) => {
-    const hex = value.startsWith("#") ? value.toUpperCase() : `#${value.toUpperCase()}`;
-    if (type === "dashboard") {
-      setDashboardThemeState((prev) => ({ ...prev, [key]: hex }));
-      if (isValidHexColor(hex)) {
-        applyThemePreview("dashboard", { ...dashboardThemeState, [key]: hex });
-      }
-    } else {
-      setClientThemeState((prev) => ({ ...prev, [key]: hex }));
-      if (isValidHexColor(hex)) {
-        applyThemePreview("client", { ...clientThemeState, [key]: hex });
-      }
-    }
-  };
 
   useEffect(() => {
     galleryPendingRef.current = galleryPending;
@@ -437,12 +349,6 @@ export default function Configuracoes() {
         setNotifyViaTelegram(Boolean(empresaData.notify_via_telegram));
         setNotifyWhatsapp(empresaData.notify_whatsapp ?? "");
         setNotifyViaWhatsapp(Boolean(empresaData.notify_via_whatsapp));
-        const dashboardTheme = sanitizeTheme(empresaData.dashboard_theme, DEFAULT_DASHBOARD_THEME);
-        const clientTheme = sanitizeTheme(empresaData.client_theme, DEFAULT_CLIENT_THEME);
-        setDashboardThemeState(dashboardTheme);
-        setClientThemeState(clientTheme);
-        applyThemePreview("dashboard", dashboardTheme);
-        setPalette("client", clientTheme);
         if (Array.isArray((empresaData as any).gallery_assets) && (empresaData as any).gallery_assets.length) {
           setGalleryExisting(
             (empresaData as any).gallery_assets.map((asset: any) => ({
@@ -584,8 +490,6 @@ export default function Configuracoes() {
         notify_via_email: notifyViaEmail,
         notify_via_telegram: notifyViaTelegram,
         notify_via_whatsapp: notifyViaWhatsapp,
-        dashboard_theme: dashboardThemeState,
-        client_theme: clientThemeState,
         gallery_photos: galleryNewFiles.length ? galleryNewFiles : undefined,
         gallery_remove: galleryRemoved.length ? galleryRemoved : undefined,
       });
@@ -597,12 +501,6 @@ export default function Configuracoes() {
       setNotifyViaEmail(Boolean(atualizada.notify_via_email));
       setNotifyViaTelegram(Boolean(atualizada.notify_via_telegram));
       setNotifyViaWhatsapp(Boolean(atualizada.notify_via_whatsapp));
-      const updatedDashboardTheme = sanitizeTheme(atualizada.dashboard_theme, DEFAULT_DASHBOARD_THEME);
-      const updatedClientTheme = sanitizeTheme(atualizada.client_theme, DEFAULT_CLIENT_THEME);
-      setDashboardThemeState(updatedDashboardTheme);
-      setClientThemeState(updatedClientTheme);
-      applyThemePreview("dashboard", updatedDashboardTheme);
-      setPalette("client", updatedClientTheme);
       if (iconeTempUrl) {
         URL.revokeObjectURL(iconeTempUrl);
         setIconeTempUrl(null);
@@ -1139,9 +1037,6 @@ export default function Configuracoes() {
             galleryPending={galleryPending}
             onRemovePendingPhoto={handleRemovePendingPhoto}
             onGalleryUpload={handleGalleryUpload}
-            dashboardTheme={dashboardThemeState}
-            clientTheme={clientThemeState}
-            renderThemeGrid={renderThemeGrid}
             onSaveEmpresa={handleSaveEmpresa}
             salvandoEmpresa={salvandoEmpresa}
           />

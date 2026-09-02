@@ -146,7 +146,14 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
-            <Card key={stat.title} className={stat.isHighlight ? 'border-primary shadow-gold' : ''}>
+            <Card
+              key={stat.title}
+              className={
+                stat.isHighlight
+                  ? "border-primary/70 bg-primary/10 shadow-gold"
+                  : "border-border/80 bg-card/90 shadow-[0_14px_34px_rgba(0,0,0,0.16)]"
+              }
+            >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.title}
@@ -164,7 +171,7 @@ export default function Dashboard() {
         </div>
 
         {showProductUpdates ? (
-          <Card className="border-primary/20 bg-primary/5">
+          <Card className="border-primary/25 bg-[linear-gradient(135deg,_hsl(var(--primary)/0.14),_hsl(var(--card)/0.98)_42%,_hsl(var(--accent)/0.10))] shadow-[0_22px_70px_rgba(0,0,0,0.22)]">
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div>
                 <CardTitle>Novidades da plataforma</CardTitle>
@@ -177,7 +184,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="grid gap-2 text-sm text-foreground/90">
               {productUpdates.map((item) => (
-                <div key={item} className="rounded-xl border border-primary/10 bg-background/80 px-3 py-2">
+                <div key={item} className="rounded-xl border border-primary/15 bg-background/55 px-3 py-2 shadow-inner">
                   {item}
                 </div>
               ))}
@@ -187,7 +194,7 @@ export default function Dashboard() {
 
         {/* Próximo Cliente Card */}
         {proximoCliente && (
-          <Card className="border-primary/50 bg-gradient-to-r from-primary/5 to-transparent">
+          <Card className="border-primary/50 bg-gradient-to-r from-primary/15 to-card/95">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-primary" />
@@ -220,7 +227,7 @@ export default function Dashboard() {
 
         {/* Quick Actions */}
         <div className="grid gap-4 md:grid-cols-2">
-          <Card className="group cursor-pointer transition-all hover:shadow-gold hover:border-primary/50">
+          <Card className="group cursor-pointer border-primary/15 bg-card/90 transition-all hover:border-primary/50 hover:bg-primary/10 hover:shadow-gold">
             <Link to="/agenda">
               <CardContent className="flex items-center justify-between p-6">
                 <div className="flex items-center gap-4">
@@ -239,7 +246,7 @@ export default function Dashboard() {
             </Link>
           </Card>
 
-          <Card className="group cursor-pointer transition-all hover:shadow-gold hover:border-primary/50">
+          <Card className="group cursor-pointer border-primary/15 bg-card/90 transition-all hover:border-primary/50 hover:bg-primary/10 hover:shadow-gold">
             <Link to="/clientes">
               <CardContent className="flex items-center justify-between p-6">
                 <div className="flex items-center gap-4">
@@ -260,14 +267,14 @@ export default function Dashboard() {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
+          <Card className="border-border/80 bg-card/90">
             <CardHeader>
               <CardTitle>Informacoes da barbearia</CardTitle>
               <CardDescription>Tudo que aparece para os clientes nos links publicos.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted shadow-inner overflow-hidden">
+                <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-primary/20 bg-muted shadow-inner">
                   <img src={companyIcon} alt={company?.nome ?? "Barbearia"} className="h-full w-full object-cover" />
                 </div>
                 <div>
@@ -295,7 +302,7 @@ export default function Dashboard() {
               </p>
 
               <div className="space-y-3 text-sm">
-                <div className="rounded-xl border border-border/70 p-3">
+                <div className="rounded-xl border border-border/70 bg-background/45 p-3">
                   <p className="text-xs uppercase text-muted-foreground">Agenda publica</p>
                   {agendaLink ? (
                     <>
@@ -319,14 +326,14 @@ export default function Dashboard() {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-border/70 p-3">
+                  <div className="rounded-xl border border-border/70 bg-background/45 p-3">
                     <p className="text-xs uppercase text-muted-foreground">Alertas por email</p>
                     <p className="mt-1 font-semibold text-foreground">{notifyEmail ?? "Sem email definido"}</p>
                     <p className="text-xs text-muted-foreground">
                       {company?.notify_via_email ? "Ativo" : "Desativado"}
                     </p>
                   </div>
-                  <div className="rounded-xl border border-border/70 p-3">
+                  <div className="rounded-xl border border-border/70 bg-background/45 p-3">
                     <p className="text-xs uppercase text-muted-foreground">Alertas no Telegram</p>
                     <p className="mt-1 font-semibold text-foreground">{notifyTelegram ?? "Sem chat conectado"}</p>
                     <p className="text-xs text-muted-foreground">
@@ -346,7 +353,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden border-border/80 bg-card/90">
             <CardHeader>
               <CardTitle>Galeria da barbearia</CardTitle>
               <CardDescription>Use imagens reais para reforcar o estilo do seu espaco.</CardDescription>
@@ -375,7 +382,7 @@ export default function Dashboard() {
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-4 rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
+                <div className="flex flex-col gap-4 rounded-2xl border border-dashed border-primary/30 bg-background/45 p-6 text-sm text-muted-foreground">
                   <p>Ainda nao ha fotos cadastradas. Mostre o clima do espaco para aumentar a confianca.</p>
                   <Button variant="outline" size="sm" asChild>
                     <Link to="/configuracoes">Adicionar fotos</Link>
