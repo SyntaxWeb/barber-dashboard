@@ -36,6 +36,8 @@ import AssinaturaSucesso from "./pages/AssinaturaSucesso";
 import AssinaturaPendente from "./pages/AssinaturaPendente";
 import AssinaturaErro from "./pages/AssinaturaErro";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
+import Explorar from "./pages/Explorar";
+import ClienteBarbearias from "./pages/ClienteBarbearias";
 
 const queryClient = new QueryClient();
 
@@ -106,6 +108,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Landing />} />
+                <Route path="/explorar" element={<Explorar />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/esqueci-senha" element={<EsqueciSenha />} />
                 <Route path="/redefinir-senha" element={<RedefinirSenha />} />
@@ -240,6 +243,14 @@ const App = () => (
                   element={
                     <ClienteProtectedRoute>
                       <ClienteDashboard />
+                    </ClienteProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/cliente/barbearias"
+                  element={
+                    <ClienteProtectedRoute>
+                      <ClienteBarbearias />
                     </ClienteProtectedRoute>
                   }
                 />

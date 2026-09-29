@@ -5,6 +5,7 @@ import {
   Images,
   Link2,
   Loader2,
+  LocateFixed,
   MessageCircle,
   Save,
   Scissors,
@@ -29,6 +30,22 @@ type ConfiguracoesEmpresaTabProps = {
   onEmpresaNomeChange: (value: string) => void;
   empresaDescricao: string;
   onEmpresaDescricaoChange: (value: string) => void;
+  empresaEndereco: string;
+  onEmpresaEnderecoChange: (value: string) => void;
+  empresaBairro: string;
+  onEmpresaBairroChange: (value: string) => void;
+  empresaCidade: string;
+  onEmpresaCidadeChange: (value: string) => void;
+  empresaEstado: string;
+  onEmpresaEstadoChange: (value: string) => void;
+  empresaCep: string;
+  onEmpresaCepChange: (value: string) => void;
+  empresaLatitude: string;
+  onEmpresaLatitudeChange: (value: string) => void;
+  empresaLongitude: string;
+  onEmpresaLongitudeChange: (value: string) => void;
+  empresaDescobertaAtiva: boolean;
+  onEmpresaDescobertaAtivaChange: (value: boolean) => void;
   onCopyLink: () => void;
   onDownloadQrCode: () => void;
   qrCodeUrl: string | null;
@@ -74,6 +91,22 @@ export function ConfiguracoesEmpresaTab({
   onEmpresaNomeChange,
   empresaDescricao,
   onEmpresaDescricaoChange,
+  empresaEndereco,
+  onEmpresaEnderecoChange,
+  empresaBairro,
+  onEmpresaBairroChange,
+  empresaCidade,
+  onEmpresaCidadeChange,
+  empresaEstado,
+  onEmpresaEstadoChange,
+  empresaCep,
+  onEmpresaCepChange,
+  empresaLatitude,
+  onEmpresaLatitudeChange,
+  empresaLongitude,
+  onEmpresaLongitudeChange,
+  empresaDescobertaAtiva,
+  onEmpresaDescobertaAtivaChange,
   onCopyLink,
   onDownloadQrCode,
   qrCodeUrl,
@@ -162,6 +195,29 @@ export function ConfiguracoesEmpresaTab({
               placeholder="Conte rapidamente o que torna seu atendimento especial."
               rows={3}
             />
+          </div>
+
+          <div className="border-y border-border py-5">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold">Descoberta pública</p>
+                <p className="text-xs text-muted-foreground">Permite que clientes encontrem a empresa na busca.</p>
+              </div>
+              <Switch checked={empresaDescobertaAtiva} onCheckedChange={onEmpresaDescobertaAtivaChange} />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2"><Label>Endereço</Label><Input value={empresaEndereco} onChange={(event) => onEmpresaEnderecoChange(event.target.value)} placeholder="Rua e número" /></div>
+              <div className="space-y-2"><Label>Bairro</Label><Input value={empresaBairro} onChange={(event) => onEmpresaBairroChange(event.target.value)} /></div>
+              <div className="space-y-2"><Label>Cidade</Label><Input value={empresaCidade} onChange={(event) => onEmpresaCidadeChange(event.target.value)} /></div>
+              <div className="space-y-2"><Label>Estado</Label><Input maxLength={2} value={empresaEstado} onChange={(event) => onEmpresaEstadoChange(event.target.value.toUpperCase())} placeholder="UF" /></div>
+              <div className="space-y-2"><Label>CEP</Label><Input value={empresaCep} onChange={(event) => onEmpresaCepChange(event.target.value)} /></div>
+              <div className="space-y-2"><Label>Latitude</Label><Input inputMode="decimal" value={empresaLatitude} onChange={(event) => onEmpresaLatitudeChange(event.target.value)} placeholder="-23.5505" /></div>
+              <div className="space-y-2"><Label>Longitude</Label><Input inputMode="decimal" value={empresaLongitude} onChange={(event) => onEmpresaLongitudeChange(event.target.value)} placeholder="-46.6333" /></div>
+            </div>
+            <Button type="button" variant="outline" className="mt-4" onClick={() => navigator.geolocation?.getCurrentPosition(({ coords }) => { onEmpresaLatitudeChange(coords.latitude.toFixed(7)); onEmpresaLongitudeChange(coords.longitude.toFixed(7)); })}>
+              <LocateFixed className="mr-2 h-4 w-4" />Usar localização atual
+            </Button>
+            <p className="mt-2 text-xs text-muted-foreground">A distância só é exibida quando estas coordenadas e a localização do cliente estão disponíveis.</p>
           </div>
 
           <div className="space-y-2">

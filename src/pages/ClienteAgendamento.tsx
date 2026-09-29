@@ -113,13 +113,13 @@ export default function ClienteAgendamento() {
   }, [availability, hora, minuto]);
 
   useEffect(() => {
-    if (!token) {
+    if (!token || !activeCompany) {
       setPendingRedemptions([]);
       setLoyaltyRedemptionId("none");
       return;
     }
 
-    fetchClientLoyalty()
+    fetchClientLoyalty(activeCompany)
       .then((summary) => {
         const pending = (summary.pending_redemptions ?? []).filter((item) => item.reward?.grants_free_appointment);
         setPendingRedemptions(
@@ -135,7 +135,7 @@ export default function ClienteAgendamento() {
         );
       })
       .catch(() => setPendingRedemptions([]));
-  }, [token]);
+  }, [token, activeCompany]);
 
   const servicosSelecionados = servicos.filter((item) => selectedServiceIds.includes(item.id));
   const horarioSelecionado = joinHorario(hora, minuto);

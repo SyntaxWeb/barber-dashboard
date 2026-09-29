@@ -105,7 +105,7 @@ export default function ClienteAgendamentos() {
     { key: "scheduling_rating", label: "O que achou da experiência com o sistema de agendamento?" },
   ];
 
-  const activeCompany = companySlug;
+  const activeCompany = editAppointment?.company?.slug ?? companySlug;
   const companyName = companyInfo?.nome ?? "Barbearia";
   const companyIcon = companyInfo?.icon_url ?? defaultLogo;
   const companyDescription =

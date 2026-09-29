@@ -59,8 +59,8 @@ export interface ClientLoyaltySummary {
   }>;
 }
 
-export async function fetchClientLoyalty(): Promise<ClientLoyaltySummary> {
-  const summary = await api<ClientLoyaltySummary>("/api/clients/loyalty");
+export async function fetchClientLoyalty(companySlug: string): Promise<ClientLoyaltySummary> {
+  const summary = await api<ClientLoyaltySummary>(`/api/clients/loyalty?company=${encodeURIComponent(companySlug)}`);
   return {
     ...summary,
     rewards: summary.rewards.map((reward) => ({
@@ -77,8 +77,8 @@ export async function fetchClientLoyalty(): Promise<ClientLoyaltySummary> {
   };
 }
 
-export async function redeemClientReward(rewardId: number): Promise<{ points_balance: number }> {
-  return api<{ points_balance: number }>("/api/clients/loyalty/redeem", {
+export async function redeemClientReward(rewardId: number, companySlug: string): Promise<{ points_balance: number }> {
+  return api<{ points_balance: number }>(`/api/clients/loyalty/redeem?company=${encodeURIComponent(companySlug)}`, {
     method: "POST",
     body: JSON.stringify({ reward_id: rewardId }),
   });

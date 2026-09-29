@@ -1,257 +1,81 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CalendarCheck2, Clock3, LogIn, ShieldCheck, UserPlus } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, CalendarDays, Clock3, MapPin, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { fetchEmpresaPublic, type EmpresaInfo } from "@/services/companyService";
-import { useClientAuth } from "@/contexts/ClientAuthContext";
-import { useTheme } from "@/contexts/ThemeContext";
+import { clientFetchFeedbackSummary, type CompanyFeedbackSummary } from "@/services/clientPortalService";
 import defaultLogo from "@/assets/syntax-logo.svg";
+
+const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function PublicAgendamento() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAuthenticated, setCompanySlug, companyInfo } = useClientAuth();
-  const { palettes } = useTheme();
-  const clientTheme = palettes.client;
-
-  const [empresa, setEmpresa] = useState<EmpresaInfo | null>(null);
+  const { isAuthenticated, setCompanySlug } = useClientAuth();
+  const [company, setCompany] = useState<EmpresaInfo | null>(null);
+  const [feedback, setFeedback] = useState<CompanyFeedbackSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const lastRequestRef = useRef<{ slug: string; timestamp: number } | null>(null);
-
-  const shouldFetch = useCallback((currentSlug: string) => {
-    const now = Date.now();
-    const lastRequest = lastRequestRef.current;
-    const MIN_FETCH_INTERVAL = 30 * 1000;
-
-    if (!lastRequest) {
-      lastRequestRef.current = { slug: currentSlug, timestamp: now };
-      return true;
-    }
-
-    if (lastRequest.slug !== currentSlug || now - lastRequest.timestamp > MIN_FETCH_INTERVAL) {
-      lastRequestRef.current = { slug: currentSlug, timestamp: now };
-      return true;
-    }
-
-    return false;
-  }, []);
 
   useEffect(() => {
     if (!slug) return;
-    if (companyInfo?.slug === slug) {
-      setEmpresa(companyInfo);
-      setLoading(false);
-      return;
-    }
-    if (!shouldFetch(slug)) {
-      return;
-    }
     setLoading(true);
-    fetchEmpresaPublic(slug)
-      .then((data) => {
-        setEmpresa(data);
-        setCompanySlug(slug, data);
+    Promise.all([fetchEmpresaPublic(slug), clientFetchFeedbackSummary(slug)])
+      .then(([companyData, feedbackData]) => {
+        setCompany(companyData);
+        setFeedback(feedbackData);
+        setCompanySlug(slug, companyData);
       })
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : "";
-        toast({
-          title: message.includes("429") ? "Muitas tentativas" : "Empresa não encontrada",
-          description: message.includes("429")
-            ? "Tente novamente em alguns instantes."
-            : "Verifique se o link foi digitado corretamente.",
-          variant: "destructive",
-        });
-      })
+      .catch(() => toast({ title: "Empresa não encontrada", description: "Confira o link e tente novamente.", variant: "destructive" }))
       .finally(() => setLoading(false));
-  }, [companyInfo, setCompanySlug, shouldFetch, slug, toast]);
+  }, [setCompanySlug, slug, toast]);
 
-  const goTo = (path: string) => {
+  const schedule = () => {
     if (!slug) return;
-    navigate(`${path}?company=${slug}`);
+    navigate(`${isAuthenticated ? "/cliente/agendar" : "/cliente/login"}?company=${slug}`);
   };
 
-  const handlePrimaryAction = () => {
-    goTo(isAuthenticated ? "/cliente/agendar" : "/cliente/login");
-  };
+  if (loading) return <div className="mx-auto min-h-screen max-w-6xl px-4 py-8"><Skeleton className="h-[460px] w-full" /><div className="mt-6 grid gap-5 md:grid-cols-3"><Skeleton className="h-60 md:col-span-2" /><Skeleton className="h-60" /></div></div>;
+  if (!company || !slug) return <div className="flex min-h-screen items-center justify-center px-4"><div className="text-center"><h1 className="text-2xl font-bold">Perfil indisponível</h1><p className="mt-2 text-muted-foreground">Este link não existe ou não está mais ativo.</p><Button className="mt-5" onClick={() => navigate("/explorar")}>Explorar estabelecimentos</Button></div></div>;
 
-  const guideSteps = [
-    {
-      title: "Identifique-se",
-      description: "Entrar garante que só você veja seus dados e histórico.",
-      icon: ShieldCheck,
-    },
-    {
-      title: "Escolha o serviço",
-      description: "Veja valores, duração e profissionais disponíveis.",
-      icon: CalendarCheck2,
-    },
-    {
-      title: "Confirme",
-      description: "Receba confirmação e lembretes automáticos.",
-      icon: Clock3,
-    },
-  ];
-
-  const onboardingCards = [
-    {
-      title: "Já tenho conta",
-      description: "Acesse com seu email e veja horários disponíveis.",
-      detail:
-        "Entrando você enxerga horários livres, confirma serviços e acompanha todos os seus atendimentos.",
-      icon: LogIn,
-      action: () => goTo("/cliente/login"),
-      buttonLabel: "Entrar com meu email",
-      variant: "default" as const,
-    },
-    {
-      title: "Primeiro atendimento",
-      description: "Crie sua conta gratuita para guardar históricos.",
-      detail:
-        "Com uma única conta você agenda em diversas empresas que usam SyntaxAtendimento.",
-      icon: UserPlus,
-      action: () => goTo("/cliente/registro"),
-      buttonLabel: "Criar conta gratuita",
-      variant: "secondary" as const,
-    },
-  ];
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/40">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Preparando a agenda pública...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!empresa || !slug) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/40 px-4">
-        <Card className="max-w-md border-border shadow-gold">
-          <CardHeader>
-            <CardTitle>Link inválido</CardTitle>
-            <CardDescription>Peça um novo link para o prestador ou tente novamente.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button className="w-full" onClick={() => navigate("/")}>
-              Voltar ao início
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const primaryLabel = isAuthenticated ? "Abrir agenda agora" : "Entrar e agendar";
+  const gallery = company.gallery_photos ?? [];
+  const heroImage = gallery[0] ?? company.icon_url ?? defaultLogo;
 
   return (
-    <div
-      className="min-h-screen py-10 px-4"
-      style={{
-        background: `linear-gradient(180deg, ${clientTheme.background} 0%, ${clientTheme.surface} 100%)`,
-      }}
-    >
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-        <Button variant="ghost" className="w-fit -ml-2" onClick={() => navigate(-1)}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar
-        </Button>
-
-        <Card className="border-border shadow-gold/40">
-          <CardContent className="flex flex-col gap-6 p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-card border border-border shadow-inner overflow-hidden">
-                <img src={empresa.icon_url ?? defaultLogo} alt={empresa.nome} className="h-full w-full object-cover" />
-              </div>
-              <div>
-                <p className="text-sm uppercase tracking-wide text-muted-foreground">Agenda oficial</p>
-                <h1 className="text-3xl font-bold text-foreground">{empresa.nome}</h1>
-                <p className="text-muted-foreground">
-                  {empresa.descricao || "Escolha seu serviço, confirme o horário e receba lembretes automáticos."}
-                </p>
-              </div>
+    <div className="min-h-screen bg-background text-foreground">
+      <main className="mx-auto max-w-6xl px-4 pb-28 pt-5">
+        <div className="mb-4 flex items-center justify-between"><Button variant="ghost" onClick={() => navigate(-1)}><ArrowLeft className="mr-2 h-4 w-4" />Voltar</Button><Button variant="outline" onClick={() => navigate("/explorar")}>Explorar</Button></div>
+        <section className="relative min-h-[430px] overflow-hidden rounded-lg bg-muted">
+          <img src={heroImage} alt={company.nome} className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-black/55" />
+          <div className="relative flex min-h-[430px] max-w-3xl flex-col justify-end p-6 text-white sm:p-10">
+            <div className="mb-4 flex items-center gap-3"><img src={company.icon_url ?? defaultLogo} alt="" className="h-14 w-14 rounded-md border border-white/30 bg-white object-cover" /><div>{feedback?.average !== null && feedback?.average !== undefined ? <p className="flex items-center gap-1 text-sm"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{feedback.average.toFixed(1)} · {feedback.count} avaliações</p> : <p className="text-sm text-white/75">Ainda sem avaliações</p>}</div></div>
+            <h1 className="text-4xl font-bold sm:text-5xl">{company.nome}</h1>
+            <p className="mt-3 max-w-2xl text-white/85">{company.descricao || "Serviços de beleza com agendamento online."}</p>
+            {company.address && <p className="mt-4 flex items-start gap-2 text-sm text-white/80"><MapPin className="mt-0.5 h-4 w-4 shrink-0" />{company.address}</p>}
+            <Button size="lg" className="mt-6 w-fit" onClick={schedule}><CalendarDays className="mr-2 h-5 w-5" />Ver horários disponíveis</Button>
+          </div>
+        </section>
+        <section className="grid gap-8 py-9 lg:grid-cols-[1fr_360px]">
+          <div>
+            <h2 className="text-2xl font-semibold">Serviços</h2>
+            <div className="mt-4 divide-y divide-border border-y border-border">
+              {(company.services ?? []).map((service) => <div key={service.id} className="flex items-center justify-between gap-4 py-4"><div><h3 className="font-medium">{service.nome}</h3><p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground"><Clock3 className="h-4 w-4" />{service.duracao} min</p></div><p className="font-semibold">{money.format(service.preco)}</p></div>)}
+              {(company.services ?? []).length === 0 && <p className="py-8 text-sm text-muted-foreground">Os serviços serão exibidos em breve.</p>}
             </div>
-            <div className="rounded-2xl bg-gradient-to-r from-card to-muted/50 p-5 space-y-5">
-              <div className="flex flex-col gap-4 lg:flex-row">
-                <div className="flex flex-1 flex-col gap-2 p-2 rounded-2xl bg-primary/10 p-5 text-sm text-primary">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">Comece por aqui</p>
-                  <h2 className="text-2xl font-bold text-primary">Reserve em poucos minutos</h2>
-                  <p className="text-sm text-primary/80">
-                    Entrando você acessa o painel seguro da empresa, escolhe um serviço, confirma o horário e recebe
-                    lembretes automáticos.
-                  </p>
-                </div>
-                <div className="flex flex-1 flex-col gap-3">
-                  <Button className="w-full py-5 text-base font-semibold shadow-lg shadow-primary/20" onClick={handlePrimaryAction}>
-                    {primaryLabel}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="w-full py-5 text-base font-semibold border border-primary/30 bg-card text-primary shadow"
-                    onClick={() => goTo("/cliente/registro")}
-                  >
-                    Criar minha conta
-                  </Button>
-                </div>
-              </div>
-              <Separator />
-              <div className="grid gap-4 text-sm text-muted-foreground sm:grid-cols-3">
-                {guideSteps.map((step) => {
-                  const Icon = step.icon;
-                  return (
-                    <div key={step.title} className="flex items-start gap-3 rounded-2xl bg-primary/10 p-4 shadow-sm">
-                      <div className="rounded-full bg-muted p-2">
-                        <Icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-foreground">{step.title}</p>
-                        <p>{step.description}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          {onboardingCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <Card key={card.title} className="border-border/70 bg-card shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Icon className="h-5 w-5 text-primary" />
-                    {card.title}
-                  </CardTitle>
-                  <CardDescription>{card.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">{card.detail}</p>
-                  <Button
-                    variant={card.variant === "secondary" ? "destructive" : "default"}
-                    className={`w-full py-4 text-base font-semibold ${
-                      card.variant === "secondary" ? "" : "bg-primary text-primary-foreground shadow-gold"
-                    }`}
-                    onClick={card.action}
-                  >
-                    {card.buttonLabel}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
+            {gallery.length > 1 && <><h2 className="mt-10 text-2xl font-semibold">Galeria</h2><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">{gallery.slice(1).map((photo, index) => <img key={photo} src={photo} alt={`${company.nome} ${index + 1}`} className="aspect-square w-full rounded-md object-cover" />)}</div></>}
+          </div>
+          <aside className="h-fit border-l border-border pl-0 lg:pl-7">
+            <h2 className="text-xl font-semibold">Avaliações</h2>
+            {feedback?.average !== null && feedback?.average !== undefined ? <div className="mt-3 flex items-end gap-3"><span className="text-4xl font-bold">{feedback.average.toFixed(1)}</span><span className="pb-1 text-sm text-muted-foreground">{feedback.count} avaliações válidas</span></div> : <p className="mt-3 text-sm text-muted-foreground">Esta empresa ainda não recebeu avaliações.</p>}
+            <div className="mt-5 space-y-5">{feedback?.recent.map((review) => <blockquote key={review.id} className="border-t border-border pt-4"><div className="flex items-center justify-between"><span className="text-sm font-medium">{review.client_name ?? "Cliente"}</span><span className="flex items-center gap-1 text-sm"><Star className="h-3.5 w-3.5 fill-primary text-primary" />{review.rating.toFixed(1)}</span></div>{review.comment && <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{review.comment}</p>}</blockquote>)}</div>
+          </aside>
+        </section>
+      </main>
+      <div className="fixed inset-x-0 bottom-0 border-t border-border bg-card/95 p-4 backdrop-blur"><div className="mx-auto flex max-w-6xl items-center justify-between gap-4"><div className="hidden sm:block"><p className="font-semibold">{company.nome}</p><p className="text-sm text-muted-foreground">Escolha serviços e consulte a agenda real.</p></div><Button size="lg" className="w-full sm:w-auto" onClick={schedule}><CalendarDays className="mr-2 h-5 w-5" />Agendar agora</Button></div></div>
     </div>
   );
 }

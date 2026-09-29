@@ -98,9 +98,6 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(async (payload: ClientRegisterPayload, overrideSlug?: string): Promise<boolean> => {
     const targetSlug = resolveCompanyForAuth(overrideSlug);
-    if (!targetSlug) {
-      return false;
-    }
 
     const response = await fetch(`${API_URL}/api/clients/register`, {
       method: "POST",
@@ -109,7 +106,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
       },
       body: JSON.stringify({
         ...payload,
-        company_slug: targetSlug,
+        company_slug: targetSlug ?? undefined,
       }),
     });
 
@@ -119,22 +116,19 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     if (!data.token || !data.user) return false;
 
     persistSession(data.user, data.token);
-    persistCompanySlug(targetSlug);
+    if (targetSlug) persistCompanySlug(targetSlug);
     return true;
   }, [persistCompanySlug, persistSession, resolveCompanyForAuth]);
 
   const login = useCallback(async (email: string, password: string, overrideSlug?: string): Promise<boolean> => {
     const targetSlug = resolveCompanyForAuth(overrideSlug);
-    if (!targetSlug) {
-      return false;
-    }
 
     const response = await fetch(`${API_URL}/api/clients/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email, password, company_slug: targetSlug }),
+      body: JSON.stringify({ email, password, company_slug: targetSlug ?? undefined }),
     });
 
     if (!response.ok) return false;
@@ -143,22 +137,19 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     if (!data.token || !data.user) return false;
 
     persistSession(data.user, data.token);
-    persistCompanySlug(targetSlug);
+    if (targetSlug) persistCompanySlug(targetSlug);
     return true;
   }, [persistCompanySlug, persistSession, resolveCompanyForAuth]);
 
   const loginWithGoogle = useCallback(async (credential: string, overrideSlug?: string): Promise<boolean> => {
     const targetSlug = resolveCompanyForAuth(overrideSlug);
-    if (!targetSlug) {
-      return false;
-    }
 
     const response = await fetch(`${API_URL}/api/clients/login/google`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ credential, company_slug: targetSlug }),
+      body: JSON.stringify({ credential, company_slug: targetSlug ?? undefined }),
     });
 
     if (!response.ok) return false;
@@ -167,7 +158,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     if (!data.token || !data.user) return false;
 
     persistSession(data.user, data.token);
-    persistCompanySlug(targetSlug);
+    if (targetSlug) persistCompanySlug(targetSlug);
     return true;
   }, [persistCompanySlug, persistSession, resolveCompanyForAuth]);
 

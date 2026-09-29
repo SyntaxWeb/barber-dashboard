@@ -92,16 +92,16 @@ export default function ClienteDashboard() {
   }, [companyInfo]);
 
   useEffect(() => {
-    if (!client) {
+    if (!client || !companyInfo?.slug) {
       setLoyaltySummary(null);
       return;
     }
     setLoyaltyLoading(true);
-    fetchClientLoyalty()
+    fetchClientLoyalty(companyInfo.slug)
       .then(setLoyaltySummary)
       .catch(() => setLoyaltySummary(null))
       .finally(() => setLoyaltyLoading(false));
-  }, [client]);
+  }, [client, companyInfo?.slug]);
 
   const availableRewards = (loyaltySummary?.rewards ?? []).filter(
     (reward) => reward.active && (loyaltySummary?.points_balance ?? 0) >= reward.points_cost,
@@ -116,8 +116,9 @@ export default function ClienteDashboard() {
   const handleRedeemReward = async (reward: ClientLoyaltyReward) => {
     setRedeemingRewardId(reward.id);
     try {
-      await redeemClientReward(reward.id);
-      const refreshed = await fetchClientLoyalty();
+      if (!companyInfo?.slug) return;
+      await redeemClientReward(reward.id, companyInfo.slug);
+      const refreshed = await fetchClientLoyalty(companyInfo.slug);
       setLoyaltySummary(refreshed);
       toast({
         title: "Recompensa resgatada",
@@ -333,7 +334,7 @@ export default function ClienteDashboard() {
                         <p className="text-sm font-semibold text-amber-950">Pronto para resgatar</p>
                         <div className="mt-3 space-y-2">
                           {availableRewards.slice(0, 2).map((reward) => (
-                            <div key={reward.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/80 px-3 py-3">
+                            <div key={reward.id} className="flex items-center justify-between gap-3 rounded-xl bg-muted/60 px-3 py-3">
                               <div className="min-w-0">
                                 <p className="truncate text-sm font-medium text-foreground">{reward.name}</p>
                                 <p className="text-xs text-muted-foreground">{reward.points_cost} pts</p>
@@ -349,7 +350,7 @@ export default function ClienteDashboard() {
                         <p className="text-sm font-semibold text-emerald-950">Agendamento grátis pendente</p>
                         <div className="mt-3 space-y-2">
                           {pendingFreeAppointments.slice(0, 2).map((item) => (
-                            <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/80 px-3 py-3">
+                            <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-muted/60 px-3 py-3">
                               <div className="min-w-0">
                                 <p className="truncate text-sm font-medium text-foreground">{item.reward.name}</p>
                                 <p className="text-xs text-muted-foreground">Use ao marcar seu próximo horário</p>
@@ -447,7 +448,7 @@ export default function ClienteDashboard() {
           </Card>
         </section>
         <section className="grid gap-6 mb-2">
-          <Card className="border-none bg-white/95  from-white to-muted shadow-md shadow-primary/5">
+          <Card className="border border-border bg-card text-card-foreground shadow-md shadow-primary/5">
             <CardHeader className="flex flex-col  gap-4 xl:flex-row xl:items-center">
               <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-3xl border border-border/60 bg-white shadow-inner overflow-hidden">
                 <img src={companyIcon} alt={companyName} className="h-full w-full object-cover" />
@@ -470,7 +471,7 @@ export default function ClienteDashboard() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid gap-4">
-                <div className="rounded-2xl border border-border/70 bg-white/80 p-4">
+                <div className="rounded-2xl border border-border/70 bg-muted/60 p-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Mail className="h-4 w-4 text-primary" />
                     E-mail da equipe
@@ -498,7 +499,7 @@ export default function ClienteDashboard() {
             return (
               <Card
                 key={action.to}
-                className="border border-border/70 bg-white transition-all hover:-translate-y-1 hover:shadow-lg"
+                className="border border-border/70 bg-card text-card-foreground transition-all hover:-translate-y-1 hover:shadow-lg"
               >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -548,7 +549,7 @@ export default function ClienteDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border border-primary/30 bg-white shadow-lg shadow-primary/10">
+          <Card className="border border-primary/30 bg-card text-card-foreground shadow-lg shadow-primary/10">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Clock3 className="h-5 w-5 text-primary" />

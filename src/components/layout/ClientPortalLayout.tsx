@@ -15,15 +15,32 @@ import {
   Menu,
   Sparkles,
   Home,
+  Building2,
+  History,
+  Search,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { useAuth } from "@/contexts/AuthContext";
+import { ClientSidebar } from "@/components/layout/ClientSidebar";
 import defaultLogo from "@/assets/syntax-logo.svg";
 interface ClientPortalLayoutProps {
   children: ReactNode;
 }
 
 const navItems = [
+  {
+    key: "explorar",
+    label: "Explorar",
+    description: "Descubra novos lugares",
+    to: "/explorar",
+    icon: Search,
+  },
+  {
+    key: "barbearias",
+    label: "Favoritas",
+    description: "Lugares onde você já foi",
+    to: "/cliente/barbearias",
+    icon: Building2,
+  },
   {
     key: "inicio",
     label: "Início",
@@ -44,6 +61,13 @@ const navItems = [
     description: "Acompanhe e remaneje",
     to: "/cliente/agendamentos",
     icon: CalendarCheck,
+  },
+  {
+    key: "historico",
+    label: "Histórico",
+    description: "Atendimentos realizados",
+    to: "/cliente/agendamentos?tab=historico",
+    icon: History,
   },
   {
     key: "perfil",
@@ -81,7 +105,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
 
   const renderNav = (variant: "desktop" | "mobile") =>
     navItems.map((item) => {
-      const active = location.pathname === item.to;
+      const active = location.pathname + location.search === item.to || location.pathname === item.to;
       return (
         <button
           key={item.key}
@@ -92,10 +116,10 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
             }
           }}
           className={cn(
-            "w-full rounded-xl border p-3 text-left transition-all",
+            "w-full rounded-lg px-3 py-2.5 text-left transition-all",
             active
-              ? "border-primary/50 bg-card/60 text-primary"
-              : "border-transparent hover:border-border hover:bg-muted/60",
+              ? "bg-amber-300 text-zinc-950"
+              : "text-zinc-100 hover:bg-white/10",
           )}
         >
           <div className="flex items-center gap-3">
@@ -171,14 +195,8 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
         </SheetContent>
       </Sheet>
 
-      <div className="mx-auto flex w-full max-w-6xl gap-4 px-4 pb-10 pt-6 md:gap-6 md:px-8">
-        <aside className="sticky top-24 hidden w-64 flex-shrink-0 flex-col gap-4 md:flex">
-          <div className="rounded-2xl border border-border/60 bg-card/90 p-4 shadow-sm">
-            <p className="text-sm font-semibold text-foreground">{companyName}</p>
-            <p className="text-xs text-muted-foreground">Escolha uma opção:</p>
-          </div>
-          <nav className="space-y-3">{renderNav("desktop")}</nav>
-        </aside>
+      <div className="mx-auto flex w-full max-w-none gap-4 px-4 pb-10 pt-6 lg:pl-72 md:gap-6 md:px-8">
+        <ClientSidebar />
         <main className="flex-1">
           <div className="rounded-[32px] p-4 sm:p-6 lg:p-8">
             {!client?.avatar_url ? (

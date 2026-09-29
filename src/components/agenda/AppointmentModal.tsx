@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { Agendamento } from "@/data/mockData";
-import { formatarData, formatarPreco, cancelarAgendamento, concluirAgendamento } from "@/services/agendaService";
+import { formatarData, formatarPreco, cancelarAgendamento } from "@/services/agendaService";
 import { useToast } from "@/hooks/use-toast";
 import { buildWhatsAppUrl, openWhatsAppChat } from "@/lib/whatsapp";
 import { closeAppointmentSale, createAppointmentPixPayment, fetchAppointmentSale, fetchProducts, type PixPaymentResponse, type Product, type Sale } from "@/services/inventoryService";
@@ -180,27 +180,6 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
       toast({ title: "Erro ao fechar atendimento", description: error instanceof Error ? error.message : "Tente novamente.", variant: "destructive" });
     } finally {
       setCheckoutLoading(false);
-    }
-  };
-
-  const handleConcluir = async () => {
-    setLoading(true);
-    try {
-      await concluirAgendamento(agendamento.id);
-      toast({
-        title: "Agendamento concluído",
-        description: `Atendimento de ${agendamento.cliente} marcado como concluído.`,
-      });
-      onUpdate();
-      onOpenChange(false);
-    } catch {
-      toast({
-        title: "Erro",
-        description: "Não foi possível concluir o agendamento.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -424,9 +403,9 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
 
           {agendamento.status === "confirmado" && (
             <div className="flex gap-2 pt-2">
-              <Button className="flex-1" onClick={handleConcluir} disabled={loading}>
+              <Button className="flex-1" onClick={() => setCheckoutOpen(true)} disabled={loading}>
                 <Check className="h-4 w-4 mr-2" />
-                Concluir
+                Fechar caixa
               </Button>
               <Button variant="destructive" className="flex-1" onClick={handleCancelar} disabled={loading}>
                 <Trash2 className="h-4 w-4 mr-2" />

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { createCliente, fetchClienteHistory, fetchClientes, type Cliente, type ClienteHistory } from "@/services/clientesService";
 import { useAuth } from "@/contexts/AuthContext";
@@ -190,6 +191,15 @@ export default function Clientes() {
     }
   };
 
+  const getInitials = (name?: string | null) => {
+    const parts = (name || "CL").trim().split(/\s+/).filter(Boolean);
+    return parts
+      .map((part) => part.charAt(0))
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  };
+
   const formatAppointmentDate = (value?: string | null) => {
     if (!value) return "—";
     try {
@@ -353,11 +363,17 @@ export default function Clientes() {
               <div className="space-y-3">
                 {filteredClientes.map((cliente) => (
                   <div key={cliente.id} className="rounded-xl border border-border/60 bg-background p-4 shadow-sm">
-                    <div className="space-y-1">
-                      <p className="font-medium">{cliente.nome}</p>
-                      {cliente.observacoes ? (
-                        <p className="text-xs text-muted-foreground">{cliente.observacoes}</p>
-                      ) : null}
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-12 w-12 border border-primary/25 bg-muted">
+                        <AvatarImage src={cliente.avatar_url ?? undefined} alt={cliente.nome} className="object-cover" />
+                        <AvatarFallback>{getInitials(cliente.nome)}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 space-y-1">
+                        <p className="font-medium">{cliente.nome}</p>
+                        {cliente.observacoes ? (
+                          <p className="text-xs text-muted-foreground">{cliente.observacoes}</p>
+                        ) : null}
+                      </div>
                     </div>
 
                     <div className="mt-4 space-y-2 text-sm">
@@ -402,10 +418,18 @@ export default function Clientes() {
                   {filteredClientes.map((cliente) => (
                     <TableRow key={cliente.id}>
                       <TableCell>
-                        <div className="font-medium">{cliente.nome}</div>
-                        {cliente.observacoes && (
-                          <p className="text-xs text-muted-foreground">{cliente.observacoes}</p>
-                        )}
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 border border-primary/25 bg-muted">
+                            <AvatarImage src={cliente.avatar_url ?? undefined} alt={cliente.nome} className="object-cover" />
+                            <AvatarFallback>{getInitials(cliente.nome)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <div className="font-medium">{cliente.nome}</div>
+                            {cliente.observacoes && (
+                              <p className="text-xs text-muted-foreground">{cliente.observacoes}</p>
+                            )}
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 text-sm">
@@ -513,9 +537,30 @@ function HistoryContent({
 
   if (!historyData) return null;
 
+  const initials = (historyData.client.nome || "CL")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0))
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
   return (
     <div className="max-h-[calc(100%-7rem)] overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6">
       <div className="space-y-6">
+        <div className="flex items-center gap-4 rounded-xl border border-border/70 bg-muted/20 p-4">
+          <Avatar className="h-16 w-16 border border-primary/30 bg-muted">
+            <AvatarImage src={historyData.client.avatar_url ?? undefined} alt={historyData.client.nome} className="object-cover" />
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="text-lg font-semibold leading-tight">{historyData.client.nome}</p>
+            <p className="break-all text-sm text-muted-foreground">{historyData.client.email ?? "Sem e-mail"}</p>
+            <p className="text-sm text-muted-foreground">{historyData.client.telefone ?? "Sem telefone"}</p>
+          </div>
+        </div>
+
         <div className="grid items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
           <div className="space-y-4 lg:sticky lg:top-0">
             <Card>

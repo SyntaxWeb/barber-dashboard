@@ -88,15 +88,6 @@ export default function ClienteRegistro() {
       return;
     }
 
-    if (!targetCompany) {
-      toast({
-        title: "Link inválido",
-        description: "Use o link exclusivo enviado pela empresa para finalizar o cadastro.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
     const success = await register(
       {
@@ -142,19 +133,10 @@ export default function ClienteRegistro() {
       title: "Bem-vindo!",
       description: "Sua conta foi criada com a foto de perfil pronta para os próximos agendamentos.",
     });
-    navigate(`/cliente${companyQuery}`);
+    navigate(targetCompany ? `/cliente${companyQuery}` : "/explorar");
   };
 
   const handleGoogleCredential = useCallback(async (credential: string) => {
-    if (!targetCompany) {
-      toast({
-        title: "Link inválido",
-        description: "Use o link exclusivo enviado pela empresa para finalizar o cadastro.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setGoogleLoading(true);
     const success = await loginWithGoogle(credential, targetCompany);
     setGoogleLoading(false);
@@ -172,7 +154,7 @@ export default function ClienteRegistro() {
       title: "Conta vinculada ao Google",
       description: "Agora você pode agendar serviços sem preencher tudo novamente.",
     });
-    navigate(`/cliente${companyQuery}`);
+    navigate(targetCompany ? `/cliente${companyQuery}` : "/explorar");
   }, [companyQuery, loginWithGoogle, navigate, targetCompany, toast]);
 
   return (

@@ -48,6 +48,7 @@ export interface Cliente {
   email?: string | null;
   telefone?: string | null;
   observacoes?: string | null;
+  avatar_url?: string | null;
   created_at?: string;
   updated_at?: string;
 }

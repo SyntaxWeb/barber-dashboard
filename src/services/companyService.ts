@@ -16,6 +16,16 @@ export interface EmpresaInfo {
   agendamento_url: string;
   icon_url?: string | null;
   gallery_photos?: string[] | null;
+  address?: string | null;
+  address_line?: string | null;
+  neighborhood?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postal_code?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  discovery_enabled?: boolean;
+  services?: Array<{ id: number; nome: string; preco: number; duracao: number }>;
   notify_email?: string | null;
   notify_telegram?: string | null;
   notify_whatsapp?: string | null;
@@ -135,6 +145,14 @@ export async function fetchEmpresaPublic(slug: string): Promise<EmpresaInfo> {
 interface UpdateEmpresaPayload {
   nome: string;
   descricao?: string;
+  address_line?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  discovery_enabled?: boolean;
   icone?: File | null;
   notify_email?: string | null;
   notify_telegram?: string | null;
@@ -160,6 +178,12 @@ export async function updateEmpresa(payload: UpdateEmpresaPayload): Promise<Empr
   if (payload.notify_email !== undefined) {
     formData.append("notify_email", payload.notify_email ?? "");
   }
+  (["address_line", "neighborhood", "city", "state", "postal_code"] as const).forEach((field) => {
+    if (payload[field] !== undefined) formData.append(field, payload[field] ?? "");
+  });
+  if (payload.latitude !== undefined) formData.append("latitude", payload.latitude === null ? "" : String(payload.latitude));
+  if (payload.longitude !== undefined) formData.append("longitude", payload.longitude === null ? "" : String(payload.longitude));
+  if (payload.discovery_enabled !== undefined) formData.append("discovery_enabled", String(payload.discovery_enabled));
   if (payload.notify_telegram !== undefined) {
     formData.append("notify_telegram", payload.notify_telegram ?? "");
   }

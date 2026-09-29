@@ -138,6 +138,14 @@ export default function Configuracoes() {
   const [empresa, setEmpresa] = useState<EmpresaInfo | null>(null);
   const [empresaNome, setEmpresaNome] = useState("");
   const [empresaDescricao, setEmpresaDescricao] = useState("");
+  const [empresaEndereco, setEmpresaEndereco] = useState("");
+  const [empresaBairro, setEmpresaBairro] = useState("");
+  const [empresaCidade, setEmpresaCidade] = useState("");
+  const [empresaEstado, setEmpresaEstado] = useState("");
+  const [empresaCep, setEmpresaCep] = useState("");
+  const [empresaLatitude, setEmpresaLatitude] = useState("");
+  const [empresaLongitude, setEmpresaLongitude] = useState("");
+  const [empresaDescobertaAtiva, setEmpresaDescobertaAtiva] = useState(true);
   const [iconePreview, setIconePreview] = useState<string | null>(null);
   const [iconeFile, setIconeFile] = useState<File | null>(null);
   const [iconeTempUrl, setIconeTempUrl] = useState<string | null>(null);
@@ -342,6 +350,14 @@ export default function Configuracoes() {
         setEmpresa(empresaData);
         setEmpresaNome(empresaData.nome);
         setEmpresaDescricao(empresaData.descricao ?? "");
+        setEmpresaEndereco(empresaData.address_line ?? "");
+        setEmpresaBairro(empresaData.neighborhood ?? "");
+        setEmpresaCidade(empresaData.city ?? "");
+        setEmpresaEstado(empresaData.state ?? "");
+        setEmpresaCep(empresaData.postal_code ?? "");
+        setEmpresaLatitude(empresaData.latitude?.toString() ?? "");
+        setEmpresaLongitude(empresaData.longitude?.toString() ?? "");
+        setEmpresaDescobertaAtiva(empresaData.discovery_enabled ?? true);
         setIconePreview(empresaData.icon_url ?? null);
         setNotifyEmail(empresaData.notify_email ?? "");
         setNotifyTelegram(empresaData.notify_telegram ?? "");
@@ -483,6 +499,14 @@ export default function Configuracoes() {
       const atualizada = await updateEmpresa({
         nome: empresaNome.trim(),
         descricao: empresaDescricao.trim(),
+        address_line: empresaEndereco.trim(),
+        neighborhood: empresaBairro.trim(),
+        city: empresaCidade.trim(),
+        state: empresaEstado.trim(),
+        postal_code: empresaCep.trim(),
+        latitude: empresaLatitude ? Number(empresaLatitude) : null,
+        longitude: empresaLongitude ? Number(empresaLongitude) : null,
+        discovery_enabled: empresaDescobertaAtiva,
         icone: iconeFile ?? undefined,
         notify_email: notifyEmail.trim() || null,
         notify_telegram: notifyTelegram.trim() || null,
@@ -1004,6 +1028,22 @@ export default function Configuracoes() {
             onEmpresaNomeChange={setEmpresaNome}
             empresaDescricao={empresaDescricao}
             onEmpresaDescricaoChange={setEmpresaDescricao}
+            empresaEndereco={empresaEndereco}
+            onEmpresaEnderecoChange={setEmpresaEndereco}
+            empresaBairro={empresaBairro}
+            onEmpresaBairroChange={setEmpresaBairro}
+            empresaCidade={empresaCidade}
+            onEmpresaCidadeChange={setEmpresaCidade}
+            empresaEstado={empresaEstado}
+            onEmpresaEstadoChange={setEmpresaEstado}
+            empresaCep={empresaCep}
+            onEmpresaCepChange={setEmpresaCep}
+            empresaLatitude={empresaLatitude}
+            onEmpresaLatitudeChange={setEmpresaLatitude}
+            empresaLongitude={empresaLongitude}
+            onEmpresaLongitudeChange={setEmpresaLongitude}
+            empresaDescobertaAtiva={empresaDescobertaAtiva}
+            onEmpresaDescobertaAtivaChange={setEmpresaDescobertaAtiva}
             onCopyLink={handleCopyLink}
             onDownloadQrCode={handleDownloadQrCode}
             qrCodeUrl={qrCodeUrl}
