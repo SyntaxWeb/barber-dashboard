@@ -5,10 +5,12 @@ import {
   Clock3,
   Gift,
   Mail,
+  MapPin,
   MessageCircle,
   NotebookPen,
   PartyPopper,
   ShieldCheck,
+  Search,
   Sparkles,
   Star,
   StarHalf,
@@ -59,7 +61,7 @@ const quickActions = [
 ];
 
 export default function ClienteDashboard() {
-  const { companyInfo, client } = useClientAuth();
+  const { companyInfo, companySlug, client } = useClientAuth();
   const { toast } = useToast();
 
   const companyName = companyInfo?.nome ?? "Barbearia";
@@ -72,6 +74,15 @@ export default function ClienteDashboard() {
   const contactTelegram = companyInfo?.notify_telegram ?? "Não informado";
   const schedulingLink = companyInfo?.agendamento_url ?? null;
   const slugLabel = companyInfo?.slug ? `/${companyInfo.slug}` : null;
+  const companyAddress =
+    companyInfo?.address ??
+    [
+      companyInfo?.address_line,
+      companyInfo?.neighborhood,
+      [companyInfo?.city, companyInfo?.state].filter(Boolean).join(" - "),
+    ]
+      .filter(Boolean)
+      .join(", ");
   const [feedbackSummary, setFeedbackSummary] = useState<CompanyFeedbackSummary | null>(null);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [loyaltySummary, setLoyaltySummary] = useState<ClientLoyaltySummary | null>(null);
@@ -168,9 +179,66 @@ export default function ClienteDashboard() {
       return "há pouco";
     }
   };
+  if (!companyInfo) {
+    return (
+      <ClientPortalLayout>
+        <section className="border-y border-border py-12">
+          <div className="mx-auto max-w-2xl text-center">
+            <Building2 className="mx-auto h-10 w-10 text-primary" />
+            <h1 className="mt-4 text-2xl font-bold">
+              {companySlug ? "Carregando a barbearia selecionada" : "Escolha uma barbearia"}
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {companySlug
+                ? `Estamos buscando os dados de /${companySlug}.`
+                : "Selecione um estabelecimento para ver galeria, avaliações, fidelidade e informações de atendimento."}
+            </p>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+              <Button asChild>
+                <Link to="/cliente/barbearias">
+                  <Building2 className="mr-2 h-4 w-4" />
+                  Minhas barbearias
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/explorar">
+                  <Search className="mr-2 h-4 w-4" />
+                  Explorar estabelecimentos
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      </ClientPortalLayout>
+    );
+  }
+
   return (
     <ClientPortalLayout>
       <div className="space-y-8">
+        <section className="flex flex-col gap-5 border-b border-border pb-7 sm:flex-row sm:items-center">
+          <img
+            src={companyIcon}
+            alt={companyName}
+            className="h-20 w-20 shrink-0 rounded-lg border border-border bg-white object-cover"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold uppercase text-primary">Barbearia selecionada</p>
+            <h1 className="mt-1 text-2xl font-bold text-foreground">{companyName}</h1>
+            <p className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+              {companyAddress || "Endereço não informado"}
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:items-end">
+            <Button asChild>
+              <Link to="/cliente/agendar">Agendar nesta barbearia</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/cliente/barbearias">Trocar barbearia</Link>
+            </Button>
+          </div>
+        </section>
         {availableRewards.length > 0 ? (
           <Alert className="border-amber-300/70 bg-amber-50 text-amber-950">
             <PartyPopper className="h-4 w-4 text-amber-600" />
@@ -198,7 +266,7 @@ export default function ClienteDashboard() {
         <section className="grid gap-6 mb-2">
           <Card className="border-border/80 shadow-sm overflow-hidden">
             <CardHeader>
-              <CardTitle>Galeria da barbearia</CardTitle>
+              <CardTitle>Galeria de {companyName}</CardTitle>
               <CardDescription>Confira fotos enviadas pelo barbeiro.</CardDescription>
             </CardHeader>
             <CardContent>
