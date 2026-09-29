@@ -127,7 +127,8 @@ export async function fetchEmpresaPublic(slug: string): Promise<EmpresaInfo> {
       throw new Error(text || "Erro na requisição");
     }
 
-    const data = await handleResponse<EmpresaInfo>(response, "Erro na requisição");
+    const payload = await handleResponse<EmpresaInfo | { data: EmpresaInfo }>(response, "Erro na requisição");
+    const data = "data" in payload ? payload.data : payload;
     const normalized = normalizeEmpresa(data);
     setCachedPublicCompany(slug, normalized);
     return normalized;

@@ -75,7 +75,7 @@ export default function PublicAgendamento() {
           </Carousel>
           <div className="absolute inset-0 bg-black/55" />
           <div className="relative flex min-h-[430px] max-w-3xl flex-col justify-end p-6 text-white sm:p-10">
-            <div className="mb-4 flex items-center gap-3"><img src={company.icon_url ?? defaultLogo} alt="" className="h-14 w-14 rounded-md border border-white/30 bg-white object-cover" /><div>{feedback?.average !== null && feedback?.average !== undefined ? <p className="flex items-center gap-1 text-sm"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{feedback.average.toFixed(1)} · {feedback.count} avaliações</p> : <p className="text-sm text-white/75">Ainda sem avaliações</p>}</div></div>
+            <div className="mb-4 flex items-center gap-3"><img src={company.icon_url ?? heroImage} alt="" onError={({ currentTarget }) => { currentTarget.onerror = null; currentTarget.src = heroImage; }} className="h-14 w-14 rounded-md border border-white/30 bg-white object-cover" /><div>{feedback?.average !== null && feedback?.average !== undefined ? <p className="flex items-center gap-1 text-sm"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{feedback.average.toFixed(1)} · {feedback.count} avaliações</p> : <p className="text-sm text-white/75">Ainda sem avaliações</p>}</div></div>
             <h1 className="text-4xl font-bold sm:text-5xl">{company.nome}</h1>
             <p className="mt-3 max-w-2xl text-white/85">{company.descricao || "Serviços de beleza com agendamento online."}</p>
             {company.address && <p className="mt-4 flex items-start gap-2 text-sm text-white/80"><MapPin className="mt-0.5 h-4 w-4 shrink-0" />{company.address}</p>}
