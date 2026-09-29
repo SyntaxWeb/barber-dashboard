@@ -52,6 +52,27 @@ export default function NovoAgendamento() {
   const [minuto, setMinuto] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const companySlug = user?.company?.slug;
+  const selectedDateKey = data ? format(data, "yyyy-MM-dd") : "";
+  const todayKey = format(new Date(), "yyyy-MM-dd");
+  const currentTime = format(new Date(), "HH:mm");
+  const retroactiveHours = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, "0"));
+  const currentHour = currentTime.slice(0, 2);
+  const elapsedMinutes = Array.from(
+    { length: Math.floor(Number(currentTime.slice(3, 5)) / 5) + 1 },
+    (_, index) => String(index * 5).padStart(2, "0"),
+  );
+  const selectableHours = selectedDateKey < todayKey
+    ? retroactiveHours
+    : selectedDateKey === todayKey
+      ? Array.from(new Set([...retroactiveHours.filter((item) => item < currentHour), currentHour, ...availability.horas])).sort()
+      : availability.horas;
+  const isPastDate = selectedDateKey < todayKey;
+  const isPastHourToday = selectedDateKey === todayKey && hora !== "" && hora < currentHour;
+  const selectableMinutes = isPastDate || isPastHourToday
+    ? Array.from({ length: 12 }, (_, index) => String(index * 5).padStart(2, "0"))
+    : selectedDateKey === todayKey && hora === currentHour
+      ? Array.from(new Set([...elapsedMinutes, ...(availability.minutosPorHora[hora] ?? [])])).sort()
+      : (hora ? availability.minutosPorHora[hora] ?? [] : []);
 
   useEffect(() => {
     async function loadData() {
@@ -82,16 +103,15 @@ export default function NovoAgendamento() {
       if (minuto) setMinuto("");
       return;
     }
-    if (!availability.horas.includes(hora)) {
+    if (!selectableHours.includes(hora)) {
       setHora("");
       setMinuto("");
       return;
     }
-    const minutosDisponiveis = availability.minutosPorHora[hora] ?? [];
-    if (!minutosDisponiveis.includes(minuto) && minuto) {
+    if (!selectableMinutes.includes(minuto) && minuto) {
       setMinuto("");
     }
-  }, [availability, hora, minuto]);
+  }, [selectableHours, selectableMinutes, hora, minuto]);
 
   const formatarTelefone = (valor: string) => {
     const numeros = valor.replace(/\D/g, "");
@@ -160,7 +180,6 @@ export default function NovoAgendamento() {
 
   const servicosSelecionados = servicos.filter((servico) => selectedServiceIds.includes(servico.id));
   const horarioSelecionado = joinHorario(hora, minuto);
-  const minutosDisponiveis = hora ? availability.minutosPorHora[hora] ?? [] : [];
   const precoTotal = servicosSelecionados.reduce((total, servico) => total + servico.preco, 0);
   const duracaoTotal = servicosSelecionados.reduce((total, servico) => total + servico.duracao, 0);
 
@@ -376,7 +395,6 @@ export default function NovoAgendamento() {
                         selected={data}
                         onSelect={setData}
                         locale={ptBR}
-                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                         className="pointer-events-auto"
                       />
                     </PopoverContent>
@@ -403,10 +421,10 @@ export default function NovoAgendamento() {
                       <SelectContent>
                         {selectedServiceIds.length === 0 ? (
                           <div className="p-2 text-sm text-muted-foreground">Selecione ao menos um serviço primeiro</div>
-                        ) : availability.horas.length === 0 ? (
+                        ) : selectableHours.length === 0 ? (
                           <div className="p-2 text-sm text-muted-foreground">Nenhuma hora disponível</div>
                         ) : (
-                          availability.horas.map((h) => (
+                          selectableHours.map((h) => (
                             <SelectItem key={h} value={h}>
                               {h}
                             </SelectItem>
@@ -424,10 +442,10 @@ export default function NovoAgendamento() {
                       <SelectContent>
                         {!hora ? (
                           <div className="p-2 text-sm text-muted-foreground">Selecione uma hora</div>
-                        ) : minutosDisponiveis.length === 0 ? (
+                        ) : selectableMinutes.length === 0 ? (
                           <div className="p-2 text-sm text-muted-foreground">Nenhum minuto disponível</div>
                         ) : (
-                          minutosDisponiveis.map((m) => (
+                          selectableMinutes.map((m) => (
                             <SelectItem key={m} value={m}>
                               {m}
                             </SelectItem>
