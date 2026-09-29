@@ -7,6 +7,13 @@ import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { fetchEmpresaPublic, type EmpresaInfo } from "@/services/companyService";
 import { clientFetchFeedbackSummary, type CompanyFeedbackSummary } from "@/services/clientPortalService";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import defaultLogo from "@/assets/syntax-logo.svg";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -43,13 +50,29 @@ export default function PublicAgendamento() {
 
   const gallery = company.gallery_photos ?? [];
   const heroImage = gallery[0] ?? company.icon_url ?? defaultLogo;
+  const profilePhotos = gallery.length ? gallery : [heroImage];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <main className="mx-auto max-w-6xl px-4 pb-28 pt-5">
         <div className="mb-4 flex items-center justify-between"><Button variant="ghost" onClick={() => navigate(-1)}><ArrowLeft className="mr-2 h-4 w-4" />Voltar</Button><Button variant="outline" onClick={() => navigate("/explorar")}>Explorar</Button></div>
         <section className="relative min-h-[430px] overflow-hidden rounded-lg bg-muted">
-          <img src={heroImage} alt={company.nome} className="absolute inset-0 h-full w-full object-cover" />
+          <Carousel opts={{ loop: profilePhotos.length > 1 }} className="absolute inset-0 h-full w-full">
+            <CarouselContent className="ml-0 h-full">
+              {profilePhotos.map((photo, index) => (
+                <CarouselItem key={`${photo}-${index}`} className="h-[430px] basis-full pl-0">
+                  <img src={photo} alt={`Foto ${index + 1} de ${company.nome}`} className="h-full w-full object-cover" />
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            {profilePhotos.length > 1 && <>
+              <CarouselPrevious className="left-4 z-20 bg-background/85" />
+              <CarouselNext className="right-4 z-20 bg-background/85" />
+              <span className="absolute right-5 top-5 z-20 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white">
+                {profilePhotos.length} fotos
+              </span>
+            </>}
+          </Carousel>
           <div className="absolute inset-0 bg-black/55" />
           <div className="relative flex min-h-[430px] max-w-3xl flex-col justify-end p-6 text-white sm:p-10">
             <div className="mb-4 flex items-center gap-3"><img src={company.icon_url ?? defaultLogo} alt="" className="h-14 w-14 rounded-md border border-white/30 bg-white object-cover" /><div>{feedback?.average !== null && feedback?.average !== undefined ? <p className="flex items-center gap-1 text-sm"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{feedback.average.toFixed(1)} · {feedback.count} avaliações</p> : <p className="text-sm text-white/75">Ainda sem avaliações</p>}</div></div>
@@ -66,7 +89,6 @@ export default function PublicAgendamento() {
               {(company.services ?? []).map((service) => <div key={service.id} className="flex items-center justify-between gap-4 py-4"><div><h3 className="font-medium">{service.nome}</h3><p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground"><Clock3 className="h-4 w-4" />{service.duracao} min</p></div><p className="font-semibold">{money.format(service.preco)}</p></div>)}
               {(company.services ?? []).length === 0 && <p className="py-8 text-sm text-muted-foreground">Os serviços serão exibidos em breve.</p>}
             </div>
-            {gallery.length > 1 && <><h2 className="mt-10 text-2xl font-semibold">Galeria</h2><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">{gallery.slice(1).map((photo, index) => <img key={photo} src={photo} alt={`${company.nome} ${index + 1}`} className="aspect-square w-full rounded-md object-cover" />)}</div></>}
           </div>
           <aside className="h-fit border-l border-border pl-0 lg:pl-7">
             <h2 className="text-xl font-semibold">Avaliações</h2>
