@@ -404,7 +404,7 @@ export default function Relatorios() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Desempenho por serviço</CardTitle>
+              <CardTitle>Desempenho por serviço no mês</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {loading ? (
@@ -417,7 +417,7 @@ export default function Relatorios() {
                       <span className="text-muted-foreground">{service.total} atendimentos</span>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      Receita estimada:{" "}
+                      Receita no mês:{" "}
                       <span className="font-semibold">{formatarPreco(service.revenue ?? 0)}</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-muted">
@@ -440,7 +440,7 @@ export default function Relatorios() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Produtos vendidos</CardTitle>
+              <CardTitle>Produtos vendidos no mês</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {loading ? (
