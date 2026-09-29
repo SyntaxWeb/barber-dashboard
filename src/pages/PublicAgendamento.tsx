@@ -61,7 +61,13 @@ export default function PublicAgendamento() {
             <CarouselContent className="ml-0 h-full">
               {profilePhotos.map((photo, index) => (
                 <CarouselItem key={`${photo}-${index}`} className="h-[430px] basis-full pl-0">
-                  <img src={photo} alt={`Foto ${index + 1} de ${company.nome}`} className="h-full w-full object-cover" />
+                  <img
+                    src={photo}
+                    alt={`Foto ${index + 1} de ${company.nome}`}
+                    loading={index === 0 ? "eager" : "lazy"}
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                  />
                 </CarouselItem>
               ))}
             </CarouselContent>

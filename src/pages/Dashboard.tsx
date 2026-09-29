@@ -366,7 +366,13 @@ export default function Dashboard() {
                       {galleryPhotos.map((photo, index) => (
                         <CarouselItem key={`${photo}-${index}`}>
                           <div className="relative h-60 w-full overflow-hidden rounded-2xl border border-border/60 bg-muted">
-                            <img src={photo} alt={`Foto ${index + 1} da barbearia`} className="h-full w-full object-cover" />
+                          <img
+                            src={photo}
+                            alt={`Foto ${index + 1} da barbearia`}
+                            loading={index === 0 ? "eager" : "lazy"}
+                            decoding="async"
+                            className="h-full w-full object-cover"
+                          />
                             <div className="absolute bottom-3 right-3 rounded-full bg-background/80 px-3 py-1 text-xs font-semibold shadow">
                               {index + 1} / {galleryPhotos.length}
                             </div>
