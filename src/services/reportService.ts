@@ -47,6 +47,11 @@ async function api<T>(path: string): Promise<T> {
 }
 
 export interface CompanyReport {
+  period: {
+    type: ReportPeriod;
+    start: string;
+    end: string;
+  };
   summary: {
     total_appointments: number;
     confirmed: number;
@@ -117,17 +122,19 @@ export interface CompanyFeedbackRankingEntry {
   last_feedback_at?: string | null;
 }
 
-export async function fetchCompanyReport(): Promise<CompanyReport> {
-  return api<CompanyReport>(REPORT_ENDPOINTS.company);
+export type ReportPeriod = "day" | "week" | "month";
+
+export async function fetchCompanyReport(period: ReportPeriod = "month"): Promise<CompanyReport> {
+  return api<CompanyReport>(`${REPORT_ENDPOINTS.company}?period=${period}`);
 }
 
-export async function fetchSystemReport(): Promise<CompanyReport> {
+export async function fetchSystemReport(period: ReportPeriod = "month"): Promise<CompanyReport> {
   const candidates = Array.isArray(REPORT_ENDPOINTS.system) ? REPORT_ENDPOINTS.system : [REPORT_ENDPOINTS.system];
   let lastError: Error | null = null;
 
   for (const endpoint of candidates) {
     try {
-      return await api<CompanyReport>(endpoint);
+      return await api<CompanyReport>(`${endpoint}?period=${period}`);
     } catch (error) {
       const apiError = error as ApiError;
       lastError = apiError;

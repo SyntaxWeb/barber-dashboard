@@ -2,7 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { fetchCompanyReport, fetchSystemReport, CompanyReport } from "@/services/reportService";
+import {
+  fetchCompanyReport,
+  fetchSystemReport,
+  CompanyReport,
+  ReportPeriod,
+} from "@/services/reportService";
 import { formatarPreco } from "@/services/agendaService";
 import {
   AlertTriangle,
@@ -27,19 +32,25 @@ export default function Relatorios() {
   const [report, setReport] = useState<CompanyReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] = useState<ReportPeriod>("month");
+
+  const periodLabel = { day: "dia", week: "semana", month: "mês" }[period];
+  const periodWithArticle = { day: "do dia", week: "da semana", month: "do mês" }[period];
+  const periodWithIn = { day: "no dia", week: "na semana", month: "no mês" }[period];
+  const currentPeriodLabel = { day: "Hoje", week: "Semana atual", month: "Mês atual" }[period];
 
   const loadReport = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await (isAdmin ? fetchSystemReport() : fetchCompanyReport());
+      const data = await (isAdmin ? fetchSystemReport(period) : fetchCompanyReport(period));
       setReport(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível carregar o relatório.");
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, [isAdmin, period]);
 
   useEffect(() => {
     loadReport();
@@ -69,8 +80,8 @@ export default function Relatorios() {
   }, [report]);
 
   const pageSubtitle = isAdmin
-    ? "Visão consolidada do sistema com métricas agregadas dos últimos 30 dias."
-    : "Visão consolidada da empresa e frequência de clientes dos últimos 30 dias.";
+    ? `Visão consolidada do sistema para o ${periodLabel} selecionado.`
+    : `Visão consolidada da empresa para o ${periodLabel} selecionado.`;
 
   return (
     <Layout>
@@ -80,10 +91,29 @@ export default function Relatorios() {
             <h1 className="text-3xl font-bold">Relatórios</h1>
             <p className="text-muted-foreground">{pageSubtitle}</p>
           </div>
-          <Button variant="outline" onClick={loadReport} className="gap-2" disabled={loading}>
-            <RefreshCcw className="h-4 w-4" />
-            Atualizar
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-md bg-muted p-1" aria-label="Período do relatório">
+              {([
+                ["day", "Dia"],
+                ["week", "Semana"],
+                ["month", "Mês"],
+              ] as const).map(([value, label]) => (
+                <Button
+                  key={value}
+                  size="sm"
+                  variant={period === value ? "secondary" : "ghost"}
+                  onClick={() => setPeriod(value)}
+                  disabled={loading && period === value}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+            <Button variant="outline" onClick={loadReport} className="gap-2" disabled={loading}>
+              <RefreshCcw className="h-4 w-4" />
+              Atualizar
+            </Button>
+          </div>
         </header>
 
         {isAdmin && (
@@ -117,21 +147,21 @@ export default function Relatorios() {
 
             <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <SummaryCard
-                title="Novas empresas (30 dias)"
+                title={`Novas empresas (${periodLabel})`}
                 value={loading ? "..." : formatCount(systemOverview?.new_companies_30d)}
                 description="Onboardings concluídos"
                 icon={<MapPin className="h-5 w-5 text-primary" />}
               />
               <SummaryCard
-                title="Novos clientes (30 dias)"
+                title={`Novos clientes (${periodLabel})`}
                 value={loading ? "..." : formatCount(systemOverview?.new_clients_30d)}
                 description="Cadastros no portal"
                 icon={<Users2 className="h-5 w-5 text-primary" />}
               />
               <SummaryCard
-                title="Faturamento do mês (sistema)"
+                title={`Faturamento ${periodWithArticle} (sistema)`}
                 value={loading ? "..." : formatSystemRevenue(systemOverview?.revenue_month)}
-                description="Receita agregada nos últimos 30 dias"
+                description={currentPeriodLabel}
                 icon={<TrendingUp className="h-5 w-5 text-primary" />}
               />
             </section>
@@ -286,22 +316,22 @@ export default function Relatorios() {
 
         <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <SummaryCard
-            title="Agendamentos totais"
+            title={`Agendamentos ${periodWithArticle}`}
             value={loading ? "..." : report?.summary.total_appointments ?? "--"}
             icon={<BarChart3 className="h-5 w-5 text-primary" />}
           />
           <SummaryCard
             title="Caixas fechados"
             value={loading ? "..." : report?.summary.closed_sales_month ?? "--"}
-            description="No mês atual"
+            description={currentPeriodLabel}
           />
           <SummaryCard
-            title="Produtos no mês"
+            title={`Produtos ${periodWithIn}`}
             value={loading ? "..." : formatarPreco(report?.summary.products_revenue_month ?? 0)}
             description="Vendas no caixa"
           />
           <SummaryCard
-            title="Receita do mês"
+            title={`Receita ${periodWithArticle}`}
             value={loading ? "..." : formatarPreco(report?.summary.revenue_month ?? 0)}
             description={`Serviços ${formatSystemRevenue(report?.summary.services_revenue_month)}`}
             icon={<TrendingUp className="h-5 w-5 text-primary" />}
@@ -313,7 +343,7 @@ export default function Relatorios() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <LineChart className="h-5 w-5 text-primary" />
-                Volume de agendamentos (30 dias)
+                Volume de agendamentos — {currentPeriodLabel.toLowerCase()}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -404,7 +434,7 @@ export default function Relatorios() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Desempenho por serviço no mês</CardTitle>
+              <CardTitle>Desempenho por serviço {periodWithIn}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {loading ? (
@@ -417,7 +447,7 @@ export default function Relatorios() {
                       <span className="text-muted-foreground">{service.total} atendimentos</span>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      Receita no mês:{" "}
+                      Receita {periodWithIn}:{" "}
                       <span className="font-semibold">{formatarPreco(service.revenue ?? 0)}</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-muted">
@@ -440,7 +470,7 @@ export default function Relatorios() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Produtos vendidos no mês</CardTitle>
+              <CardTitle>Produtos vendidos {periodWithIn}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {loading ? (
