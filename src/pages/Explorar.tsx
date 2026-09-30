@@ -77,7 +77,7 @@ export default function Explorar() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="border-b border-white/10 bg-zinc-950/95 backdrop-blur">
+      <header className="device-safe-surface border-b border-white/10 bg-zinc-950/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <Link to="/explorar" className="flex items-center gap-3">
             <img src={defaultLogo} alt="SyntaxAtendimento" className="h-9 w-9" />

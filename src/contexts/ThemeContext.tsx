@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, ReactNode } from "react";
 import {
   BrandTheme,
   DEFAULT_CLIENT_THEME,
@@ -52,13 +52,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>(() => readStoredMode());
   const [palettes, setPalettes] = useState<Record<ThemeKind, BrandTheme>>(getDefaultPalettes);
   const [activeKind, setActiveKind] = useState<ThemeKind>("dashboard");
-  const palettesRef = useRef(palettes);
-
   const activePalette = useMemo(() => palettes[activeKind] ?? DEFAULT_DASHBOARD_THEME, [palettes, activeKind]);
-
-  useEffect(() => {
-    palettesRef.current = palettes;
-  }, [palettes]);
 
   const syncCssVariables = useCallback(() => {
     const root = document.documentElement;
@@ -81,12 +75,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     syncCssVariables();
     localStorage.setItem(STORAGE_KEY, mode);
   }, [mode, syncCssVariables]);
-
-  useEffect(() => {
-    if (mode === "brand") {
-      syncCssVariables();
-    }
-  }, [activePalette, mode, syncCssVariables]);
 
   const toggleMode = () => {
     setModeState(DEFAULT_MODE);
@@ -117,16 +105,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const activatePalette = useCallback(
     (kind: ThemeKind) => {
-      setActiveKind(kind);
-      if (mode !== "brand") {
-        return;
-      }
-      requestAnimationFrame(() => {
-        const palette = kind === "dashboard" ? palettesRef.current.dashboard : palettesRef.current.client;
-        applyCssVariables(palette);
-      });
+      setActiveKind((current) => (current === kind ? current : kind));
     },
-    [mode],
+    [],
   );
 
   const value = useMemo(

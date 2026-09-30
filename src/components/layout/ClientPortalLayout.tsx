@@ -141,7 +141,7 @@ export function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
       }}
     >
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <header className="sticky top-0 z-30 border-b border-border/60 bg-card/90 backdrop-blur">
+        <header className="device-safe-surface sticky top-0 z-30 border-b border-border/60 bg-card/90 backdrop-blur">
           <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 md:px-8">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(true)}>

@@ -98,6 +98,13 @@ All colors MUST be HSL.
   }
 }
 
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
+  .device-safe-surface {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;

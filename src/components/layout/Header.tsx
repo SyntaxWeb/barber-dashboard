@@ -47,7 +47,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 shadow-[0_12px_40px_rgba(0,0,0,0.22)] backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="device-safe-surface sticky top-0 z-40 border-b border-border/70 bg-background/90 shadow-[0_12px_40px_rgba(0,0,0,0.22)] backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="flex h-16 items-center gap-3 px-4">
         <div className="relative flex flex-1 items-center justify-center md:flex-none md:justify-start">
           <Button

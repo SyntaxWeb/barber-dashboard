@@ -103,7 +103,7 @@ export default function PublicAgendamento() {
           </aside>
         </section>
       </main>
-      <div className="fixed inset-x-0 bottom-0 border-t border-border bg-card/95 p-4 backdrop-blur"><div className="mx-auto flex max-w-6xl items-center justify-between gap-4"><div className="hidden sm:block"><p className="font-semibold">{company.nome}</p><p className="text-sm text-muted-foreground">Escolha serviços e consulte a agenda real.</p></div><Button size="lg" className="w-full sm:w-auto" onClick={schedule}><CalendarDays className="mr-2 h-5 w-5" />Agendar agora</Button></div></div>
+      <div className="device-safe-surface fixed inset-x-0 bottom-0 border-t border-border bg-card/95 p-4 backdrop-blur"><div className="mx-auto flex max-w-6xl items-center justify-between gap-4"><div className="hidden sm:block"><p className="font-semibold">{company.nome}</p><p className="text-sm text-muted-foreground">Escolha serviços e consulte a agenda real.</p></div><Button size="lg" className="w-full sm:w-auto" onClick={schedule}><CalendarDays className="mr-2 h-5 w-5" />Agendar agora</Button></div></div>
     </div>
   );
 }
