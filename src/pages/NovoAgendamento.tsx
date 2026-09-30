@@ -55,20 +55,26 @@ export default function NovoAgendamento() {
   const selectedDateKey = data ? format(data, "yyyy-MM-dd") : "";
   const todayKey = format(new Date(), "yyyy-MM-dd");
   const currentTime = format(new Date(), "HH:mm");
+  const canScheduleAnyTime = user?.role === "provider";
   const retroactiveHours = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, "0"));
+  const allMinutes = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, "0"));
   const currentHour = currentTime.slice(0, 2);
   const elapsedMinutes = Array.from(
     { length: Math.floor(Number(currentTime.slice(3, 5)) / 5) + 1 },
     (_, index) => String(index * 5).padStart(2, "0"),
   );
-  const selectableHours = selectedDateKey < todayKey
+  const selectableHours = canScheduleAnyTime
+    ? retroactiveHours
+    : selectedDateKey < todayKey
     ? retroactiveHours
     : selectedDateKey === todayKey
       ? Array.from(new Set([...retroactiveHours.filter((item) => item < currentHour), currentHour, ...availability.horas])).sort()
       : availability.horas;
   const isPastDate = selectedDateKey < todayKey;
   const isPastHourToday = selectedDateKey === todayKey && hora !== "" && hora < currentHour;
-  const selectableMinutes = isPastDate || isPastHourToday
+  const selectableMinutes = canScheduleAnyTime
+    ? allMinutes
+    : isPastDate || isPastHourToday
     ? Array.from({ length: 12 }, (_, index) => String(index * 5).padStart(2, "0"))
     : selectedDateKey === todayKey && hora === currentHour
       ? Array.from(new Set([...elapsedMinutes, ...(availability.minutosPorHora[hora] ?? [])])).sort()
@@ -84,7 +90,7 @@ export default function NovoAgendamento() {
   }, []);
 
   useEffect(() => {
-    if (!data || !configuracoes || selectedServiceIds.length === 0) {
+    if (!data || !configuracoes || selectedServiceIds.length === 0 || canScheduleAnyTime) {
       setAvailability({ horarios: [], horas: [], minutosPorHora: {} });
       setHora("");
       setMinuto("");
@@ -96,7 +102,7 @@ export default function NovoAgendamento() {
         setAvailability(dataResponse);
       })
       .catch(() => setAvailability({ horarios: [], horas: [], minutosPorHora: {} }));
-  }, [data, configuracoes, selectedServiceIds, companySlug]);
+  }, [data, configuracoes, selectedServiceIds, companySlug, canScheduleAnyTime]);
 
   useEffect(() => {
     if (!hora) {
@@ -403,6 +409,9 @@ export default function NovoAgendamento() {
 
                 <div className="space-y-2">
                   <Label>Horário</Label>
+                  {canScheduleAnyTime && (
+                    <p className="text-xs text-muted-foreground">Como prestador, você pode escolher qualquer hora e minuto.</p>
+                  )}
                   <div className="grid grid-cols-2 gap-2">
                     <Select
                       value={hora}
