@@ -1,17 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-import { Calendar, Clock, Users, TrendingUp, Plus, ArrowRight, X } from "lucide-react";
+import { Calendar, Clock, Users, TrendingUp, Plus, ArrowRight, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 import { Layout } from "@/components/layout/Layout";
 import { Agendamento } from "@/data/mockData";
 import { fetchAgendamentosPorData, formatarPreco } from "@/services/agendaService";
@@ -33,6 +26,7 @@ export default function Dashboard() {
   const [agendamentosHoje, setAgendamentosHoje] = useState<Agendamento[]>([]);
   const [salesHoje, setSalesHoje] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
+  const [galleryIndex, setGalleryIndex] = useState(0);
   const [showProductUpdates, setShowProductUpdates] = useState(() => {
     if (typeof window === "undefined") return true;
     return window.localStorage.getItem(PRODUCT_UPDATES_DISMISSED_KEY) !== "1";
@@ -47,6 +41,10 @@ export default function Dashboard() {
   const notifyTelegram = company?.notify_via_telegram && company?.notify_telegram ? company.notify_telegram : null;
 
   const hoje = format(new Date(), "yyyy-MM-dd");
+
+  useEffect(() => {
+    setGalleryIndex((current) => Math.min(current, Math.max(galleryPhotos.length - 1, 0)));
+  }, [galleryPhotos.length]);
 
   const handleCopyAgendaLink = async () => {
     if (!agendaLink) return;
@@ -361,28 +359,41 @@ export default function Dashboard() {
             <CardContent>
               {galleryPhotos.length ? (
                 <div className="space-y-3">
-                  <Carousel opts={{ loop: true }}>
-                    <CarouselContent>
-                      {galleryPhotos.map((photo, index) => (
-                        <CarouselItem key={`${photo}-${index}`}>
-                          <div className="relative h-60 w-full overflow-hidden rounded-2xl border border-border/60 bg-muted">
-                          <img
-                            src={photo}
-                            alt={`Foto ${index + 1} da barbearia`}
-                            loading={index === 0 ? "eager" : "lazy"}
-                            decoding="async"
-                            className="h-full w-full object-cover"
-                          />
-                            <div className="absolute bottom-3 right-3 rounded-full bg-background/80 px-3 py-1 text-xs font-semibold shadow">
-                              {index + 1} / {galleryPhotos.length}
-                            </div>
-                          </div>
-                        </CarouselItem>
-                      ))}
-                    </CarouselContent>
-                    <CarouselPrevious className="bg-background/80" />
-                    <CarouselNext className="bg-background/80" />
-                  </Carousel>
+                  <div className="relative h-60 w-full overflow-hidden rounded-2xl border border-border/60 bg-muted">
+                    <img
+                      src={galleryPhotos[galleryIndex]}
+                      alt={`Foto ${galleryIndex + 1} da barbearia`}
+                      decoding="async"
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute bottom-3 right-3 rounded-full bg-background/90 px-3 py-1 text-xs font-semibold shadow">
+                      {galleryIndex + 1} / {galleryPhotos.length}
+                    </div>
+                    {galleryPhotos.length > 1 && (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-background/90"
+                          onClick={() => setGalleryIndex((current) => (current - 1 + galleryPhotos.length) % galleryPhotos.length)}
+                          aria-label="Foto anterior"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-background/90"
+                          onClick={() => setGalleryIndex((current) => (current + 1) % galleryPhotos.length)}
+                          aria-label="Próxima foto"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Atualize as fotos em Configuracoes &gt; Empresa para manter o feed sempre atual.
                   </p>

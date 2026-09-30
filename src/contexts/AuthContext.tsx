@@ -123,7 +123,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const persistUser = useCallback((payload: any, authToken?: string | null) => {
     const normalizedUser = normalizeUser(payload);
-    setUser(normalizedUser);
+    setUser((currentUser) =>
+      JSON.stringify(currentUser) === JSON.stringify(normalizedUser) ? currentUser : normalizedUser,
+    );
     localStorage.setItem(
       "barbeiro-user",
       JSON.stringify({
