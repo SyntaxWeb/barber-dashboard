@@ -45,12 +45,14 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const { toast } = useToast();
   const lastSeenNotificationId = useRef<string | null>(null);
+  const fetchingRef = useRef(false);
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read_at).length, [notifications]);
 
-  const loadNotifications = async (showToast = false) => {
-    if (loading) return;
-    setLoading(true);
+  const loadNotifications = async (showToast = false, showLoading = false) => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+    if (showLoading) setLoading(true);
     try {
       const data = await fetchNotifications();
       if (showToast && data.length > 0 && data[0].id !== lastSeenNotificationId.current) {
@@ -66,16 +68,19 @@ export function NotificationBell() {
       } else if (!lastSeenNotificationId.current && data.length > 0) {
         lastSeenNotificationId.current = data[0].id;
       }
-      setNotifications(data);
+      setNotifications((current) =>
+        JSON.stringify(current) === JSON.stringify(data) ? current : data,
+      );
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      fetchingRef.current = false;
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadNotifications();
+    loadNotifications(false, true);
     const interval = setInterval(() => loadNotifications(true), POLLING_INTERVAL);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps

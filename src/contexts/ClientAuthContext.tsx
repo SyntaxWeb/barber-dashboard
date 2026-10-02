@@ -64,7 +64,9 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
 
   const persistSession = useCallback((userPayload: any, jwt: string) => {
     const normalized = normalizeClientUser(userPayload);
-    setClient(normalized);
+    setClient((current) =>
+      JSON.stringify(current) === JSON.stringify(normalized) ? current : normalized,
+    );
     setToken(jwt);
     localStorage.setItem(STORAGE_USER, JSON.stringify(normalized));
     secureStorage.setItem(STORAGE_TOKEN, jwt);
@@ -72,7 +74,9 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
 
   const applyClientUpdate = useCallback((payload: any) => {
     const normalized = normalizeClientUser(payload);
-    setClient(normalized);
+    setClient((current) =>
+      JSON.stringify(current) === JSON.stringify(normalized) ? current : normalized,
+    );
     localStorage.setItem(STORAGE_USER, JSON.stringify(normalized));
   }, []);
 

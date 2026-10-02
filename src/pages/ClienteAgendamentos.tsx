@@ -116,7 +116,7 @@ export default function ClienteAgendamentos() {
   const contactTelegram = companyInfo?.notify_telegram ?? null;
   const companySlugLabel = companyInfo?.slug ? `/${companyInfo.slug}` : null;
 
-  const loadAppointments = async () => {
+  const loadAppointments = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     try {
@@ -131,12 +131,12 @@ export default function ClienteAgendamentos() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, toast]);
 
   useEffect(() => {
     if (!token) return;
-    loadAppointments();
-  }, [token]);
+    void loadAppointments();
+  }, [token, loadAppointments]);
 
   useEffect(() => {
     if (!activeCompany) return;
@@ -242,6 +242,25 @@ export default function ClienteAgendamentos() {
     setFeedbackStep(appointment.feedback ? "already" : "form");
     setFeedbackError(null);
   }, []);
+
+  useEffect(() => {
+    if (feedbackParamHandled) return;
+    const pendingFeedbackId = searchParams.get("feedback");
+    if (!pendingFeedbackId) return;
+    const parsedId = Number(pendingFeedbackId);
+    if (!Number.isInteger(parsedId) || parsedId <= 0) {
+      setFeedbackParamHandled(true);
+      return;
+    }
+    if (loading) return;
+    const targetAppointment = appointments.find((appointment) => appointment.id === parsedId);
+    if (!targetAppointment) return;
+    openFeedbackDialog(targetAppointment);
+    setFeedbackParamHandled(true);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("feedback");
+    setSearchParams(nextParams, { replace: true });
+  }, [appointments, loading, openFeedbackDialog, searchParams, setSearchParams, feedbackParamHandled]);
 
   const closeFeedbackDialog = useCallback(() => {
     setFeedbackAppointment(null);
@@ -358,25 +377,6 @@ export default function ClienteAgendamentos() {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (feedbackParamHandled) return;
-    const pendingFeedbackId = searchParams.get("feedback");
-    if (!pendingFeedbackId) return;
-    const parsedId = Number(pendingFeedbackId);
-    if (!Number.isInteger(parsedId) || parsedId <= 0) {
-      setFeedbackParamHandled(true);
-      return;
-    }
-    if (loading) return;
-    const targetAppointment = appointments.find((appointment) => appointment.id === parsedId);
-    if (!targetAppointment) return;
-    openFeedbackDialog(targetAppointment);
-    setFeedbackParamHandled(true);
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete("feedback");
-    setSearchParams(nextParams, { replace: true });
-  }, [appointments, loading, openFeedbackDialog, searchParams, setSearchParams, feedbackParamHandled]);
 
   return (
     <ClientPortalLayout>

@@ -33,6 +33,7 @@ export default function Relatorios() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<ReportPeriod>("month");
+  const initialLoading = loading && report === null;
 
   const periodLabel = { day: "dia", week: "semana", month: "mês" }[period];
   const periodWithArticle = { day: "do dia", week: "da semana", month: "do mês" }[period];
@@ -121,25 +122,25 @@ export default function Relatorios() {
             <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <SummaryCard
                 title="Empresas cadastradas"
-                value={loading ? "..." : formatCount(systemOverview?.total_companies)}
+                value={initialLoading ? "..." : formatCount(systemOverview?.total_companies)}
                 description="Contas totais no SyntaxAtendimento"
                 icon={<Building2 className="h-5 w-5 text-primary" />}
               />
               <SummaryCard
                 title="Empresas ativas"
-                value={loading ? "..." : formatCount(systemOverview?.active_companies)}
+                value={initialLoading ? "..." : formatCount(systemOverview?.active_companies)}
                 description="Assinaturas liberadas"
                 icon={<Sparkles className="h-5 w-5 text-primary" />}
               />
               <SummaryCard
                 title="Prestadores ativos"
-                value={loading ? "..." : formatCount(systemOverview?.active_providers)}
+                value={initialLoading ? "..." : formatCount(systemOverview?.active_providers)}
                 description="Usuários com acesso ao dashboard"
                 icon={<UserCheck className="h-5 w-5 text-primary" />}
               />
               <SummaryCard
                 title="Clientes cadastrados"
-                value={loading ? "..." : formatCount(systemOverview?.total_clients)}
+                value={initialLoading ? "..." : formatCount(systemOverview?.total_clients)}
                 description="Perfis confirmados no portal"
                 icon={<UserPlus className="h-5 w-5 text-primary" />}
               />
@@ -148,19 +149,19 @@ export default function Relatorios() {
             <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <SummaryCard
                 title={`Novas empresas (${periodLabel})`}
-                value={loading ? "..." : formatCount(systemOverview?.new_companies_30d)}
+                value={initialLoading ? "..." : formatCount(systemOverview?.new_companies_30d)}
                 description="Onboardings concluídos"
                 icon={<MapPin className="h-5 w-5 text-primary" />}
               />
               <SummaryCard
                 title={`Novos clientes (${periodLabel})`}
-                value={loading ? "..." : formatCount(systemOverview?.new_clients_30d)}
+                value={initialLoading ? "..." : formatCount(systemOverview?.new_clients_30d)}
                 description="Cadastros no portal"
                 icon={<Users2 className="h-5 w-5 text-primary" />}
               />
               <SummaryCard
                 title={`Faturamento ${periodWithArticle} (sistema)`}
-                value={loading ? "..." : formatSystemRevenue(systemOverview?.revenue_month)}
+                value={initialLoading ? "..." : formatSystemRevenue(systemOverview?.revenue_month)}
                 description={currentPeriodLabel}
                 icon={<TrendingUp className="h-5 w-5 text-primary" />}
               />
@@ -172,7 +173,7 @@ export default function Relatorios() {
                   <CardTitle>Distribuição de planos</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {loading ? (
+                  {initialLoading ? (
                     <p className="text-sm text-muted-foreground">Carregando...</p>
                   ) : planBreakdown.length ? (
                     planBreakdown.map((plan) => (
@@ -191,7 +192,7 @@ export default function Relatorios() {
                   <CardTitle>Status das assinaturas</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {loading ? (
+                  {initialLoading ? (
                     <p className="text-sm text-muted-foreground">Carregando...</p>
                   ) : statusBreakdown.length ? (
                     statusBreakdown.map((status) => (
@@ -213,7 +214,7 @@ export default function Relatorios() {
                   <CardTitle>Novas empresas</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {loading ? (
+                  {initialLoading ? (
                     <p className="text-sm text-muted-foreground">Carregando...</p>
                   ) : recentCompanies.length ? (
                     recentCompanies.map((company) => (
@@ -256,7 +257,7 @@ export default function Relatorios() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {loading ? (
+                  {initialLoading ? (
                     <p className="text-sm text-muted-foreground">Carregando...</p>
                   ) : companyFeedbackRanking.length ? (
                     companyFeedbackRanking.slice(0, 6).map((company, index) => {
@@ -317,22 +318,22 @@ export default function Relatorios() {
         <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <SummaryCard
             title={`Agendamentos ${periodWithArticle}`}
-            value={loading ? "..." : report?.summary.total_appointments ?? "--"}
+            value={initialLoading ? "..." : report?.summary.total_appointments ?? "--"}
             icon={<BarChart3 className="h-5 w-5 text-primary" />}
           />
           <SummaryCard
             title="Caixas fechados"
-            value={loading ? "..." : report?.summary.closed_sales_month ?? "--"}
+            value={initialLoading ? "..." : report?.summary.closed_sales_month ?? "--"}
             description={currentPeriodLabel}
           />
           <SummaryCard
             title={`Produtos ${periodWithIn}`}
-            value={loading ? "..." : formatarPreco(report?.summary.products_revenue_month ?? 0)}
+            value={initialLoading ? "..." : formatarPreco(report?.summary.products_revenue_month ?? 0)}
             description="Vendas no caixa"
           />
           <SummaryCard
             title={`Receita ${periodWithArticle}`}
-            value={loading ? "..." : formatarPreco(report?.summary.revenue_month ?? 0)}
+            value={initialLoading ? "..." : formatarPreco(report?.summary.revenue_month ?? 0)}
             description={`Serviços ${formatSystemRevenue(report?.summary.services_revenue_month)}`}
             icon={<TrendingUp className="h-5 w-5 text-primary" />}
           />
@@ -347,7 +348,7 @@ export default function Relatorios() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {initialLoading ? (
                 <p className="text-sm text-muted-foreground">Carregando...</p>
               ) : report?.trend.length ? (
                 <div className="space-y-3">
@@ -382,7 +383,7 @@ export default function Relatorios() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-4xl font-bold text-primary">
-                  {loading ? "--" : report?.feedback.average?.toFixed(1) ?? "--"}
+                  {initialLoading ? "--" : report?.feedback.average?.toFixed(1) ?? "--"}
                 </p>
                 <p className="text-sm text-muted-foreground">Média geral</p>
               </div>
@@ -409,7 +410,7 @@ export default function Relatorios() {
               <CardTitle>Frequência por cliente</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {loading ? (
+              {initialLoading ? (
                 <p className="text-sm text-muted-foreground">Carregando...</p>
               ) : report?.top_clients.length ? (
                 report.top_clients.map((client) => (
@@ -437,7 +438,7 @@ export default function Relatorios() {
               <CardTitle>Desempenho por serviço {periodWithIn}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {loading ? (
+              {initialLoading ? (
                 <p className="text-sm text-muted-foreground">Carregando...</p>
               ) : report?.services.length ? (
                 report.services.map((service) => (
@@ -473,7 +474,7 @@ export default function Relatorios() {
               <CardTitle>Produtos vendidos {periodWithIn}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {loading ? (
+              {initialLoading ? (
                 <p className="text-sm text-muted-foreground">Carregando...</p>
               ) : report?.products?.length ? (
                 report.products.map((product) => (

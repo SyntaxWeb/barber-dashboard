@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { resolveMediaUrl } from "@/lib/media";
 import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME } from "@/lib/theme";
 import { useTheme } from "./ThemeContext";
@@ -141,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = async (email: string, _senha: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, _senha: string): Promise<boolean> => {
     try {
       const response = await fetch(`${API_URL}/api/login`, {
         method: "POST",
@@ -164,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       return false;
     }
-  };
+  }, [persistUser, setPalette]);
 
   const logout = useCallback(() => {
     setUser(null);
@@ -184,17 +184,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("auth:expired", handler);
   }, [logout]);
 
-  const updateCompany = (company: CompanyInfo | null) => {
+  const updateCompany = useCallback((company: CompanyInfo | null) => {
     const normalized = normalizeCompany(company);
     setUser((prev) => {
       if (!prev) return prev;
       const updated = { ...prev, company: normalized };
       localStorage.setItem("barbeiro-user", JSON.stringify(updated));
-      return updated;
+      return JSON.stringify(prev) === JSON.stringify(updated) ? prev : updated;
     });
     setPalette("dashboard", DEFAULT_DASHBOARD_THEME);
     setPalette("client", DEFAULT_CLIENT_THEME);
-  };
+  }, [setPalette]);
 
   const updateUser = useCallback(
     (payload: any) => {
@@ -240,17 +240,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [token, updateUser]);
 
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthenticated: !!user,
+      token,
+      login,
+      logout,
+      updateCompany,
+      updateUser,
+    }),
+    [user, token, login, logout, updateCompany, updateUser],
+  );
+
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        token,
-        login,
-        logout,
-        updateCompany,
-        updateUser,
-      }}
+      value={value}
     >
       {children}
     </AuthContext.Provider>
