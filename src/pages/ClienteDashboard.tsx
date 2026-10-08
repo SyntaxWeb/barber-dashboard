@@ -88,31 +88,39 @@ export default function ClienteDashboard() {
   const [loyaltySummary, setLoyaltySummary] = useState<ClientLoyaltySummary | null>(null);
   const [loyaltyLoading, setLoyaltyLoading] = useState(false);
   const [redeemingRewardId, setRedeemingRewardId] = useState<number | null>(null);
+  const feedbackCompany = companyInfo?.slug;
+  const clientId = client?.id;
 
 
   useEffect(() => {
-    if (!companyInfo) {
+    if (!feedbackCompany) {
       setFeedbackSummary(null);
       return;
     }
+    let cancelled = false;
     setFeedbackLoading(true);
-    clientFetchFeedbackSummary(companyInfo.slug)
-      .then(setFeedbackSummary)
-      .catch(() => setFeedbackSummary(null))
-      .finally(() => setFeedbackLoading(false));
-  }, [companyInfo]);
+    setFeedbackSummary(null);
+    clientFetchFeedbackSummary(feedbackCompany)
+      .then((data) => { if (!cancelled) setFeedbackSummary(data); })
+      .catch(() => { /* Preserve data on transient failures. */ })
+      .finally(() => { if (!cancelled) setFeedbackLoading(false); });
+    return () => { cancelled = true; };
+  }, [feedbackCompany]);
 
   useEffect(() => {
-    if (!client || !companyInfo?.slug) {
+    if (!clientId || !feedbackCompany) {
       setLoyaltySummary(null);
       return;
     }
+    let cancelled = false;
     setLoyaltyLoading(true);
-    fetchClientLoyalty(companyInfo.slug)
-      .then(setLoyaltySummary)
-      .catch(() => setLoyaltySummary(null))
-      .finally(() => setLoyaltyLoading(false));
-  }, [client, companyInfo?.slug]);
+    setLoyaltySummary(null);
+    fetchClientLoyalty(feedbackCompany)
+      .then((data) => { if (!cancelled) setLoyaltySummary(data); })
+      .catch(() => { /* Preserve data on transient failures. */ })
+      .finally(() => { if (!cancelled) setLoyaltyLoading(false); });
+    return () => { cancelled = true; };
+  }, [clientId, feedbackCompany]);
 
   const availableRewards = (loyaltySummary?.rewards ?? []).filter(
     (reward) => reward.active && (loyaltySummary?.points_balance ?? 0) >= reward.points_cost,

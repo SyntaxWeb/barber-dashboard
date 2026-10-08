@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -76,6 +76,8 @@ export default function ClienteAgendamentos() {
 
   const [appointments, setAppointments] = useState<ClientAppointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const appointmentsRequest = useRef(0);
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [editAppointment, setEditAppointment] = useState<ClientAppointment | null>(null);
   const [editServiceId, setEditServiceId] = useState("");
@@ -118,24 +120,31 @@ export default function ClienteAgendamentos() {
 
   const loadAppointments = useCallback(async () => {
     if (!token) return;
+    const request = ++appointmentsRequest.current;
     setLoading(true);
     try {
       const data = await clientFetchAgendamentos(token);
+      if (request !== appointmentsRequest.current) return;
       setAppointments(data);
     } catch (error) {
+      if (request !== appointmentsRequest.current) return;
       toast({
         title: "Erro ao buscar agendamentos",
         description: error instanceof Error ? error.message : "Tente novamente.",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (request === appointmentsRequest.current) {
+        setHasLoaded(true);
+        setLoading(false);
+      }
     }
   }, [token, toast]);
 
   useEffect(() => {
     if (!token) return;
     void loadAppointments();
+    return () => { appointmentsRequest.current += 1; };
   }, [token, loadAppointments]);
 
   useEffect(() => {
@@ -403,7 +412,7 @@ export default function ClienteAgendamentos() {
           </CardHeader>
         </Card>
 
-        {loading ? (
+        {loading && !hasLoaded ? (
           <Card className="border-border shadow-gold/20">
             <CardContent className="py-12 text-center text-muted-foreground">Carregando agendamentos...</CardContent>
           </Card>

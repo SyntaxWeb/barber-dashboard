@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,28 +33,35 @@ export default function Relatorios() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<ReportPeriod>("month");
+  const [displayedPeriod, setDisplayedPeriod] = useState<ReportPeriod>("month");
   const initialLoading = loading && report === null;
+  const reportRequest = useRef(0);
 
-  const periodLabel = { day: "dia", week: "semana", month: "mês" }[period];
-  const periodWithArticle = { day: "do dia", week: "da semana", month: "do mês" }[period];
-  const periodWithIn = { day: "no dia", week: "na semana", month: "no mês" }[period];
-  const currentPeriodLabel = { day: "Hoje", week: "Semana atual", month: "Mês atual" }[period];
+  const periodLabel = { day: "dia", week: "semana", month: "mês" }[displayedPeriod];
+  const periodWithArticle = { day: "do dia", week: "da semana", month: "do mês" }[displayedPeriod];
+  const periodWithIn = { day: "no dia", week: "na semana", month: "no mês" }[displayedPeriod];
+  const currentPeriodLabel = { day: "Hoje", week: "Semana atual", month: "Mês atual" }[displayedPeriod];
 
   const loadReport = useCallback(async () => {
+    const request = ++reportRequest.current;
     setLoading(true);
     setError(null);
     try {
       const data = await (isAdmin ? fetchSystemReport(period) : fetchCompanyReport(period));
+      if (request !== reportRequest.current) return;
       setReport(data);
+      setDisplayedPeriod(period);
     } catch (err) {
+      if (request !== reportRequest.current) return;
       setError(err instanceof Error ? err.message : "Não foi possível carregar o relatório.");
     } finally {
-      setLoading(false);
+      if (request === reportRequest.current) setLoading(false);
     }
   }, [isAdmin, period]);
 
   useEffect(() => {
     loadReport();
+    return () => { reportRequest.current += 1; };
   }, [loadReport]);
 
   const trendMax = useMemo(() => {

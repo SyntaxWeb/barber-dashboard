@@ -39,7 +39,7 @@ export default function Agenda() {
   const [dayModalOpen, setDayModalOpen] = useState(false);
   const [dayModalDate, setDayModalDate] = useState<Date | null>(null);
   const cacheRef = useRef<Record<string, Agendamento[]>>({});
-  const fetchingRanges = useRef<Set<string>>(new Set());
+  const agendaRequest = useRef(0);
   const calendarRef = useRef<FullCalendar | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -67,17 +67,15 @@ export default function Agenda() {
 
   const loadAgendamentos = useCallback(async () => {
     if (!range) return;
+    const request = ++agendaRequest.current;
     const cacheKey = `${range.start}_${range.end}`;
     const cached = cacheRef.current[cacheKey];
     if (cached) {
       setAgendamentos(cached);
       setLoadError(null);
+      setLoading(false);
       return;
     }
-    if (fetchingRanges.current.has(cacheKey)) {
-      return;
-    }
-    fetchingRanges.current.add(cacheKey);
     setLoading(true);
     try {
       setLoadError(null);
@@ -88,19 +86,20 @@ export default function Agenda() {
         return a.horario.localeCompare(b.horario);
       });
       cacheRef.current[cacheKey] = sorted;
+      if (request !== agendaRequest.current) return;
       setAgendamentos(sorted);
     } catch (error) {
+      if (request !== agendaRequest.current) return;
       const rawMessage = error instanceof Error ? error.message : String(error);
       setLoadError(sanitizeErrorMessage(rawMessage));
-      setAgendamentos([]);
     } finally {
-      fetchingRanges.current.delete(cacheKey);
-      setLoading(false);
+      if (request === agendaRequest.current) setLoading(false);
     }
   }, [range]);
 
   useEffect(() => {
     loadAgendamentos();
+    return () => { agendaRequest.current += 1; };
   }, [loadAgendamentos]);
 
   const refreshCurrentRange = useCallback(async () => {
@@ -208,9 +207,9 @@ export default function Agenda() {
           </Button>
         </div>
 
-        <Card className="p-2 sm:p-4">
+        <Card className="relative p-2 sm:p-4" aria-busy={loading}>
           {loading && (
-            <div className="mb-2 rounded-lg border border-dashed border-border bg-muted/40 px-4 py-2 text-sm text-muted-foreground">
+            <div role="status" className="pointer-events-none absolute bottom-2 right-2 z-10 rounded-lg border border-border bg-background px-3 py-1 text-xs text-muted-foreground">
               Carregando agendamentos do período...
             </div>
           )}

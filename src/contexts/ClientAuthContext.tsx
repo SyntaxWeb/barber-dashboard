@@ -187,23 +187,30 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!token || typeof document === "undefined") return;
     let cancelled = false;
+    let fetching = false;
+    const controller = new AbortController();
     const validate = async () => {
-      const response = await apiFetch(
-        "/api/clients/me",
-        {
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        },
-        "client",
-      );
-      if (!response.ok || cancelled) return;
+      if (cancelled || fetching) return;
+      fetching = true;
       try {
+        const response = await apiFetch(
+          "/api/clients/me",
+          {
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            signal: controller.signal,
+          },
+          "client",
+        );
+        if (!response.ok || cancelled) return;
         const payload = await response.json();
-        applyClientUpdate(payload);
+        if (!cancelled) applyClientUpdate(payload);
       } catch {
-        // ignore payload parsing errors
+        // Keep the current session during network failures or cancellation.
+      } finally {
+        fetching = false;
       }
     };
 
@@ -217,6 +224,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     document.addEventListener("visibilitychange", handleVisibility);
     return () => {
       cancelled = true;
+      controller.abort();
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [token, applyClientUpdate]);
