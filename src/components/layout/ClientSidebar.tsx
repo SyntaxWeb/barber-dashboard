@@ -7,7 +7,7 @@ import defaultLogo from "@/assets/syntax-logo.svg";
 export const clientNavItems = [
   { key: "explorar", label: "Explorar", description: "Descubra novos lugares", to: "/explorar", icon: Search },
   { key: "inicio", label: "Inicio", description: "Visao geral da sua conta", to: "/cliente", icon: Home },
-  { key: "barbearias", label: "Favoritas", description: "Lugares onde voce ja foi", to: "/cliente/barbearias", icon: Building2 },
+  { key: "barbearias", label: "Minhas barbearias", description: "Lugares onde voce ja foi", to: "/cliente/barbearias", icon: Building2 },
   { key: "agendar", label: "Novo agendamento", description: "Escolha servico e horario", to: "/cliente/agendar", icon: NotebookPen },
   { key: "agendamentos", label: "Meus agendamentos", description: "Acompanhe e remaneje", to: "/cliente/agendamentos", icon: CalendarCheck },
   { key: "historico", label: "Historico", description: "Atendimentos realizados", to: "/cliente/agendamentos?tab=historico", icon: History },

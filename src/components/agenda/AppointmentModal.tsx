@@ -1,3 +1,5 @@
+import { usePolling } from "@/hooks/use-polling";
+import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { Phone, Calendar, Clock, Scissors, FileText, Check, Trash2, Star, MessageSquareText, Gift, ShoppingCart, Plus, Minus, QrCode, Copy, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -35,13 +37,17 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
   const [pixPayment, setPixPayment] = useState<PixPaymentResponse | null>(null);
   const [generatingPix, setGeneratingPix] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
+  const appointmentId = agendamento?.id;
   useEffect(() => {
-    if (!open || !agendamento || !checkoutOpen) return;
+    if (!open || !appointmentId || !checkoutOpen) return;
 
+    let cancelled = false;
     setCheckoutLoading(true);
-    Promise.all([fetchAppointmentSale(agendamento.id), fetchProducts()])
+    Promise.all([fetchAppointmentSale(appointmentId), fetchProducts()])
       .then(([saleData, productData]) => {
+        if (cancelled) return;
         setSale(saleData);
         setProducts(productData);
         setConsumedProducts(
@@ -66,30 +72,21 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
         setPixPayment(null);
       })
       .catch((error) => {
+        if (cancelled) return;
         toast({ title: "Erro ao abrir caixa", description: error instanceof Error ? error.message : "Tente novamente.", variant: "destructive" });
       })
-      .finally(() => setCheckoutLoading(false));
-  }, [open, agendamento?.id, checkoutOpen, toast]);
+      .finally(() => { if (!cancelled) setCheckoutLoading(false); });
+    return () => { cancelled = true; };
+  }, [open, appointmentId, checkoutOpen, toast]);
 
-  useEffect(() => {
-    if (!open || !agendamento || !pixPayment || pixPayment.status === "APPROVED") return;
-    const interval = window.setInterval(async () => {
-      try {
-        const saleData = await fetchAppointmentSale(agendamento.id);
-        if (saleData.status === "closed") {
-          window.clearInterval(interval);
-          setSale(saleData);
-          setPixPayment(null);
-          toast({ title: "Pagamento confirmado", description: "Atendimento fechado automaticamente." });
-          onUpdate();
-          onOpenChange(false);
-        }
-      } catch {
-        // A consulta continua no próximo ciclo.
-      }
-    }, 5000);
-    return () => window.clearInterval(interval);
-  }, [open, agendamento?.id, pixPayment?.id, pixPayment?.status, toast, onUpdate, onOpenChange]);
+  usePolling(async (signal) => {
+    const saleData = await fetchAppointmentSale(agendamento!.id);
+    if (signal.aborted || saleData.status !== "closed") return;
+    setSale(saleData); setPixPayment(null);
+    toast({ title: "Pagamento confirmado", description: "Atendimento fechado automaticamente." });
+    onUpdate(); onOpenChange(false);
+  }, 5000, { enabled: Boolean(open && agendamento && pixPayment && pixPayment.status !== "APPROVED"), requestKey: `${agendamento?.id}:${pixPayment?.id}` });
+
 
   if (!agendamento) return null;
 
@@ -205,7 +202,7 @@ export function AppointmentModal({ agendamento, open, onOpenChange, onUpdate }: 
   };
 
   const handleWhatsAppContact = () => {
-    const message = `Olá ${agendamento.cliente}! Aqui é da equipe da ${agendamento.company.nome}. Estou entrando em contato sobre seu atendimento do dia ${formatarData(agendamento.data)} às ${agendamento.horario}.`;
+    const message = `Olá ${agendamento.cliente}! Aqui é da equipe da ${user?.company?.nome ?? "barbearia"}. Estou entrando em contato sobre seu atendimento do dia ${formatarData(agendamento.data)} às ${agendamento.horario}.`;
     const opened = openWhatsAppChat(agendamento.telefone, message);
 
     if (!opened) {

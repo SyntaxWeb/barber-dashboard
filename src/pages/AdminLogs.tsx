@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useRequestGuard } from "@/hooks/use-request-guard";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,9 @@ export default function AdminLogs() {
   const [filters, setFilters] = useState({ company_id: "", user_id: "", action: "" });
   const [form, setForm] = useState(filters);
 
-  const load = async () => {
+  const logRequest = useRequestGuard();
+  const load = useCallback(async () => {
+    const isCurrent = logRequest.start();
     setLoading(true);
     try {
       const response = await fetchActivityLogs({
@@ -34,6 +37,7 @@ export default function AdminLogs() {
         user_id: filters.user_id || undefined,
         action: filters.action || undefined,
       });
+      if (!isCurrent()) return;
       setLogs(response.data);
       setMeta({
         current_page: response.meta.current_page,
@@ -41,20 +45,21 @@ export default function AdminLogs() {
         total: response.meta.total,
       });
     } catch (error) {
+      if (!isCurrent()) return;
       toast({
         title: "Erro ao carregar logs",
         description: error instanceof Error ? error.message : "Tente novamente.",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  };
+  }, [logRequest, filters, page, toast]);
 
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filters]);
+    void load();
+    return logRequest.invalidate;
+  }, [load, logRequest]);
 
   const formatDate = (value?: string) => {
     if (!value) return "--";

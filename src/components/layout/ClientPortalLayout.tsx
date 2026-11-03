@@ -36,7 +36,7 @@ const navItems = [
   },
   {
     key: "barbearias",
-    label: "Favoritas",
+    label: "Minhas barbearias",
     description: "Lugares onde você já foi",
     to: "/cliente/barbearias",
     icon: Building2,

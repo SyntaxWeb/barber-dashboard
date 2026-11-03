@@ -1,5 +1,15 @@
 # Build Notes
 
+## Build local
+
+Execute `npm run build:local` para gerar o `dist` usando `.env.development`,
+com API em `http://192.168.18.97:8001`. O painel local é servido na porta 4002.
+Para outro endereço de rede, ajuste `VITE_API_URL` e as origens permitidas na API.
+
+O comando `npm run build` continua usando `.env.production`.
+O Dockerfile atual apenas copia o `dist` pronto; argumentos de build não alteram
+a URL já compilada. Gere o `dist` antes de recriar o container do painel.
+
 ## Build de producao do frontend
 
 Quando o ambiente nao tiver `node`, `npm` ou `bun` instalados no host, o build do `dist` pode ser gerado via Docker usando o `Dockerfile` do projeto.

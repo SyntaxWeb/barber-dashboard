@@ -59,6 +59,7 @@ export async function fetchAgendamentosPorPeriodo(dataInicio: string, dataFim: s
 }
 
 type AppointmentPayload = {
+  client_id?: number;
   cliente: string;
   telefone: string;
   data: string;

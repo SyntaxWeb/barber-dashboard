@@ -56,14 +56,14 @@ const normalizeCompany = (company: DiscoveredCompany): DiscoveredCompany => ({
   cover_url: resolveMediaUrl(company.cover_url),
 });
 
-export async function discoverCompanies(filters: DiscoveryFilters): Promise<DiscoveryPage> {
+export async function discoverCompanies(filters: DiscoveryFilters, signal?: AbortSignal): Promise<DiscoveryPage> {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
   });
   params.set("per_page", "12");
 
-  const response = await apiFetch(`/api/discover/companies?${params.toString()}`);
+  const response = await apiFetch(`/api/discover/companies?${params.toString()}`, { signal });
   const result = await handleResponse<DiscoveryPage>(response, "Não foi possível buscar estabelecimentos.");
   return { ...result, data: result.data.map(normalizeCompany) };
 }

@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState, useCallback, ReactNode } from "react";
+import { safeLocalStorage } from "@/lib/localStorage";
+import { createContext, useContext, useLayoutEffect, useMemo, useState, useCallback, ReactNode } from "react";
 import {
   BrandTheme,
   DEFAULT_CLIENT_THEME,
@@ -44,7 +45,7 @@ const applyCssVariables = (palette: BrandTheme) => {
   const root = document.documentElement;
   const cssVars = themeToCssVars(palette);
   Object.entries(cssVars).forEach(([key, value]) => {
-    root.style.setProperty(key, value);
+    if (root.style.getPropertyValue(key) !== value) root.style.setProperty(key, value);
   });
 };
 
@@ -71,9 +72,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyCssVariables(activePalette);
   }, [mode, activePalette]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     syncCssVariables();
-    localStorage.setItem(STORAGE_KEY, mode);
+    safeLocalStorage.setItem(STORAGE_KEY, mode);
   }, [mode, syncCssVariables]);
 
   const toggleMode = () => {

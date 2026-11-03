@@ -1,3 +1,6 @@
+import { ConfiguracoesMensagens } from "@/pages/configuracoes/ConfiguracoesMensagens";
+import { usePolling } from "@/hooks/use-polling";
+import { useRequestGuard } from "@/hooks/use-request-guard";
 import { useEffect, useState, ChangeEvent, useRef, useCallback } from "react";
 import { format } from "date-fns";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -7,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/components/layout/Layout";
-import { Servico, ConfiguracoesBarbearia } from "@/data/mockData";
+import { Servico, ConfiguracoesBarbearia, type DaySchedule } from "@/data/mockData";
 import {
   fetchServicos,
   fetchConfiguracoes,
@@ -22,7 +25,7 @@ import {
   verifyTelegramLink,
   type EmpresaInfo,
 } from "@/services/companyService";
-import { fetchWhatsappSession, logoutWhatsappSession, startWhatsappSession } from "@/services/whatsappService";
+import { fetchWhatsappSession, logoutWhatsappSession, startWhatsappSession, normalizeQrCode, type WhatsappSessionResponse } from "@/services/whatsappService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { ConfiguracoesEmpresaTab } from "@/pages/configuracoes/ConfiguracoesEmpresaTab";
@@ -163,6 +166,8 @@ export default function Configuracoes() {
   const [telegramLink, setTelegramLink] = useState<string | null>(null);
   const [telegramLinkLoading, setTelegramLinkLoading] = useState(false);
   const [telegramVerifyLoading, setTelegramVerifyLoading] = useState(false);
+  const [whatsappConfigured, setWhatsappConfigured] = useState(true);
+  const [whatsappPairing, setWhatsappPairing] = useState(false);
   const [whatsappStatus, setWhatsappStatus] = useState("desconectado");
   const [whatsappLoading, setWhatsappLoading] = useState(false);
   const [whatsappQrCode, setWhatsappQrCode] = useState<string | null>(null);
@@ -251,68 +256,68 @@ export default function Configuracoes() {
     }));
   };
 
+  const whatsappRequest = useRequestGuard();
+  const whatsappActionRevision = useRef(0);
+  const applyWhatsappSession = useCallback((data: WhatsappSessionResponse) => {
+    setWhatsappConfigured(data.configured ?? true);
+    setWhatsappSessionId(data.session_id ?? null);
+    const status = data.status ?? {};
+    const state = status.state ?? status.status ?? "desconectado";
+    const connected = Boolean(status.connected) || ["open", "CONNECTED", "isLogged", "connected"].includes(state);
+    setWhatsappStatus(connected ? "conectado" : state.toLowerCase());
+    const phone = status.phone?.wid?.user ?? status.phone?.device_model ?? null;
+    const pushname = status.phone?.pushname ?? null;
+    setWhatsappInfo((current) => current.phone === phone && current.pushname === pushname ? current : { phone, pushname });
+    setWhatsappQrCode(connected ? null : normalizeQrCode(data.qr_code));
+    setWhatsappPairing(!connected && (data.pairing ?? Boolean(data.qr_code || state === "connecting")));
+  }, []);
+
   const refreshWhatsappStatus = useCallback(async () => {
-    setWhatsappLoading(true);
-    setWhatsappError(null);
+    whatsappActionRevision.current += 1;
+    const isCurrent = whatsappRequest.start();
+    setWhatsappLoading(true); setWhatsappError(null);
     try {
       const data = await fetchWhatsappSession();
-      setWhatsappSessionId(data.session_id ?? null);
-      const status = data.status ?? {};
-      const stateCandidate = typeof status.state === "string" ? status.state : status.status;
-      const connected =
-        Boolean(status.connected) ||
-        stateCandidate === "CONNECTED" ||
-        stateCandidate === "isLogged" ||
-        stateCandidate === "connected";
-      const normalizedState =
-        typeof stateCandidate === "string" ? stateCandidate.toLowerCase() : connected ? "conectado" : "desconectado";
-      setWhatsappStatus(connected ? "conectado" : normalizedState);
-      const phone = status.phone?.wid?.user ?? status.phone?.device_model ?? (notifyWhatsapp || null);
-      const pushname = status.phone?.pushname ?? null;
-      setWhatsappInfo({ phone, pushname });
-      if (!connected) {
-        setWhatsappQrCode(normalizeQrCode(data.qr_code ?? null));
-      } else {
-        setWhatsappQrCode(null);
-      }
+      if (isCurrent()) applyWhatsappSession(data);
+    } catch (error) { if (isCurrent()) setWhatsappError(getApiErrorMessage(error)); }
+    finally { if (isCurrent()) setWhatsappLoading(false); }
+  }, [whatsappRequest, applyWhatsappSession]);
+
+  usePolling(async (signal) => {
+    const revision = whatsappActionRevision.current;
+    try {
+      const data = await fetchWhatsappSession({ refreshQr: whatsappPairing, signal });
+      if (!signal.aborted && revision === whatsappActionRevision.current) { applyWhatsappSession(data); setWhatsappError(null); }
     } catch (error) {
-      setWhatsappError(getApiErrorMessage(error));
-      setWhatsappStatus("desconectado");
-      setWhatsappInfo({});
-      setWhatsappQrCode(null);
-      setWhatsappSessionId(null);
-    } finally {
-      setWhatsappLoading(false);
+      if (!signal.aborted && revision === whatsappActionRevision.current) setWhatsappError(getApiErrorMessage(error));
     }
-  }, [notifyWhatsapp]);
+  }, whatsappPairing ? 5000 : 30000, { enabled: !whatsappLoading && whatsappConfigured && (whatsappPairing || whatsappStatus === "conectado") });
 
   const handleStartWhatsapp = useCallback(async () => {
-    setWhatsappLoading(true);
-    setWhatsappError(null);
+    whatsappActionRevision.current += 1;
+    const isCurrent = whatsappRequest.start();
+    setWhatsappLoading(true); setWhatsappError(null);
     try {
-      await startWhatsappSession();
-      await refreshWhatsappStatus();
-      toast({ title: "Sessão iniciada", description: "Escaneie o QR Code pelo WhatsApp." });
-    } catch (error) {
-      setWhatsappError(getApiErrorMessage(error));
-    } finally {
-      setWhatsappLoading(false);
-    }
-  }, [refreshWhatsappStatus, toast]);
+      const data = await startWhatsappSession();
+      if (!isCurrent()) return;
+      applyWhatsappSession(data);
+      toast({ title: data.status?.connected ? "WhatsApp conectado" : "Conexão iniciada", description: data.status?.connected ? "Os avisos podem ser enviados." : "Leia o QR Code pelo aplicativo do WhatsApp." });
+    } catch (error) { if (isCurrent()) setWhatsappError(getApiErrorMessage(error)); }
+    finally { if (isCurrent()) setWhatsappLoading(false); }
+  }, [whatsappRequest, applyWhatsappSession, toast]);
 
   const handleLogoutWhatsapp = useCallback(async () => {
-    setWhatsappLoading(true);
-    setWhatsappError(null);
+    whatsappActionRevision.current += 1;
+    const isCurrent = whatsappRequest.start();
+    setWhatsappPairing(false); setWhatsappLoading(true); setWhatsappError(null);
     try {
       await logoutWhatsappSession();
-      await refreshWhatsappStatus();
-      toast({ title: "Sessão desconectada", description: "Você pode gerar outro QR Code quando preferir." });
-    } catch (error) {
-      setWhatsappError(getApiErrorMessage(error));
-    } finally {
-      setWhatsappLoading(false);
-    }
-  }, [refreshWhatsappStatus, toast]);
+      if (!isCurrent()) return;
+      setWhatsappStatus("desconectado"); setWhatsappQrCode(null); setWhatsappInfo({});
+      toast({ title: "WhatsApp desconectado" });
+    } catch (error) { if (isCurrent()) setWhatsappError(getApiErrorMessage(error)); }
+    finally { if (isCurrent()) setWhatsappLoading(false); }
+  }, [whatsappRequest, toast]);
 
   const refreshIntegrations = useCallback(async () => {
     setIntegrationsLoading(true);
@@ -330,6 +335,7 @@ export default function Configuracoes() {
   }, [toast]);
 
   useEffect(() => {
+    let cancelled = false;
     async function loadData() {
       try {
         const [servicosData, configData, empresaData, loyaltySettingsData, loyaltyRewardsData, integrationsData] = await Promise.all([
@@ -340,6 +346,7 @@ export default function Configuracoes() {
           fetchLoyaltyRewards(),
           fetchIntegrations(),
         ]);
+        if (cancelled) return;
         setServicos(servicosData);
         setConfiguracoes(configData);
         setHorarioInicio(configData.horarioInicio);
@@ -394,12 +401,15 @@ export default function Configuracoes() {
             ? String(loyaltySettingsData.expiration_days)
             : "180",
         });
+      } catch (error) {
+        if (!cancelled) toast({ title: "Erro ao carregar configurações", description: getApiErrorMessage(error), variant: "destructive" });
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    loadData();
-  }, []);
+    void loadData();
+    return () => { cancelled = true; };
+  }, [toast]);
 
   useEffect(() => {
     refreshWhatsappStatus();
@@ -1004,7 +1014,7 @@ export default function Configuracoes() {
         <Tabs defaultValue={searchParams.get("tab") ?? "empresa"} className="space-y-6">
           <TabsList className="flex h-auto w-full flex-col gap-2 overflow-x-auto sm:grid sm:grid-cols-5">
             <TabsTrigger value="empresa" className="w-full flex-1 whitespace-normal text-center sm:whitespace-nowrap">
-              Marca & canais
+              Marca & empresa
             </TabsTrigger>
             <TabsTrigger value="agenda" className="w-full flex-1 whitespace-normal text-center sm:whitespace-nowrap">
               Agenda & horários
@@ -1047,30 +1057,6 @@ export default function Configuracoes() {
             onCopyLink={handleCopyLink}
             onDownloadQrCode={handleDownloadQrCode}
             qrCodeUrl={qrCodeUrl}
-            notifyEmail={notifyEmail}
-            onNotifyEmailChange={setNotifyEmail}
-            notifyViaEmail={notifyViaEmail}
-            onNotifyViaEmailChange={setNotifyViaEmail}
-            notifyWhatsapp={notifyWhatsapp}
-            onNotifyWhatsappChange={setNotifyWhatsapp}
-            notifyViaWhatsapp={notifyViaWhatsapp}
-            onNotifyViaWhatsappChange={setNotifyViaWhatsapp}
-            telegramLink={telegramLink}
-            telegramLinkLoading={telegramLinkLoading}
-            onGenerateTelegramLink={handleGenerateTelegramLink}
-            onVerifyTelegramLink={handleVerifyTelegramLink}
-            telegramVerifyLoading={telegramVerifyLoading}
-            notifyViaTelegram={notifyViaTelegram}
-            onNotifyViaTelegramChange={setNotifyViaTelegram}
-            whatsappSessionId={whatsappSessionId}
-            whatsappStatus={whatsappStatus}
-            whatsappInfo={whatsappInfo}
-            whatsappLoading={whatsappLoading}
-            onRefreshWhatsappStatus={refreshWhatsappStatus}
-            onLogoutWhatsapp={handleLogoutWhatsapp}
-            whatsappError={whatsappError}
-            whatsappQrCode={whatsappQrCode}
-            onStartWhatsapp={handleStartWhatsapp}
             galleryExisting={galleryExisting}
             galleryRemoved={galleryRemoved}
             onToggleRemoveExistingPhoto={toggleRemoveExistingPhoto}
@@ -1133,6 +1119,31 @@ export default function Configuracoes() {
           />
 
           <ConfiguracoesIntegracoesTab
+            messaging={<ConfiguracoesMensagens
+              empresa={empresa} notifyTelegram={notifyTelegram}
+              onSaveEmpresa={handleSaveEmpresa} salvandoEmpresa={salvandoEmpresa}
+              notifyWhatsapp={notifyWhatsapp}
+              onNotifyWhatsappChange={setNotifyWhatsapp}
+              notifyViaWhatsapp={notifyViaWhatsapp}
+              onNotifyViaWhatsappChange={setNotifyViaWhatsapp}
+              telegramLink={telegramLink}
+              telegramLinkLoading={telegramLinkLoading}
+              onGenerateTelegramLink={handleGenerateTelegramLink}
+              onVerifyTelegramLink={handleVerifyTelegramLink}
+              telegramVerifyLoading={telegramVerifyLoading}
+              notifyViaTelegram={notifyViaTelegram}
+              onNotifyViaTelegramChange={setNotifyViaTelegram}
+              whatsappConfigured={whatsappConfigured}
+              whatsappSessionId={whatsappSessionId}
+              whatsappStatus={whatsappStatus}
+              whatsappInfo={whatsappInfo}
+              whatsappLoading={whatsappLoading}
+              onRefreshWhatsappStatus={refreshWhatsappStatus}
+              onLogoutWhatsapp={handleLogoutWhatsapp}
+              whatsappError={whatsappError}
+              whatsappQrCode={whatsappQrCode}
+              onStartWhatsapp={handleStartWhatsapp}
+            />}
             integrations={integrations}
             loading={integrationsLoading}
             actionProvider={integrationActionProvider}

@@ -62,12 +62,22 @@ Rotas e protecoes:
 - Busca e sugestao de clientes existentes.
 - Validacao de campos obrigatorios.
 - Listagem de horarios livres via `/api/availability`.
-- Bloqueio de datas passadas.
+- Clientes só podem agendar datas futuras; o prestador pode registrar atendimentos retroativos.
 
 ### Clientes
 - Cadastro manual de clientes com nome, email, telefone e observacoes.
-- Busca por nome, email ou telefone.
-- Convite automatico para o portal via link do Telegram com dados pre-preenchidos.
+- Busca na API por nome sem acentos, email ou telefone sem formatação, com paginação e total real.
+- Atalhos para agendar com o cliente selecionado, WhatsApp e histórico.
+- Aviso de possível duplicidade por telefone, com confirmação para pessoas que compartilham o número.
+- Convite para o portal por WhatsApp, Telegram ou link copiado, escolhido pelo profissional.
+
+### Explorar barbearias
+- Filtros na URL, preservados ao voltar e compartilhar a busca.
+- Busca por cidade e bairro combinados, serviço e preço aplicados ao mesmo serviço.
+- Localização opcional, raio ajustável entre 5 e 200 km e opção de desativar ou limpar filtros.
+- Resultados permanecem visíveis durante atualizações; menu do cliente também no celular.
+- Captura de localização requer HTTPS ou localhost; busca por endereço funciona sem geolocalização.
+- Páginas carregadas sob demanda para reduzir o JavaScript inicial.
 
 ### Configuracoes
 - Empresa: nome, descricao, icone, galeria, link publico e QR Code.
@@ -242,3 +252,7 @@ Rotas e protecoes:
 3. Agenda servico com horario disponivel.
 4. Remarca ou cancela com antecedencia minima.
 5. Envia feedback apos atendimento concluido.
+
+### Integrações de mensagens
+
+WhatsApp e Telegram são configurados em **Configurações → Integrações**. O WhatsApp reúne destinatário, ativação dos avisos, conexão por QR Code, mensagem de teste e histórico em um único painel. Salve o destinatário antes de testar. O Telegram permite gerar o link do bot, verificar o vínculo e salvar a preferência de recebimento. A aba da empresa mantém identidade, localização, link público e galeria.

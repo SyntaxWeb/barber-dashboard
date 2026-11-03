@@ -16,7 +16,9 @@ export default function ClienteBarbearias() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchClientCompanies().then(setCompanies).catch((reason) => setError(reason instanceof Error ? reason.message : "Tente novamente.")).finally(() => setLoading(false));
+    let cancelled = false;
+    fetchClientCompanies().then((data) => { if (!cancelled) setCompanies(data); }).catch((reason) => { if (!cancelled) setError(reason instanceof Error ? reason.message : "Tente novamente."); }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
   const schedule = (company: ClientCompany) => {

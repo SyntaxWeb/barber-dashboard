@@ -148,26 +148,35 @@ export default function ClienteAgendamentos() {
   }, [token, loadAppointments]);
 
   useEffect(() => {
+    let cancelled = false;
     if (!activeCompany) return;
     clientFetchServicos(activeCompany)
-      .then(setServicos)
-      .catch(() => setServicos([]));
+      .then((data) => { if (!cancelled) setServicos(data); })
+      .catch(() => { if (!cancelled) setServicos([]); });
+    return () => { cancelled = true; };
   }, [activeCompany]);
 
+  const editingId = editAppointment?.id;
+  const editingDate = editDate ? format(editDate, "yyyy-MM-dd") : "";
   useEffect(() => {
-    if (!editAppointment || !editDate || !activeCompany || !editServiceId) {
+    let cancelled = false;
+    if (!editingId || !editingDate || !activeCompany || !editServiceId) {
+      setLoadingHorarios(false);
       setEditAvailability({ horarios: [], horas: [], minutosPorHora: {} });
       setEditHora("");
       setEditMinuto("");
       return;
     }
     setLoadingHorarios(true);
-    clientFetchHorarios(format(editDate, "yyyy-MM-dd"), activeCompany, Number(editServiceId), editAppointment.id)
+    clientFetchHorarios(editingDate, activeCompany, Number(editServiceId), editingId)
       .then((dataResponse) => {
+        if (cancelled) return;
         setEditAvailability(dataResponse);
       })
-      .finally(() => setLoadingHorarios(false));
-  }, [editAppointment, editDate, activeCompany, editServiceId]);
+      .catch(() => { if (!cancelled) { setEditAvailability({ horarios: [], horas: [], minutosPorHora: {} }); toast({ title: "Não foi possível consultar os horários", variant: "destructive" }); } })
+      .finally(() => { if (!cancelled) setLoadingHorarios(false); });
+    return () => { cancelled = true; };
+  }, [editingId, editingDate, activeCompany, editServiceId, toast]);
 
   useEffect(() => {
     if (!editHora) {

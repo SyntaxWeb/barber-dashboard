@@ -94,6 +94,7 @@ export default function ClienteDashboard() {
 
   useEffect(() => {
     if (!feedbackCompany) {
+      setFeedbackLoading(false);
       setFeedbackSummary(null);
       return;
     }
@@ -109,6 +110,7 @@ export default function ClienteDashboard() {
 
   useEffect(() => {
     if (!clientId || !feedbackCompany) {
+      setLoyaltyLoading(false);
       setLoyaltySummary(null);
       return;
     }

@@ -1,7 +1,7 @@
 const MEMORY_STORE = new Map<string, string>();
 
 const canUseSessionStorage = (): boolean => {
-  if (typeof window === "undefined" || !window.sessionStorage) {
+  if (typeof window === "undefined") {
     return false;
   }
   try {

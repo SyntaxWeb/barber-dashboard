@@ -1,43 +1,44 @@
+import { lazy, Suspense, useLayoutEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ClientAuthProvider, useClientAuth } from "@/contexts/ClientAuthContext";
-import Login from "./pages/Login";
-import EsqueciSenha from "./pages/EsqueciSenha";
-import RedefinirSenha from "./pages/RedefinirSenha";
-import Dashboard from "./pages/Dashboard";
-import Agenda from "./pages/Agenda";
-import NovoAgendamento from "./pages/NovoAgendamento";
-import Configuracoes from "./pages/Configuracoes";
-import NotFound from "./pages/NotFound";
-import Registro from "./pages/Registro";
-import ClienteRegistro from "./pages/ClienteRegistro";
-import ClienteLogin from "./pages/ClienteLogin";
-import ClienteAgendamento from "./pages/ClienteAgendamento";
-import ClienteAgendamentos from "./pages/ClienteAgendamentos";
-import PublicAgendamento from "./pages/PublicAgendamento";
-import Landing from "./pages/Landing";
-import Clientes from "./pages/Clientes";
-import Perfil from "./pages/Perfil";
-import ClientePerfil from "./pages/ClientePerfil";
-import ClienteDashboard from "./pages/ClienteDashboard";
-import FeedbackPublico from "./pages/FeedbackPublico";
-import Relatorios from "./pages/Relatorios";
-import Estoque from "./pages/Estoque";
-import Caixa from "./pages/Caixa";
-import Assinatura from "./pages/Assinatura";
-import AdminUsuarios from "./pages/AdminUsuarios";
-import AdminLogs from "./pages/AdminLogs";
-import AssinaturaSucesso from "./pages/AssinaturaSucesso";
-import AssinaturaPendente from "./pages/AssinaturaPendente";
-import AssinaturaErro from "./pages/AssinaturaErro";
-import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
-import Explorar from "./pages/Explorar";
-import ClienteBarbearias from "./pages/ClienteBarbearias";
+const Login = lazy(() => import("./pages/Login"));
+const EsqueciSenha = lazy(() => import("./pages/EsqueciSenha"));
+const RedefinirSenha = lazy(() => import("./pages/RedefinirSenha"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Agenda = lazy(() => import("./pages/Agenda"));
+const NovoAgendamento = lazy(() => import("./pages/NovoAgendamento"));
+const Configuracoes = lazy(() => import("./pages/Configuracoes"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Registro = lazy(() => import("./pages/Registro"));
+const ClienteRegistro = lazy(() => import("./pages/ClienteRegistro"));
+const ClienteLogin = lazy(() => import("./pages/ClienteLogin"));
+const ClienteAgendamento = lazy(() => import("./pages/ClienteAgendamento"));
+const ClienteAgendamentos = lazy(() => import("./pages/ClienteAgendamentos"));
+const PublicAgendamento = lazy(() => import("./pages/PublicAgendamento"));
+const Landing = lazy(() => import("./pages/Landing"));
+const Clientes = lazy(() => import("./pages/Clientes"));
+const Perfil = lazy(() => import("./pages/Perfil"));
+const ClientePerfil = lazy(() => import("./pages/ClientePerfil"));
+const ClienteDashboard = lazy(() => import("./pages/ClienteDashboard"));
+const FeedbackPublico = lazy(() => import("./pages/FeedbackPublico"));
+const Relatorios = lazy(() => import("./pages/Relatorios"));
+const Estoque = lazy(() => import("./pages/Estoque"));
+const Caixa = lazy(() => import("./pages/Caixa"));
+const Assinatura = lazy(() => import("./pages/Assinatura"));
+const AdminUsuarios = lazy(() => import("./pages/AdminUsuarios"));
+const AdminLogs = lazy(() => import("./pages/AdminLogs"));
+const AssinaturaSucesso = lazy(() => import("./pages/AssinaturaSucesso"));
+const AssinaturaPendente = lazy(() => import("./pages/AssinaturaPendente"));
+const AssinaturaErro = lazy(() => import("./pages/AssinaturaErro"));
+const PoliticaPrivacidade = lazy(() => import("./pages/PoliticaPrivacidade"));
+const Explorar = lazy(() => import("./pages/Explorar"));
+const ClienteBarbearias = lazy(() => import("./pages/ClienteBarbearias"));
 
 const queryClient = new QueryClient();
 
@@ -97,6 +98,14 @@ const SuperAdminRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+function RoutePalette() {
+  const { pathname } = useLocation();
+  const { activatePalette } = useTheme();
+  const kind = pathname.startsWith("/cliente") || pathname.startsWith("/e/") || pathname === "/explorar" ? "client" : "dashboard";
+  useLayoutEffect(() => { activatePalette(kind); }, [activatePalette, kind]);
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -105,7 +114,9 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true }}>
+              <Suspense fallback={<div role="status" className="flex min-h-[50vh] items-center justify-center">Carregando página...</div>}>
+              <RoutePalette />
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/explorar" element={<Explorar />} />
@@ -280,6 +291,7 @@ const App = () => (
                 />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </Suspense>
             </BrowserRouter>
           </TooltipProvider>
         </ClientAuthProvider>

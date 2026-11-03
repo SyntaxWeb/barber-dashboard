@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, User, Phone, Calendar as CalendarIcon, ChevronDown, Clock, Scissors, FileText, Save } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -29,6 +29,8 @@ import { AvailabilityData, joinHorario } from "@/lib/availability";
 
 export default function NovoAgendamento() {
   const navigate = useNavigate();
+  const route = useLocation();
+  const initialClient = (route.state as { cliente?: ClienteInfo } | null)?.cliente;
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -41,11 +43,11 @@ export default function NovoAgendamento() {
   });
   const [loading, setLoading] = useState(false);
 
-  const [cliente, setCliente] = useState("");
-  const [telefone, setTelefone] = useState("");
+  const [cliente, setCliente] = useState(initialClient?.nome ?? "");
+  const [telefone, setTelefone] = useState(initialClient?.telefone ?? "");
   const [clienteSugestoes, setClienteSugestoes] = useState<ClienteInfo[]>([]);
   const [buscandoClientes, setBuscandoClientes] = useState(false);
-  const [clienteSelecionado, setClienteSelecionado] = useState<ClienteInfo | null>(null);
+  const [clienteSelecionado, setClienteSelecionado] = useState<ClienteInfo | null>(initialClient ?? null);
   const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([]);
   const [data, setData] = useState<Date | undefined>(new Date());
   const [hora, setHora] = useState("");
@@ -80,44 +82,50 @@ export default function NovoAgendamento() {
       ? Array.from(new Set([...elapsedMinutes, ...(availability.minutosPorHora[hora] ?? [])])).sort()
       : (hora ? availability.minutosPorHora[hora] ?? [] : []);
 
+  const serviceKey = selectedServiceIds.join(",");
+  const hasSettings = Boolean(configuracoes);
+  const hoursKey = selectableHours.join(",");
+  const minutesKey = selectableMinutes.join(",");
   useEffect(() => {
-    async function loadData() {
-      const [servicosData, configData] = await Promise.all([fetchServicos(), fetchConfiguracoes()]);
-      setServicos(servicosData);
-      setConfiguracoes(configData);
-    }
-    loadData();
-  }, []);
+    let cancelled = false;
+    Promise.all([fetchServicos(), fetchConfiguracoes()])
+      .then(([servicosData, configData]) => { if (!cancelled) { setServicos(servicosData); setConfiguracoes(configData); } })
+      .catch(() => { if (!cancelled) toast({ title: "Erro ao carregar o agendamento", description: "Reabra esta página para tentar novamente.", variant: "destructive" }); });
+    return () => { cancelled = true; };
+  }, [toast]);
 
   useEffect(() => {
-    if (!data || !configuracoes || selectedServiceIds.length === 0 || canScheduleAnyTime) {
+    let cancelled = false;
+    if (!selectedDateKey || !hasSettings || !serviceKey || canScheduleAnyTime) {
       setAvailability({ horarios: [], horas: [], minutosPorHora: {} });
       setHora("");
       setMinuto("");
       return;
     }
-    const dataStr = format(data, "yyyy-MM-dd");
-    fetchHorariosDisponiveis(dataStr, selectedServiceIds[0], undefined, selectedServiceIds, companySlug)
+    const dataStr = selectedDateKey;
+    fetchHorariosDisponiveis(dataStr, Number(serviceKey.split(",")[0]), undefined, serviceKey.split(",").map(Number), companySlug)
       .then((dataResponse) => {
+        if (cancelled) return;
         setAvailability(dataResponse);
       })
-      .catch(() => setAvailability({ horarios: [], horas: [], minutosPorHora: {} }));
-  }, [data, configuracoes, selectedServiceIds, companySlug, canScheduleAnyTime]);
+      .catch(() => { if (!cancelled) setAvailability({ horarios: [], horas: [], minutosPorHora: {} }); });
+    return () => { cancelled = true; };
+  }, [selectedDateKey, hasSettings, serviceKey, companySlug, canScheduleAnyTime]);
 
   useEffect(() => {
     if (!hora) {
       if (minuto) setMinuto("");
       return;
     }
-    if (!selectableHours.includes(hora)) {
+    if (!hoursKey.split(",").includes(hora)) {
       setHora("");
       setMinuto("");
       return;
     }
-    if (!selectableMinutes.includes(minuto) && minuto) {
+    if (!minutesKey.split(",").includes(minuto) && minuto) {
       setMinuto("");
     }
-  }, [selectableHours, selectableMinutes, hora, minuto]);
+  }, [hoursKey, minutesKey, hora, minuto]);
 
   const formatarTelefone = (valor: string) => {
     const numeros = valor.replace(/\D/g, "");
@@ -146,7 +154,7 @@ export default function NovoAgendamento() {
 
     let ignore = false;
     setBuscandoClientes(true);
-    fetchClientes(termo)
+    const timer = window.setTimeout(() => { fetchClientes(termo)
       .then((lista) => {
         if (!ignore) {
           setClienteSugestoes(lista);
@@ -161,10 +169,11 @@ export default function NovoAgendamento() {
         if (!ignore) {
           setBuscandoClientes(false);
         }
-      });
+      }); }, 300);
 
     return () => {
       ignore = true;
+      window.clearTimeout(timer);
     };
   }, [cliente, clienteSelecionado]);
 
@@ -217,6 +226,7 @@ export default function NovoAgendamento() {
 
     try {
       await createAgendamento({
+        client_id: clienteSelecionado?.id,
         cliente: cliente.trim(),
         telefone: telefone.trim(),
         data: format(data, "yyyy-MM-dd"),

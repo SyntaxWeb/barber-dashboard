@@ -1,12 +1,11 @@
-import { ChangeEvent } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { ChangeEvent, useState } from "react";
 import {
   Building2,
   Download,
   Images,
   Link2,
-  Loader2,
   LocateFixed,
-  MessageCircle,
   Save,
   Scissors,
   Upload,
@@ -18,9 +17,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { TabsContent } from "@/components/ui/tabs";
-import { normalizeQrCode } from "@/services/whatsappService";
 import type { EmpresaInfo } from "@/services/companyService";
-import type { ExistingGalleryPhoto, GalleryUpload, WhatsappInfo } from "@/pages/configuracoes/types";
+import type { ExistingGalleryPhoto, GalleryUpload } from "@/pages/configuracoes/types";
 
 type ConfiguracoesEmpresaTabProps = {
   empresa: EmpresaInfo | null;
@@ -49,30 +47,6 @@ type ConfiguracoesEmpresaTabProps = {
   onCopyLink: () => void;
   onDownloadQrCode: () => void;
   qrCodeUrl: string | null;
-  notifyEmail: string;
-  onNotifyEmailChange: (value: string) => void;
-  notifyViaEmail: boolean;
-  onNotifyViaEmailChange: (value: boolean) => void;
-  notifyWhatsapp: string;
-  onNotifyWhatsappChange: (value: string) => void;
-  notifyViaWhatsapp: boolean;
-  onNotifyViaWhatsappChange: (value: boolean) => void;
-  telegramLink: string | null;
-  telegramLinkLoading: boolean;
-  onGenerateTelegramLink: () => void;
-  onVerifyTelegramLink: () => void;
-  telegramVerifyLoading: boolean;
-  notifyViaTelegram: boolean;
-  onNotifyViaTelegramChange: (value: boolean) => void;
-  whatsappSessionId: string | null;
-  whatsappStatus: string;
-  whatsappInfo: WhatsappInfo;
-  whatsappLoading: boolean;
-  onRefreshWhatsappStatus: () => void;
-  onLogoutWhatsapp: () => void;
-  whatsappError: string | null;
-  whatsappQrCode: string | null;
-  onStartWhatsapp: () => void;
   galleryExisting: ExistingGalleryPhoto[];
   galleryRemoved: string[];
   onToggleRemoveExistingPhoto: (photo: ExistingGalleryPhoto) => void;
@@ -110,30 +84,6 @@ export function ConfiguracoesEmpresaTab({
   onCopyLink,
   onDownloadQrCode,
   qrCodeUrl,
-  notifyEmail,
-  onNotifyEmailChange,
-  notifyViaEmail,
-  onNotifyViaEmailChange,
-  notifyWhatsapp,
-  onNotifyWhatsappChange,
-  notifyViaWhatsapp,
-  onNotifyViaWhatsappChange,
-  telegramLink,
-  telegramLinkLoading,
-  onGenerateTelegramLink,
-  onVerifyTelegramLink,
-  telegramVerifyLoading,
-  notifyViaTelegram,
-  onNotifyViaTelegramChange,
-  whatsappSessionId,
-  whatsappStatus,
-  whatsappInfo,
-  whatsappLoading,
-  onRefreshWhatsappStatus,
-  onLogoutWhatsapp,
-  whatsappError,
-  whatsappQrCode,
-  onStartWhatsapp,
   galleryExisting,
   galleryRemoved,
   onToggleRemoveExistingPhoto,
@@ -143,6 +93,24 @@ export function ConfiguracoesEmpresaTab({
   onSaveEmpresa,
   salvandoEmpresa,
 }: ConfiguracoesEmpresaTabProps) {
+  const { toast } = useToast();
+  const [locating, setLocating] = useState(false);
+  const locateCompany = () => {
+    if (!navigator.geolocation || !window.isSecureContext) {
+      toast({ title: "Localização indisponível", description: "Use HTTPS ou informe latitude e longitude manualmente.", variant: "destructive" });
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(({ coords }) => {
+      onEmpresaLatitudeChange(coords.latitude.toFixed(7));
+      onEmpresaLongitudeChange(coords.longitude.toFixed(7));
+      setLocating(false);
+      toast({ title: "Localização preenchida", description: "Salve as alterações para atualizar o perfil público." });
+    }, (error) => {
+      setLocating(false);
+      toast({ title: error.code === 1 ? "Permissão de localização negada" : error.code === 3 ? "Tempo de localização esgotado" : "Localização indisponível", description: "Tente novamente ou informe as coordenadas manualmente.", variant: "destructive" });
+    }, { timeout: 10000, enableHighAccuracy: true });
+  };
   return (
     <TabsContent value="empresa" className="space-y-6">
       <Card>
@@ -205,6 +173,7 @@ export function ConfiguracoesEmpresaTab({
               </div>
               <Switch checked={empresaDescobertaAtiva} onCheckedChange={onEmpresaDescobertaAtivaChange} />
             </div>
+            {empresaDescobertaAtiva && (!empresaLatitude.trim() || !empresaLongitude.trim()) && <p role="status" className="mb-4 rounded-md border border-amber-400/40 bg-amber-500/10 p-3 text-sm">Sua empresa aparece na busca geral, mas precisa de latitude e longitude para aparecer na busca por proximidade. Capture a localização estando no estabelecimento e salve as alterações.</p>}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2"><Label>Endereço</Label><Input value={empresaEndereco} onChange={(event) => onEmpresaEnderecoChange(event.target.value)} placeholder="Rua e número" /></div>
               <div className="space-y-2"><Label>Bairro</Label><Input value={empresaBairro} onChange={(event) => onEmpresaBairroChange(event.target.value)} /></div>
@@ -214,8 +183,8 @@ export function ConfiguracoesEmpresaTab({
               <div className="space-y-2"><Label>Latitude</Label><Input inputMode="decimal" value={empresaLatitude} onChange={(event) => onEmpresaLatitudeChange(event.target.value)} placeholder="-23.5505" /></div>
               <div className="space-y-2"><Label>Longitude</Label><Input inputMode="decimal" value={empresaLongitude} onChange={(event) => onEmpresaLongitudeChange(event.target.value)} placeholder="-46.6333" /></div>
             </div>
-            <Button type="button" variant="outline" className="mt-4" onClick={() => navigator.geolocation?.getCurrentPosition(({ coords }) => { onEmpresaLatitudeChange(coords.latitude.toFixed(7)); onEmpresaLongitudeChange(coords.longitude.toFixed(7)); })}>
-              <LocateFixed className="mr-2 h-4 w-4" />Usar localização atual
+            <Button type="button" variant="outline" className="mt-4" onClick={locateCompany} disabled={locating}>
+              <LocateFixed className="mr-2 h-4 w-4" />{locating ? "Localizando..." : "Usar localização atual"}
             </Button>
             <p className="mt-2 text-xs text-muted-foreground">A distância só é exibida quando estas coordenadas e a localização do cliente estão disponíveis.</p>
           </div>
@@ -251,164 +220,6 @@ export function ConfiguracoesEmpresaTab({
               </p>
             </div>
           )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <MessageCircle className="h-4 w-4 text-primary" />
-                Alertas automáticos
-              </CardTitle>
-              <CardDescription>Integre e-mails e Telegram para receber notificações.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div className="space-y-2">
-                <Label>Email para alertas</Label>
-                <Input
-                  type="email"
-                  placeholder="contato@suaempresa.com"
-                  value={notifyEmail}
-                  onChange={(event) => onNotifyEmailChange(event.target.value)}
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                <div>
-                  <p className="text-sm font-medium">Receber por email</p>
-                  <p className="text-xs text-muted-foreground">Um aviso é enviado a cada novo agendamento.</p>
-                </div>
-                <Switch checked={notifyViaEmail} onCheckedChange={(checked) => onNotifyViaEmailChange(Boolean(checked))} />
-              </div>
-              <div className="space-y-3 text-sm">
-                <p className="text-xs text-muted-foreground">
-                  Capturaremos automaticamente o chat ao conectar com o bot @syntax_atendimento_bot.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" onClick={onGenerateTelegramLink} disabled={telegramLinkLoading}>
-                    {telegramLinkLoading ? "Gerando..." : "Capturar automaticamente"}
-                  </Button>
-                  {telegramLink && (
-                    <>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => window.open(telegramLink, "_blank", "noopener,noreferrer")}
-                      >
-                        Abrir bot
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={onVerifyTelegramLink}
-                        disabled={telegramVerifyLoading}
-                        className="bg-emerald-600 hover:bg-emerald-500"
-                      >
-                        {telegramVerifyLoading ? "Verificando..." : "Confirmar captura"}
-                      </Button>
-                    </>
-                  )}
-                </div>
-                <div className="space-y-2 pt-2">
-                  <Label>WhatsApp para alertas</Label>
-                  <Input
-                    type="tel"
-                    placeholder="5511999999999"
-                    value={notifyWhatsapp}
-                    onChange={(event) => onNotifyWhatsappChange(event.target.value)}
-                  />
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <div>
-                    <p className="text-sm font-medium">Receber via WhatsApp</p>
-                    <p className="text-xs text-muted-foreground">
-                      Os alertas serão enviados automaticamente para o número acima.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifyViaWhatsapp}
-                    onCheckedChange={(checked) => onNotifyViaWhatsappChange(Boolean(checked))}
-                  />
-                </div>
-                {telegramLink && (
-                  <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-                    <p>Envie /start no bot usando o link acima e clique em confirmar captura.</p>
-                    <p className="mt-1 break-all">{telegramLink}</p>
-                  </div>
-                )}
-                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <div>
-                    <p className="text-sm font-medium">Receber via Telegram</p>
-                    <p className="text-xs text-muted-foreground">Um job será disparado para seu integrador.</p>
-                  </div>
-                  <Switch
-                    checked={notifyViaTelegram}
-                    onCheckedChange={(checked) => onNotifyViaTelegramChange(Boolean(checked))}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <MessageCircle className="h-4 w-4 text-primary" />
-                WhatsApp automático
-              </CardTitle>
-              <CardDescription>Conecte seu WhatsApp via WPPConnect para disparar mensagens.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              {!whatsappSessionId && (
-                <p className="text-sm text-muted-foreground">
-                  Clique em &quot;Gerar QR Code&quot; para criar a sessão e concluir a conexão.
-                </p>
-              )}
-              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                <div>
-                  <p className="text-sm font-medium capitalize">Status: {whatsappStatus}</p>
-                  {whatsappInfo.pushname && <p className="text-xs text-muted-foreground">{whatsappInfo.pushname}</p>}
-                  {whatsappInfo.phone && <p className="text-xs text-muted-foreground">Número: {whatsappInfo.phone}</p>}
-                </div>
-                {whatsappLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={onRefreshWhatsappStatus}>
-                      Atualizar
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={onLogoutWhatsapp} disabled={whatsappStatus === "desconectado"}>
-                      Desconectar
-                    </Button>
-                  </div>
-                )}
-              </div>
-              {whatsappError && <p className="text-xs text-destructive">{whatsappError}</p>}
-              {whatsappQrCode ? (
-                <div className="rounded-lg border border-dashed border-border p-4 text-center">
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Abra o WhatsApp &gt; Aparelhos conectados e leia o QR Code abaixo.
-                  </p>
-                  <img
-                    src={normalizeQrCode(whatsappQrCode) ?? undefined}
-                    alt="QR Code do WhatsApp"
-                    className="mx-auto h-48 w-48"
-                  />
-                  <p className="mt-2 text-xs text-muted-foreground">Expirou? Clique em atualizar.</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    Se estiver desconectado gere um novo QR Code e leia pelo aplicativo.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button onClick={onStartWhatsapp} disabled={whatsappLoading}>
-                      {whatsappLoading ? "Gerando..." : "Gerar QR Code"}
-                    </Button>
-                    <Button variant="outline" onClick={onRefreshWhatsappStatus} disabled={whatsappLoading}>
-                      Recarregar QR Code
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
           <Button type="button" className="shadow-gold" onClick={onSaveEmpresa} disabled={salvandoEmpresa}>
             {salvandoEmpresa ? (

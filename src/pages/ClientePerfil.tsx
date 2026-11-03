@@ -1,4 +1,4 @@
-import { useEffect, useState, ChangeEvent } from "react";
+import { useEffect, useRef, useState, ChangeEvent } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -16,22 +16,29 @@ export default function ClientePerfil() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [telefone, setTelefone] = useState("");
+  const [name, setName] = useState(client?.name ?? "");
+  const [email, setEmail] = useState(client?.email ?? "");
+  const [telefone, setTelefone] = useState(client?.telefone ?? "");
   const [avatar, setAvatar] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(client?.avatar_url ?? null);
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const { id: profileId, name: profile_name, email: profile_email, telefone: profile_telefone, avatar_url: profile_avatar_url } = client ?? {};
+  const dirty = useRef(false);
+  const loadedId = useRef<number | undefined>();
   useEffect(() => {
-    if (!client) return;
-    setName(client.name);
-    setEmail(client.email);
-    setTelefone(client.telefone ?? "");
-    setAvatarPreview(client.avatar_url ?? null);
-  }, [client]);
+    if (dirty.current && loadedId.current === profileId) return;
+    loadedId.current = profileId;
+    dirty.current = false;
+    setName(profile_name ?? "");
+    setEmail(profile_email ?? "");
+    setTelefone(profile_telefone ?? "");
+    setAvatarPreview(profile_avatar_url ?? null);
+  }, [profileId, profile_name, profile_email, profile_telefone, profile_avatar_url]);
+
+  useEffect(() => () => { if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview); }, [avatarPreview]);
 
   const handleAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -56,7 +63,9 @@ export default function ClientePerfil() {
         password_confirmation: password ? passwordConfirmation : undefined,
         avatar: avatar ?? undefined,
       });
+      dirty.current = false;
       updateClient(payload);
+      setAvatar(null);
       setPassword("");
       setPasswordConfirmation("");
       toast({ title: "Perfil salvo", description: "Atualizamos suas informações." });
@@ -88,7 +97,7 @@ export default function ClientePerfil() {
             <CardDescription>Mantenha seus dados atualizados para agilizar os agendamentos.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-5" onSubmit={handleSubmit}>
+            <form onChangeCapture={() => { dirty.current = true; }} className="space-y-5" onSubmit={handleSubmit}>
               {!client?.avatar_url && !avatarPreview ? (
                 <Alert className="border-amber-300/70 bg-amber-50 text-amber-950">
                   <AlertTriangle className="h-4 w-4 text-amber-600" />

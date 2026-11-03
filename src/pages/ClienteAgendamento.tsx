@@ -68,6 +68,8 @@ export default function ClienteAgendamento() {
   const [paymentMode, setPaymentMode] = useState<"local" | "pix">("local");
   const [pixPayment, setPixPayment] = useState<PixPaymentResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const selectedDateKey = data ? format(data, "yyyy-MM-dd") : "";
+  const serviceKey = selectedServiceIds.join(",");
   useEffect(() => {
     if (queryCompany && queryCompany !== companySlug) {
       setCompanySlug(queryCompany);
@@ -75,26 +77,31 @@ export default function ClienteAgendamento() {
   }, [queryCompany, companySlug, setCompanySlug]);
 
   useEffect(() => {
+    let cancelled = false;
     if (!activeCompany) return;
     clientFetchServicos(activeCompany)
-      .then(setServicos)
-      .catch(() => toast({ title: "Erro ao carregar serviços", variant: "destructive" }));
+      .then((data) => { if (!cancelled) setServicos(data); })
+      .catch(() => { if (!cancelled) toast({ title: "Erro ao carregar serviços", variant: "destructive" }); });
+    return () => { cancelled = true; };
   }, [activeCompany, toast]);
 
   useEffect(() => {
-    if (!data || !activeCompany || selectedServiceIds.length === 0) {
+    let cancelled = false;
+    if (!selectedDateKey || !activeCompany || !serviceKey) {
       setAvailability({ horarios: [], horas: [], minutosPorHora: {} });
       setHora("");
       setMinuto("");
       return;
     }
-    const dataStr = format(data, "yyyy-MM-dd");
-    clientFetchHorarios(dataStr, activeCompany, selectedServiceIds[0], undefined, selectedServiceIds)
+    const dataStr = selectedDateKey;
+    clientFetchHorarios(dataStr, activeCompany, Number(serviceKey.split(",")[0]), undefined, serviceKey.split(",").map(Number))
       .then((dataResponse) => {
+        if (cancelled) return;
         setAvailability(dataResponse);
       })
-      .catch(() => setAvailability({ horarios: [], horas: [], minutosPorHora: {} }));
-  }, [data, activeCompany, selectedServiceIds]);
+      .catch(() => { if (!cancelled) setAvailability({ horarios: [], horas: [], minutosPorHora: {} }); });
+    return () => { cancelled = true; };
+  }, [selectedDateKey, activeCompany, serviceKey]);
 
   useEffect(() => {
     if (!hora) {
@@ -113,6 +120,7 @@ export default function ClienteAgendamento() {
   }, [availability, hora, minuto]);
 
   useEffect(() => {
+    let cancelled = false;
     if (!token || !activeCompany) {
       setPendingRedemptions([]);
       setLoyaltyRedemptionId("none");
@@ -121,6 +129,7 @@ export default function ClienteAgendamento() {
 
     fetchClientLoyalty(activeCompany)
       .then((summary) => {
+        if (cancelled) return;
         const pending = (summary.pending_redemptions ?? []).filter((item) => item.reward?.grants_free_appointment);
         setPendingRedemptions(
           pending.map((item) => ({
@@ -134,7 +143,8 @@ export default function ClienteAgendamento() {
           })),
         );
       })
-      .catch(() => setPendingRedemptions([]));
+      .catch(() => { if (!cancelled) setPendingRedemptions([]); });
+    return () => { cancelled = true; };
   }, [token, activeCompany]);
 
   const servicosSelecionados = servicos.filter((item) => selectedServiceIds.includes(item.id));

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { AlertTriangle, CreditCard, ExternalLink, Link2Off, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import type { IntegrationSummary } from "@/services/integrationService";
 
 type Props = {
+  messaging?: ReactNode;
   integrations: IntegrationSummary[];
   loading: boolean;
   actionProvider: string | null;
@@ -20,6 +22,7 @@ const formatDate = (value?: string | null) => {
 };
 
 export function ConfiguracoesIntegracoesTab({
+  messaging,
   integrations,
   loading,
   actionProvider,
@@ -32,7 +35,7 @@ export function ConfiguracoesIntegracoesTab({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">Integrações</h2>
-          <p className="text-sm text-muted-foreground">Conecte serviços externos para pagamentos e automações.</p>
+          <p className="text-sm text-muted-foreground">Conecte serviços externos para mensagens, pagamentos e automações.</p>
         </div>
         <Button variant="outline" size="icon" onClick={onRefresh} disabled={loading}>
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -40,6 +43,9 @@ export function ConfiguracoesIntegracoesTab({
       </div>
 
 
+      {messaging}
+
+      <h3 className="text-lg font-semibold">Pagamentos</h3>
       <div className="flex gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
         <div className="space-y-1">

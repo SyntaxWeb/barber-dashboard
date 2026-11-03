@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { usePolling } from "@/hooks/use-polling";
+import { useRequestGuard } from "@/hooks/use-request-guard";
+import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { CalendarClock, CheckCircle2, Copy, CreditCard, ExternalLink, History, Minus, Plus, QrCode, ReceiptText, Search, ShoppingCart, Trash2, UserRound } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
@@ -75,7 +77,9 @@ export default function Caixa() {
   const [appointmentPixPayment, setAppointmentPixPayment] = useState<PixPaymentResponse | null>(null);
   const [generatingAppointmentPix, setGeneratingAppointmentPix] = useState(false);
 
-  const loadData = async () => {
+  const dataRequest = useRequestGuard();
+  const loadData = useCallback(async () => {
+    const isCurrent = dataRequest.start();
     setLoading(true);
     try {
       const [serviceData, productData, appointmentData, historyData] = await Promise.all([
@@ -84,63 +88,42 @@ export default function Caixa() {
         fetchAgendamentosPorData(today()),
         fetchSales({ status: "closed" }),
       ]);
+      if (!isCurrent()) return;
       setServices(serviceData);
       setProducts(productData);
       setAppointments(appointmentData.filter((item) => item.status !== "cancelado"));
       setSalesHistory(historyData);
     } catch (error) {
+      if (!isCurrent()) return;
       toast({ title: "Erro ao carregar caixa", description: error instanceof Error ? error.message : "Tente novamente.", variant: "destructive" });
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  };
+  }, [dataRequest, toast]);
 
   useEffect(() => {
-    loadData();
-  }, []);
-  useEffect(() => {
-    if (!freePixPayment?.id || freePixPayment.status === "APPROVED") return;
-    const interval = window.setInterval(async () => {
-      try {
-        const payment = await fetchPixPayment(freePixPayment.id);
-        if (payment.status === "APPROVED") {
-          window.clearInterval(interval);
-          setFreePixPayment(payment);
-          setCart([]);
-          setCustomerName("");
-          setCustomerPhone("");
-          setDiscount("0");
-          setAddition("0");
-          toast({ title: "Pagamento confirmado", description: "Venda fechada automaticamente pelo Pix." });
-          await loadData();
-        }
-      } catch {
-        // A consulta continua no próximo ciclo.
-      }
-    }, 3000);
-    return () => window.clearInterval(interval);
-  }, [freePixPayment?.id, freePixPayment?.status]);
+    void loadData();
+    return dataRequest.invalidate;
+  }, [loadData, dataRequest]);
+  usePolling(async (signal) => {
+    const payment = await fetchPixPayment(freePixPayment!.id);
+    if (signal.aborted || payment.status !== "APPROVED") return;
+    setFreePixPayment(payment);
+    setCart([]); setCustomerName(""); setCustomerPhone(""); setDiscount("0"); setAddition("0");
+    toast({ title: "Pagamento confirmado", description: "Venda fechada automaticamente pelo Pix." });
+    await loadData();
+  }, 3000, { enabled: Boolean(freePixPayment?.id && freePixPayment.status !== "APPROVED"), requestKey: freePixPayment?.id });
 
-  useEffect(() => {
-    if (!appointmentPixPayment?.id || !selectedAppointment || appointmentPixPayment.status === "APPROVED") return;
-    const interval = window.setInterval(async () => {
-      try {
-        const payment = await fetchPixPayment(appointmentPixPayment.id);
-        if (payment.status === "APPROVED") {
-          window.clearInterval(interval);
-          const sale = await fetchAppointmentSale(selectedAppointment.id);
-          setAppointmentPixPayment(payment);
-          setAppointmentSale(sale);
-          setAppointmentProducts([]);
-          toast({ title: "Pagamento confirmado", description: "Caixa do agendamento fechado automaticamente." });
-          await loadData();
-        }
-      } catch {
-        // A consulta continua no próximo ciclo.
-      }
-    }, 3000);
-    return () => window.clearInterval(interval);
-  }, [appointmentPixPayment?.id, appointmentPixPayment?.status, selectedAppointment?.id]);
+  usePolling(async (signal) => {
+    const payment = await fetchPixPayment(appointmentPixPayment!.id);
+    if (signal.aborted || payment.status !== "APPROVED") return;
+    const sale = await fetchAppointmentSale(selectedAppointment!.id);
+    if (signal.aborted) return;
+    setAppointmentPixPayment(payment); setAppointmentSale(sale); setAppointmentProducts([]);
+    toast({ title: "Pagamento confirmado", description: "Caixa do agendamento fechado automaticamente." });
+    await loadData();
+  }, 3000, { enabled: Boolean(appointmentPixPayment?.id && selectedAppointment && appointmentPixPayment.status !== "APPROVED"), requestKey: `${selectedAppointment?.id}:${appointmentPixPayment?.id}` });
+
 
   const term = search.trim().toLowerCase();
   const filteredServices = services.filter((item) => item.nome.toLowerCase().includes(term));

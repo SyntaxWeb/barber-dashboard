@@ -1,4 +1,4 @@
-import { useEffect, useState, ChangeEvent } from "react";
+import { useEffect, useRef, useState, ChangeEvent } from "react";
 import { UserRound, Save, Upload, Camera } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,24 +14,31 @@ export default function Perfil() {
   const { user, updateUser } = useAuth();
   const { toast } = useToast();
 
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [objetivo, setObjetivo] = useState("");
+  const [nome, setNome] = useState(user?.nome ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [telefone, setTelefone] = useState(user?.telefone ?? "");
+  const [objetivo, setObjetivo] = useState(user?.objetivo ?? "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar_url ?? null);
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const { id: profileId, nome: profile_nome, email: profile_email, telefone: profile_telefone, objetivo: profile_objetivo, avatar_url: profile_avatar_url } = user ?? {};
+  const dirty = useRef(false);
+  const loadedId = useRef<number | undefined>();
   useEffect(() => {
-    if (!user) return;
-    setNome(user.nome ?? "");
-    setEmail(user.email ?? "");
-    setTelefone(user.telefone ?? "");
-    setObjetivo(user.objetivo ?? "");
-    setAvatarPreview(user.avatar_url ?? null);
-  }, [user]);
+    if (dirty.current && loadedId.current === profileId) return;
+    loadedId.current = profileId;
+    dirty.current = false;
+    setNome(profile_nome ?? "");
+    setEmail(profile_email ?? "");
+    setTelefone(profile_telefone ?? "");
+    setObjetivo(profile_objetivo ?? "");
+    setAvatarPreview(profile_avatar_url ?? null);
+  }, [profileId, profile_nome, profile_email, profile_telefone, profile_objetivo, profile_avatar_url]);
+
+  useEffect(() => () => { if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview); }, [avatarPreview]);
 
   const handleAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -59,7 +66,9 @@ export default function Perfil() {
         password_confirmation: password ? passwordConfirmation : undefined,
         avatar: avatarFile ?? undefined,
       });
+      dirty.current = false;
       updateUser(payload);
+      setAvatarFile(null);
       setPassword("");
       setPasswordConfirmation("");
       toast({ title: "Perfil atualizado", description: "Suas informações foram salvas." });
@@ -86,7 +95,7 @@ export default function Perfil() {
             <CardDescription>Atualize as informações exibidas para sua equipe e clientes.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-5" onSubmit={handleSubmit}>
+            <form onChangeCapture={() => { dirty.current = true; }} className="space-y-5" onSubmit={handleSubmit}>
               <div className="flex items-center gap-4">
                 <div className="relative h-20 w-20 rounded-full overflow-hidden border border-dashed border-border bg-muted flex items-center justify-center">
                   {avatarPreview ? (

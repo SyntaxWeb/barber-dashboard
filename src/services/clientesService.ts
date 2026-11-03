@@ -1,5 +1,5 @@
 import { secureStorage } from "@/lib/secureStorage";
-import { apiFetch } from "@/services/api";
+import { apiFetch, handleResponse } from "@/services/api";
 
 const authHeaders = () => {
   const token = secureStorage.getItem("barbeiro-token");
@@ -30,8 +30,7 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   );
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || "Erro na requisição");
+    await handleResponse(response, "Não foi possível concluir a operação com o cliente.");
   }
 
   if (response.status === 204) {
@@ -54,6 +53,7 @@ export interface Cliente {
 }
 
 export interface CreateClientePayload {
+  allow_duplicate_phone?: boolean;
   nome: string;
   email?: string;
   telefone: string;
@@ -110,4 +110,11 @@ export async function createCliente(payload: CreateClientePayload): Promise<Clie
 
 export async function fetchClienteHistory(id: number): Promise<ClienteHistory> {
   return api<ClienteHistory>(`/api/clients/${id}/history`);
+}
+
+export type ClientesPage = { data: Cliente[]; meta: { current_page: number; last_page: number; total: number } };
+export async function fetchClientesPage(search: string, page: number, signal?: AbortSignal): Promise<ClientesPage> {
+  const params = new URLSearchParams({ search, page: String(page), per_page: "20" });
+  const response = await apiFetch(`/api/clients?${params}`, { headers: authHeaders(), signal }, "provider");
+  return handleResponse<ClientesPage>(response, "Não foi possível carregar os clientes.");
 }

@@ -12,17 +12,6 @@ import { useTheme } from "@/contexts/ThemeContext";
 import defaultLogo from "@/assets/syntax-logo.svg";
 import { GoogleClientButton } from "@/components/auth/GoogleClientButton";
 
-const LOCATION_KEY = "cliente-localizacao-atual";
-
-async function requestClientLocation() {
-  if (!navigator.geolocation) return;
-  await new Promise<void>((resolve) => navigator.geolocation.getCurrentPosition(
-    ({ coords }) => { sessionStorage.setItem(LOCATION_KEY, JSON.stringify({ latitude: coords.latitude, longitude: coords.longitude })); resolve(); },
-    () => resolve(),
-    { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
-  ));
-}
-
 export default function ClienteLogin() {
   const { toast } = useToast();
   const { login, loginWithGoogle, companySlug, setCompanySlug, companyInfo } = useClientAuth();
@@ -58,8 +47,10 @@ export default function ClienteLogin() {
     }
 
     setLoading(true);
-    const success = await login(email, password, targetCompany);
-    setLoading(false);
+    let success = false;
+    try { success = await login(email, password, targetCompany); }
+    catch { /* Show the standard login error while keeping the form usable. */ }
+    finally { setLoading(false); }
 
     if (!success) {
       toast({
@@ -71,14 +62,15 @@ export default function ClienteLogin() {
     }
 
     toast({ title: "Bem-vindo de volta!" });
-    await requestClientLocation();
     navigate(targetCompany ? `/cliente${companyQuery}` : "/explorar");
   };
 
   const handleGoogleCredential = useCallback(async (credential: string) => {
     setGoogleLoading(true);
-    const success = await loginWithGoogle(credential, targetCompany);
-    setGoogleLoading(false);
+    let success = false;
+    try { success = await loginWithGoogle(credential, targetCompany); }
+    catch { /* Network errors must not leave the button loading indefinitely. */ }
+    finally { setGoogleLoading(false); }
 
     if (!success) {
       toast({
@@ -90,7 +82,6 @@ export default function ClienteLogin() {
     }
 
     toast({ title: "Login realizado com Google" });
-    await requestClientLocation();
     navigate(targetCompany ? `/cliente${companyQuery}` : "/explorar");
   }, [companyQuery, loginWithGoogle, navigate, targetCompany, toast]);
 

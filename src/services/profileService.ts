@@ -37,7 +37,7 @@ const buildFormData = (payload: Record<string, FormDataEntryValue | undefined | 
       formData.append(key, value);
       return;
     }
-    if (typeof value === "string" || value instanceof Blob) {
+    if (typeof value === "string") {
       if (value !== "") {
         formData.append(key, value);
       }

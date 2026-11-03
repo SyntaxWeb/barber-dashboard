@@ -29,15 +29,20 @@ export default function PublicAgendamento() {
 
   useEffect(() => {
     if (!slug) return;
+    let cancelled = false;
+    setCompany(null);
+    setFeedback(null);
     setLoading(true);
     Promise.all([fetchEmpresaPublic(slug), clientFetchFeedbackSummary(slug)])
       .then(([companyData, feedbackData]) => {
+        if (cancelled) return;
         setCompany(companyData);
         setFeedback(feedbackData);
         setCompanySlug(slug, companyData);
       })
-      .catch(() => toast({ title: "Empresa não encontrada", description: "Confira o link e tente novamente.", variant: "destructive" }))
-      .finally(() => setLoading(false));
+      .catch(() => { if (!cancelled) toast({ title: "Empresa não encontrada", description: "Confira o link e tente novamente.", variant: "destructive" }); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [setCompanySlug, slug, toast]);
 
   const schedule = () => {

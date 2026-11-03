@@ -1,3 +1,4 @@
+import { safeLocalStorage } from "@/lib/localStorage";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { resolveMediaUrl } from "@/lib/media";
 import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME } from "@/lib/theme";
@@ -96,7 +97,7 @@ const normalizeUser = (payload: any): User => {
 };
 
 const getStoredUser = (): User | null => {
-  const stored = localStorage.getItem("barbeiro-user");
+  const stored = safeLocalStorage.getItem("barbeiro-user");
   if (!stored) return null;
   try {
     const parsed = JSON.parse(stored);
@@ -109,24 +110,18 @@ const getStoredUser = (): User | null => {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => getStoredUser());
   const [token, setToken] = useState<string | null>(() => secureStorage.getItem("barbeiro-token"));
-  const { setPalette, activatePalette } = useTheme();
+  const { setPalette } = useTheme();
   useEffect(() => {
     setPalette("dashboard", DEFAULT_DASHBOARD_THEME);
     setPalette("client", DEFAULT_CLIENT_THEME);
   }, [setPalette]);
-
-  useEffect(() => {
-    if (user) {
-      activatePalette("dashboard");
-    }
-  }, [user, activatePalette]);
 
   const persistUser = useCallback((payload: any, authToken?: string | null) => {
     const normalizedUser = normalizeUser(payload);
     setUser((currentUser) =>
       JSON.stringify(currentUser) === JSON.stringify(normalizedUser) ? currentUser : normalizedUser,
     );
-    localStorage.setItem(
+    safeLocalStorage.setItem(
       "barbeiro-user",
       JSON.stringify({
         ...payload,
@@ -169,27 +164,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem("barbeiro-user");
+    safeLocalStorage.removeItem("barbeiro-user");
     secureStorage.removeItem("barbeiro-token");
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handler = (event: Event) => {
-      const detail = (event as CustomEvent<{ scope?: string }>).detail;
+      const detail = (event as CustomEvent<{ scope?: string; token?: string }>).detail;
       if (detail?.scope && detail.scope !== "provider" && detail.scope !== "any") return;
+      if (detail?.token && detail.token !== token) return;
       logout();
     };
     window.addEventListener("auth:expired", handler);
     return () => window.removeEventListener("auth:expired", handler);
-  }, [logout]);
+  }, [logout, token]);
 
   const updateCompany = useCallback((company: CompanyInfo | null) => {
     const normalized = normalizeCompany(company);
     setUser((prev) => {
       if (!prev) return prev;
       const updated = { ...prev, company: normalized };
-      localStorage.setItem("barbeiro-user", JSON.stringify(updated));
+      safeLocalStorage.setItem("barbeiro-user", JSON.stringify(updated));
       return JSON.stringify(prev) === JSON.stringify(updated) ? prev : updated;
     });
     setPalette("dashboard", DEFAULT_DASHBOARD_THEME);
@@ -207,9 +203,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!token || typeof document === "undefined") return;
     let cancelled = false;
     let fetching = false;
+    let lastAttempt = 0;
     const controller = new AbortController();
     const validate = async () => {
-      if (cancelled || fetching) return;
+      if (cancelled || fetching || document.visibilityState === "hidden") return;
+      if (lastAttempt && Date.now() - lastAttempt < 30000) return;
+      lastAttempt = Date.now();
       fetching = true;
       try {
         const response = await apiFetch(

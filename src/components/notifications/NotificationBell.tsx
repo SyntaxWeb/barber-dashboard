@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { usePolling } from "@/hooks/use-polling";
+import { useMemo, useRef, useState } from "react";
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -45,46 +46,26 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const { toast } = useToast();
   const lastSeenNotificationId = useRef<string | null>(null);
-  const fetchingRef = useRef(false);
+  const hasLoaded = useRef(false);
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read_at).length, [notifications]);
 
-  const loadNotifications = async (showToast = false, showLoading = false) => {
-    if (fetchingRef.current) return;
-    fetchingRef.current = true;
-    if (showLoading) setLoading(true);
+  usePolling(async (signal) => {
+    if (!hasLoaded.current) setLoading(true);
     try {
-      const data = await fetchNotifications();
-      if (showToast && data.length > 0 && data[0].id !== lastSeenNotificationId.current) {
+      const data = await fetchNotifications(signal);
+      if (signal.aborted) return;
+      if (hasLoaded.current && data.length > 0 && data[0].id !== lastSeenNotificationId.current) {
         const latest = data[0];
-        toast({
-          title: getActionTitle(latest.data.action),
-          description:
-            latest.data.action === "reward_redeemed"
-              ? `${latest.data.cliente ?? "Cliente"} resgatou ${latest.data.reward_name ?? "uma recompensa"}`
-              : `${latest.data.cliente} · ${latest.data.data} às ${latest.data.horario}`,
-        });
-        lastSeenNotificationId.current = latest.id;
-      } else if (!lastSeenNotificationId.current && data.length > 0) {
-        lastSeenNotificationId.current = data[0].id;
+        toast({ title: getActionTitle(latest.data.action), description: latest.data.action === "reward_redeemed" ? `${latest.data.cliente ?? "Cliente"} resgatou ${latest.data.reward_name ?? "uma recompensa"}` : `${latest.data.cliente} · ${latest.data.data} às ${latest.data.horario}` });
       }
-      setNotifications((current) =>
-        JSON.stringify(current) === JSON.stringify(data) ? current : data,
-      );
-    } catch (error) {
-      console.error(error);
+      lastSeenNotificationId.current = data[0]?.id ?? lastSeenNotificationId.current;
+      hasLoaded.current = true;
+      setNotifications((current) => JSON.stringify(current) === JSON.stringify(data) ? current : data);
     } finally {
-      fetchingRef.current = false;
-      if (showLoading) setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadNotifications(false, true);
-    const interval = setInterval(() => loadNotifications(true), POLLING_INTERVAL);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, POLLING_INTERVAL, { immediate: true });
 
   const handleMarkAsRead = async (id: string) => {
     try {

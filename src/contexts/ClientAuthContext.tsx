@@ -1,3 +1,4 @@
+import { safeLocalStorage } from "@/lib/localStorage";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { EmpresaInfo, fetchEmpresaPublic } from "@/services/companyService";
 import { resolveMediaUrl } from "@/lib/media";
@@ -54,13 +55,13 @@ const normalizeClientUser = (data: any): ClientUser => ({
 export function ClientAuthProvider({ children }: { children: ReactNode }) {
   const initialToken = secureStorage.getItem(STORAGE_TOKEN);
   const [client, setClient] = useState<ClientUser | null>(() => {
-    const stored = localStorage.getItem(STORAGE_USER);
-    return stored && initialToken ? normalizeClientUser(JSON.parse(stored)) : null;
+    const stored = safeLocalStorage.getItem(STORAGE_USER);
+    try { return stored && initialToken ? normalizeClientUser(JSON.parse(stored)) : null; } catch { return null; }
   });
   const [token, setToken] = useState<string | null>(initialToken);
-  const [companySlug, setCompanySlugState] = useState<string | null>(() => localStorage.getItem(STORAGE_COMPANY));
+  const [companySlug, setCompanySlugState] = useState<string | null>(() => safeLocalStorage.getItem(STORAGE_COMPANY));
   const [companyInfo, setCompanyInfo] = useState<EmpresaInfo | null>(null);
-  const { setPalette, activatePalette } = useTheme();
+  const { setPalette } = useTheme();
 
   const persistSession = useCallback((userPayload: any, jwt: string) => {
     const normalized = normalizeClientUser(userPayload);
@@ -68,7 +69,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
       JSON.stringify(current) === JSON.stringify(normalized) ? current : normalized,
     );
     setToken(jwt);
-    localStorage.setItem(STORAGE_USER, JSON.stringify(normalized));
+    safeLocalStorage.setItem(STORAGE_USER, JSON.stringify(normalized));
     secureStorage.setItem(STORAGE_TOKEN, jwt);
   }, []);
 
@@ -77,26 +78,26 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     setClient((current) =>
       JSON.stringify(current) === JSON.stringify(normalized) ? current : normalized,
     );
-    localStorage.setItem(STORAGE_USER, JSON.stringify(normalized));
+    safeLocalStorage.setItem(STORAGE_USER, JSON.stringify(normalized));
   }, []);
 
   const persistCompanySlug = useCallback((slug: string | null, info?: EmpresaInfo | null) => {
     setCompanySlugState(slug);
     if (slug) {
-      localStorage.setItem(STORAGE_COMPANY, slug);
+      safeLocalStorage.setItem(STORAGE_COMPANY, slug);
     } else {
-      localStorage.removeItem(STORAGE_COMPANY);
+      safeLocalStorage.removeItem(STORAGE_COMPANY);
     }
     if (info) {
       setCompanyInfo(info);
       setPalette("client", DEFAULT_CLIENT_THEME);
-      activatePalette("client");
+
     } else if (!slug) {
       setCompanyInfo(null);
       setPalette("client", DEFAULT_CLIENT_THEME);
-      activatePalette("dashboard");
+
     }
-  }, [activatePalette, setPalette]);
+  }, [setPalette]);
 
   const resolveCompanyForAuth = useCallback((override?: string): string | null => override ?? companySlug, [companySlug]);
 
@@ -169,28 +170,32 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setClient(null);
     setToken(null);
-    localStorage.removeItem(STORAGE_USER);
+    safeLocalStorage.removeItem(STORAGE_USER);
     secureStorage.removeItem(STORAGE_TOKEN);
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handler = (event: Event) => {
-      const detail = (event as CustomEvent<{ scope?: string }>).detail;
+      const detail = (event as CustomEvent<{ scope?: string; token?: string }>).detail;
       if (detail?.scope && detail.scope !== "client" && detail.scope !== "any") return;
+      if (detail?.token && detail.token !== token) return;
       logout();
     };
     window.addEventListener("auth:expired", handler);
     return () => window.removeEventListener("auth:expired", handler);
-  }, [logout]);
+  }, [logout, token]);
 
   useEffect(() => {
     if (!token || typeof document === "undefined") return;
     let cancelled = false;
     let fetching = false;
+    let lastAttempt = 0;
     const controller = new AbortController();
     const validate = async () => {
-      if (cancelled || fetching) return;
+      if (cancelled || fetching || document.visibilityState === "hidden") return;
+      if (lastAttempt && Date.now() - lastAttempt < 30000) return;
+      lastAttempt = Date.now();
       fetching = true;
       try {
         const response = await apiFetch(
@@ -232,7 +237,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!token && client) {
       setClient(null);
-      localStorage.removeItem(STORAGE_USER);
+      safeLocalStorage.removeItem(STORAGE_USER);
     }
   }, [token, client]);
 
@@ -240,12 +245,12 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     if (!companySlug) {
       setCompanyInfo(null);
       setPalette("client", DEFAULT_CLIENT_THEME);
-      activatePalette("dashboard");
+
       return;
     }
 
     if (companyInfo?.slug === companySlug) {
-      activatePalette("client");
+
       return;
     }
 
@@ -255,7 +260,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setCompanyInfo(info);
         setPalette("client", DEFAULT_CLIENT_THEME);
-        activatePalette("client");
+
       })
       .catch(() => {
         if (cancelled) return;
@@ -265,7 +270,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [companySlug, companyInfo?.slug, setPalette, activatePalette]);
+  }, [companySlug, companyInfo?.slug, setPalette]);
 
   const value = useMemo(
     () => ({

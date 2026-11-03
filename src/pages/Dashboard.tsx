@@ -1,3 +1,4 @@
+import { safeLocalStorage } from "@/lib/localStorage";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
@@ -29,7 +30,7 @@ export default function Dashboard() {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [showProductUpdates, setShowProductUpdates] = useState(() => {
     if (typeof window === "undefined") return true;
-    return window.localStorage.getItem(PRODUCT_UPDATES_DISMISSED_KEY) !== "1";
+    return safeLocalStorage.getItem(PRODUCT_UPDATES_DISMISSED_KEY) !== "1";
   });
   const { user } = useAuth();
   const { toast } = useToast();
@@ -64,22 +65,27 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    let cancelled = false;
     async function loadData() {
       try {
         const [data, sales] = await Promise.all([fetchAgendamentosPorData(hoje), fetchSales({ status: "closed", from: hoje, to: hoje })]);
+        if (cancelled) return;
         setAgendamentosHoje(data);
         setSalesHoje(sales);
+      } catch (error) {
+        if (!cancelled) toast({ title: "Erro ao atualizar painel", description: error instanceof Error ? error.message : "Tente novamente.", variant: "destructive" });
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    loadData();
-  }, [hoje]);
+    void loadData();
+    return () => { cancelled = true; };
+  }, [hoje, toast]);
 
   const handleDismissProductUpdates = () => {
     setShowProductUpdates(false);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(PRODUCT_UPDATES_DISMISSED_KEY, "1");
+      safeLocalStorage.setItem(PRODUCT_UPDATES_DISMISSED_KEY, "1");
     }
   };
 

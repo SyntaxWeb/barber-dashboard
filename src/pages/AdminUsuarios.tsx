@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useRequestGuard } from "@/hooks/use-request-guard";
+import { useCallback, useEffect, useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -81,25 +82,33 @@ export default function AdminUsuarios() {
     return `${recurrence.frequency} ${unit}`;
   };
 
-  const load = () => {
+  const providerRequest = useRequestGuard();
+  const load = useCallback(() => {
+    const isCurrent = providerRequest.start();
     setLoading(true);
     Promise.all([fetchProviders(filters), fetchPlans()])
       .then(([providersData, plansData]) => {
+        if (!isCurrent()) return;
         setProviders(providersData as Provider[]);
         setPlans(plansData.plans);
         setStatuses(plansData.statuses);
       })
-      .finally(() => setLoading(false));
-  };
+      .catch((error) => { if (isCurrent()) toast({ title: "Erro ao carregar usuários", description: error instanceof Error ? error.message : "Tente novamente.", variant: "destructive" }); })
+      .finally(() => { if (isCurrent()) setLoading(false); });
+  }, [providerRequest, filters, toast]);
 
-  const loadMercadoPago = () => {
+  const mpRequest = useRequestGuard();
+  const loadMercadoPago = useCallback(() => {
+    const isCurrent = mpRequest.start();
     setMpLoading(true);
     setMpError(null);
     fetchMercadoPagoSubscriptions()
       .then((data) => {
+        if (!isCurrent()) return;
         setMpSubscriptions(data);
       })
       .catch((error) => {
+        if (!isCurrent()) return;
         const message = error instanceof Error ? error.message : "Nao foi possivel consultar o Mercado Pago.";
         setMpError(message);
         toast({
@@ -108,8 +117,8 @@ export default function AdminUsuarios() {
           variant: "destructive",
         });
       })
-      .finally(() => setMpLoading(false));
-  };
+      .finally(() => { if (isCurrent()) setMpLoading(false); });
+  }, [mpRequest, toast]);
 
   const handleSyncMercadoPagoPlans = () => {
     setSyncingPlans(true);
@@ -133,14 +142,14 @@ export default function AdminUsuarios() {
   };
 
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.plan, filters.status]);
+    void load();
+    return providerRequest.invalidate;
+  }, [load, providerRequest]);
 
   useEffect(() => {
     loadMercadoPago();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return mpRequest.invalidate;
+  }, [loadMercadoPago, mpRequest]);
   const handleSelectProvider = (provider: Provider) => {
     setSelected(provider);
     setForm({
@@ -226,7 +235,7 @@ export default function AdminUsuarios() {
               </div>
             </div>
 
-            {loading ? (
+            {loading && providers.length === 0 ? (
               <div className="flex h-32 items-center justify-center text-muted-foreground">Carregando...</div>
             ) : (
               <div className="grid gap-3">

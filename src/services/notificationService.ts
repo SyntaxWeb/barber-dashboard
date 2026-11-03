@@ -32,10 +32,11 @@ export interface AppNotification {
   created_at: string;
 }
 
-export async function fetchNotifications(): Promise<AppNotification[]> {
+export async function fetchNotifications(signal?: AbortSignal): Promise<AppNotification[]> {
   const response = await apiFetch(
     "/api/notifications",
     {
+      signal,
       headers: {
         Accept: "application/json",
         ...authHeaders(),

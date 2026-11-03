@@ -1,4 +1,5 @@
-import { type ChangeEvent, useEffect, useMemo, useState } from "react";
+import { useRequestGuard } from "@/hooks/use-request-guard";
+import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ImageIcon, Package, Pencil, Plus, Save, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -46,20 +47,25 @@ export default function Estoque() {
   const [removeImage, setRemoveImage] = useState(false);
   const [adjustments, setAdjustments] = useState<Record<number, string>>({});
 
-  const loadProducts = async () => {
+  const productRequest = useRequestGuard();
+  const loadProducts = useCallback(async () => {
+    const isCurrent = productRequest.start();
     setLoading(true);
     try {
-      setProducts(await fetchProducts());
+      const data = await fetchProducts();
+      if (isCurrent()) setProducts(data);
     } catch (error) {
+      if (!isCurrent()) return;
       toast({ title: "Erro ao carregar estoque", description: error instanceof Error ? error.message : "Tente novamente.", variant: "destructive" });
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  };
+  }, [productRequest, toast]);
 
   useEffect(() => {
-    loadProducts();
-  }, []);
+    void loadProducts();
+    return productRequest.invalidate;
+  }, [loadProducts, productRequest]);
 
 
   useEffect(() => {

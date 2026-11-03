@@ -39,15 +39,16 @@ const FeedbackPublico = () => {
 
   useEffect(() => {
     if (!token) {
-      console.log(`Token inválido: ${token}`);
       setStep("error");
       setError("Link inválido. Solicite outro ao profissional.");
       return;
     }
 
+    let cancelled = false;
     setStep("loading");
     fetchPublicFeedbackForm(token)
       .then((data) => {
+        if (cancelled) return;
         setAppointment(data);
         if (data.feedback) {
           setStep("already");
@@ -57,9 +58,11 @@ const FeedbackPublico = () => {
         }
       })
       .catch((err) => {
+        if (cancelled) return;
         setError(err instanceof Error ? err.message : "Não conseguimos validar este link.");
         setStep("error");
       });
+    return () => { cancelled = true; };
   }, [token]);
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -217,7 +220,7 @@ const FeedbackPublico = () => {
 };
 
 const questions: Array<{
-  key: keyof ClientAppointmentFeedbackPayload;
+  key: "service_rating" | "professional_rating" | "scheduling_rating";
   label: string;
 }> = [
   { key: "service_rating", label: "Como você avalia o serviço prestado?" },

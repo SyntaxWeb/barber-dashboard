@@ -56,34 +56,17 @@ export function GoogleClientButton({ onCredential, context = "signin", className
       return;
     }
 
-    let cancelled = false;
+    const onLoad = () => setScriptReady(true);
     const existing = document.getElementById(GOOGLE_SCRIPT_ID) as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener(
-        "load",
-        () => {
-          if (!cancelled) setScriptReady(true);
-        },
-        { once: true },
-      );
-      return () => {
-        cancelled = true;
-      };
+    const script = existing ?? document.createElement("script");
+    script.addEventListener("load", onLoad, { once: true });
+    if (!existing) {
+      script.id = GOOGLE_SCRIPT_ID;
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true; script.defer = true;
+      document.head.appendChild(script);
     }
-
-    const script = document.createElement("script");
-    script.id = GOOGLE_SCRIPT_ID;
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      if (!cancelled) setScriptReady(true);
-    };
-    document.head.appendChild(script);
-
-    return () => {
-      cancelled = true;
-    };
+    return () => script.removeEventListener("load", onLoad);
   }, [clientId]);
 
   useEffect(() => {

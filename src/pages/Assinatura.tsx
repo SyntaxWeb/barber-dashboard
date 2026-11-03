@@ -39,10 +39,12 @@ export default function Assinatura() {
   const [checkoutPlan, setCheckoutPlan] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     fetchSubscriptionSummary()
-      .then(setSummary)
-      .catch((err) => setError(err instanceof Error ? err.message : "Nao foi possivel carregar a assinatura."))
-      .finally(() => setLoading(false));
+      .then((data) => { if (!cancelled) setSummary(data); })
+      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : "Nao foi possivel carregar a assinatura."); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
   if (loading) {

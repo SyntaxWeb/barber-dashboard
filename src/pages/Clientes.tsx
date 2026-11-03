@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState, FormEvent } from "react";
+import { ApiError } from "@/services/api";
+import { useEffect, useRef, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Users, Plus, Search, Mail, Phone, MessageSquare, Eye } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
@@ -12,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { createCliente, fetchClienteHistory, fetchClientes, type Cliente, type ClienteHistory } from "@/services/clientesService";
+import { createCliente, fetchClienteHistory, fetchClientesPage, type Cliente, type ClienteHistory } from "@/services/clientesService";
 import { useAuth } from "@/contexts/AuthContext";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { buildWhatsAppUrl, openWhatsAppChat } from "@/lib/whatsapp";
@@ -20,6 +22,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Clientes() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -27,8 +30,15 @@ export default function Clientes() {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [duplicatePhone, setDuplicatePhone] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [lastInvite, setLastInvite] = useState<{ nome: string; url: string } | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [lastPage, setLastPage] = useState(1);
+  const [reload, setReload] = useState(0);
+  const [lastInvite, setLastInvite] = useState<{ nome: string; url: string; message: string } | null>(null);
+  const historyRequest = useRef(0);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -40,31 +50,32 @@ export default function Clientes() {
   const [observacoes, setObservacoes] = useState("");
 
   useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
-    fetchClientes()
-      .then((data) => {
-        setClientes(data);
-        setError(null);
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : "Não foi possível carregar os clientes.");
-      })
-      .finally(() => setLoading(false));
-  }, []);
+    const timer = window.setTimeout(() => {
+      fetchClientesPage(search.trim(), page, controller.signal)
+        .then((result) => {
+          if (controller.signal.aborted) return;
+          setClientes(result.data);
+          setTotal(result.meta.total);
+          setLastPage(result.meta.last_page);
+          setError(null);
+        })
+        .catch((err) => { if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Não foi possível carregar os clientes."); })
+        .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    }, 300);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [search, page, reload]);
 
-  const filteredClientes = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return clientes;
-    return clientes.filter((cliente) => {
-      const base = `${cliente.nome} ${cliente.email ?? ""} ${cliente.telefone ?? ""}`.toLowerCase();
-      return base.includes(term);
-    });
-  }, [clientes, search]);
+  const filteredClientes = clientes;
+  const scheduleClient = (cliente: Cliente) => navigate("/novo-agendamento", { state: { cliente } });
 
   const companySlug = user?.company?.slug ?? undefined;
   const companyName = user?.company?.nome ?? "sua empresa";
 
   const clearForm = () => {
+    setDuplicatePhone(false);
+    setFormError(null);
     setNome("");
     setEmail("");
     setTelefone("");
@@ -92,42 +103,26 @@ export default function Clientes() {
     if (!signupLink) return;
 
     const message = `Olá ${cliente.nome}! Você já está cadastrado na ${companyName}. Defina sua senha e confirme seus dados neste link: ${signupLink}`;
-    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(signupLink)}&text=${encodeURIComponent(message)}`;
-    setLastInvite({ nome: cliente.nome, url: telegramUrl });
-
-    if (typeof window !== "undefined") {
-      const opened = window.open(telegramUrl, "_blank", "noopener,noreferrer");
-      if (!opened) {
-        toast({
-          title: "Autorize o Telegram",
-          description: "Clique no botão para reenviar manualmente o convite.",
-        });
-      } else {
-        toast({
-          title: "Convite preparado",
-          description: "O Telegram foi aberto com a mensagem pronta para envio.",
-        });
-      }
-    }
+    setLastInvite({ nome: cliente.nome, url: signupLink, message });
   };
 
   const handleManualInvite = () => {
-    if (lastInvite && typeof window !== "undefined") {
-      window.open(lastInvite.url, "_blank", "noopener,noreferrer");
-    }
+    if (lastInvite) window.open(`https://t.me/share/url?url=${encodeURIComponent(lastInvite.url)}&text=${encodeURIComponent(lastInvite.message)}`, "_blank", "noopener,noreferrer");
   };
 
   const handleOpenHistory = (cliente: Cliente) => {
+    const request = ++historyRequest.current;
     setHistoryDialogOpen(true);
     setHistoryLoading(true);
     setHistoryError(null);
     setHistoryData(null);
     fetchClienteHistory(cliente.id)
-      .then((data) => setHistoryData(data))
+      .then((data) => { if (request === historyRequest.current) setHistoryData(data); })
       .catch((err) => {
+        if (request !== historyRequest.current) return;
         setHistoryError(err instanceof Error ? err.message : "Não foi possível carregar o histórico.");
       })
-      .finally(() => setHistoryLoading(false));
+      .finally(() => { if (request === historyRequest.current) setHistoryLoading(false); });
   };
 
   const handleWhatsAppContact = (cliente: Cliente) => {
@@ -154,15 +149,19 @@ export default function Clientes() {
       return;
     }
 
+    setFormError(null);
     setSaving(true);
     try {
       const novo = await createCliente({
+        allow_duplicate_phone: duplicatePhone,
         nome: nome.trim(),
         email: email.trim() || undefined,
         telefone: telefone.trim(),
         observacoes: observacoes.trim() || undefined,
       });
-      setClientes((prev) => [novo, ...prev]);
+      setSearch("");
+      setPage(1);
+      setReload((value) => value + 1);
       toast({
         title: "Cliente cadastrado",
         description: `${novo.nome} foi adicionado à sua base.`,
@@ -171,6 +170,8 @@ export default function Clientes() {
       setDialogOpen(false);
       triggerOnboardingMessage(novo);
     } catch (err) {
+      setDuplicatePhone(err instanceof ApiError && err.status === 409);
+      setFormError(err instanceof Error ? err.message : "Não foi possível salvar o cliente.");
       toast({
         title: "Erro ao salvar",
         description: err instanceof Error ? err.message : "Tente novamente em instantes.",
@@ -221,6 +222,7 @@ export default function Clientes() {
   const handleHistoryDialogChange = (open: boolean) => {
     setHistoryDialogOpen(open);
     if (!open) {
+      historyRequest.current += 1;
       setHistoryData(null);
       setHistoryError(null);
     }
@@ -255,9 +257,10 @@ export default function Clientes() {
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                aria-label="Buscar clientes por nome, e-mail ou telefone"
                 placeholder="Buscar por nome, email ou telefone"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="pl-10"
               />
             </div>
@@ -275,10 +278,12 @@ export default function Clientes() {
                   <DialogDescription>Registre dados básicos para iniciar o relacionamento.</DialogDescription>
                 </DialogHeader>
                 <form className="space-y-4" onSubmit={handleCreateCliente}>
+                  {formError && <p role="alert" className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{formError}</p>}
                   <div className="space-y-2">
                     <Label htmlFor="cliente-nome">Nome completo</Label>
                     <Input
                       id="cliente-nome"
+                      required autoComplete="name"
                       placeholder="Ex: João Silva"
                       value={nome}
                       onChange={(e) => setNome(e.target.value)}
@@ -298,9 +303,10 @@ export default function Clientes() {
                     <Label htmlFor="cliente-telefone">Telefone / Telegram</Label>
                     <Input
                       id="cliente-telefone"
+                      type="tel" autoComplete="tel"
                       placeholder="(11) 99999-0000"
                       value={telefone}
-                      onChange={(e) => setTelefone(e.target.value)}
+                      onChange={(e) => { setTelefone(e.target.value); setDuplicatePhone(false); setFormError(null); }}
                       required
                     />
                   </div>
@@ -314,9 +320,10 @@ export default function Clientes() {
                       onChange={(e) => setObservacoes(e.target.value)}
                     />
                   </div>
+                  {duplicatePhone && <p className="text-sm text-muted-foreground">Confira o cadastro existente. Se outra pessoa compartilha este telefone, você pode confirmar um novo cadastro abaixo.</p>}
                   <DialogFooter>
                     <Button type="submit" className="w-full sm:w-auto" disabled={saving}>
-                      {saving ? "Salvando..." : "Cadastrar cliente"}
+                      {saving ? "Salvando..." : duplicatePhone ? "Cadastrar outra pessoa com este telefone" : "Cadastrar cliente"}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -328,12 +335,13 @@ export default function Clientes() {
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
               Convite pronto para{" "}
-              <span className="font-semibold text-foreground">{lastInvite.nome}</span>. Caso o Telegram não abra
-              automaticamente, clique abaixo.
+              <span className="font-semibold text-foreground">{lastInvite.nome}</span>. Escolha como compartilhar o acesso.
             </p>
+            <Button variant="outline" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(lastInvite.message)}`, "_blank", "noopener,noreferrer")}>WhatsApp</Button>
+            <Button variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(lastInvite.url); toast({ title: "Link copiado" }); } catch { toast({ title: "Não foi possível copiar", description: lastInvite.url }); } }}>Copiar link</Button>
             <Button variant="outline" className="gap-2" onClick={handleManualInvite}>
               <MessageSquare className="h-4 w-4" />
-              Reenviar via Telegram
+              Telegram
             </Button>
           </div>
         )}
@@ -342,22 +350,23 @@ export default function Clientes() {
           <CardHeader>
             <CardTitle>Clientes cadastrados</CardTitle>
             <CardDescription>
-              {loading ? "Carregando..." : `${clientes.length} cliente${clientes.length === 1 ? "" : "s"} na base.`}
+              {loading ? "Carregando..." : `${total} cliente${total === 1 ? "" : "s"} encontrado${total === 1 ? "" : "s"}.`}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent aria-busy={loading}>
+            {loading && clientes.length > 0 && <p role="status" className="mb-3 text-sm text-muted-foreground">Atualizando clientes...</p>}
             {error && (
               <p className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 {error}
               </p>
             )}
 
-            {loading ? (
+            {loading && clientes.length === 0 ? (
               <div className="flex h-32 items-center justify-center text-muted-foreground">Carregando clientes...</div>
             ) : filteredClientes.length === 0 ? (
               <div className="flex h-32 flex-col items-center justify-center text-center text-muted-foreground">
                 <p className="font-medium">Nenhum cliente encontrado</p>
-                <p className="text-sm">Cadastre um novo cliente ou refine sua busca.</p>
+                <p className="text-sm">{search ? "Tente outro nome, e-mail ou telefone." : "Cadastre o primeiro cliente para começar."}</p>
               </div>
             ) : isMobile ? (
               <div className="space-y-3">
@@ -389,6 +398,7 @@ export default function Clientes() {
                     </div>
 
                     <div className="mt-4 flex flex-col gap-2">
+                      <Button size="sm" onClick={() => scheduleClient(cliente)}>Agendar</Button>
                       {buildWhatsAppUrl(cliente.telefone) ? (
                         <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => handleWhatsAppContact(cliente)}>
                           <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
@@ -446,6 +456,7 @@ export default function Clientes() {
                       <TableCell>{formatCreatedAt(cliente)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button size="sm" onClick={() => scheduleClient(cliente)}>Agendar</Button>
                           {buildWhatsAppUrl(cliente.telefone) ? (
                             <Button variant="outline" size="sm" className="gap-2" onClick={() => handleWhatsAppContact(cliente)}>
                               <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
@@ -463,6 +474,12 @@ export default function Clientes() {
                 </TableBody>
               </Table>
             )}
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+              <Button variant="outline" disabled={loading || page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button>
+              <span className="text-sm text-muted-foreground" aria-live="polite">Página {page} de {lastPage} · {total} clientes</span>
+              <Button variant="outline" disabled={loading || page >= lastPage} onClick={() => setPage(page + 1)}>Próxima</Button>
+              {error && <Button variant="outline" onClick={() => setReload((value) => value + 1)}>Tentar novamente</Button>}
+            </div>
           </CardContent>
         </Card>
 
