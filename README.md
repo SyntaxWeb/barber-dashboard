@@ -35,7 +35,7 @@ php artisan serve
 
 ## Deploy
 
-- Frontend: build com `npm run build` e publicação via CDN, VPS ou serviço estático.
+- Frontend: `docker compose up -d --build app` compila e publica o painel. Em produção, as chamadas usam `/api` no domínio do painel e o Nginx encaminha para a API local na porta 8001. Consulte [BUILD_NOTES.md](BUILD_NOTES.md) para configuração e validação.
 - Backend: deploy Laravel em VPS ou plataforma compatível (PHP 8.3+), apontando para o mesmo banco da aplicação.
 - Configure `APP_URL`, `FRONTEND_URL` e `CORS_ALLOWED_ORIGINS` para refletirem os domínios de produção. Hoje o projeto já usa domínios legados e atuais, como `https://api-barberapp.syntaxweb.com.br`, `https://barberapp.syntaxweb.com.br`, `https://syntaxatendimento.com.br` e `https://api-atendimento.syntaxatendimento.com.br`. 
 

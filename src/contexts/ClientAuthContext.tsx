@@ -39,7 +39,7 @@ interface ClientRegisterPayload {
 
 const ClientAuthContext = createContext<ClientAuthContextType | undefined>(undefined);
 
-const API_URL = import.meta.env.VITE_API_URL || "https://api-atendimento.syntaxatendimento.com.br";
+import { API_URL } from "@/lib/apiConfig";
 const STORAGE_USER = "cliente-user";
 const STORAGE_TOKEN = "cliente-token";
 const STORAGE_COMPANY = "cliente-company";

@@ -54,6 +54,12 @@ export default function Login() {
           variant: "destructive",
         });
       }
+    } catch (error) {
+      toast({
+        title: "Erro no login",
+        description: error instanceof Error ? error.message : "Não foi possível entrar. Tente novamente.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -123,7 +129,7 @@ export default function Login() {
         Esqueci minha senha
       </button>
 
-      <p className="mt-8 text-center text-sm text-zinc-100">Use qualquer email valido e senha para entrar</p>
+      <p className="mt-8 text-center text-sm text-zinc-100">Entre com o email e a senha da sua conta</p>
       <p className="mt-4 text-center text-sm text-zinc-100">
         Ainda nao tem acesso?{" "}
         <button

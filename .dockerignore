@@ -4,3 +4,9 @@ node_modules
 README.md
 DOCUMENTACAO.md
 npm-debug.log*
+
+dist
+dist.*
+.env
+.env.*
+!.env.production

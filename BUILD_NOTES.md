@@ -1,58 +1,54 @@
-# Build Notes
+# Build e deploy
 
-## Build local
+## Produção com Docker
 
-Execute `npm run build:local` para gerar o `dist` usando `.env.development`,
-com API em `http://192.168.18.97:8001`. O painel local é servido na porta 4002.
-Para outro endereço de rede, ajuste `VITE_API_URL` e as origens permitidas na API.
+O Dockerfile compila o frontend antes de criar a imagem Nginx. Não é necessário
+gerar `dist` no host. O valor vazio de `VITE_API_URL` em produção faz as chamadas
+usarem `/api` no domínio do painel. O Nginx encaminha `/api/` e `/storage/` à API
+Laravel na porta publicada 8001 do mesmo host Docker.
 
-O comando `npm run build` continua usando `.env.production`.
-O Dockerfile atual apenas copia o `dist` pronto; argumentos de build não alteram
-a URL já compilada. Gere o `dist` antes de recriar o container do painel.
-
-## Build de producao do frontend
-
-Quando o ambiente nao tiver `node`, `npm` ou `bun` instalados no host, o build do `dist` pode ser gerado via Docker usando o `Dockerfile` do projeto.
-
-### Comando usado
+Com a API em execução, publique o painel:
 
 ```bash
-docker build \
-  --target builder \
-  --build-arg VITE_API_URL=https://api-atendimento.syntaxatendimento.com.br \
-  --build-arg VITE_GOOGLE_CLIENT_ID=327557297306-r5uqehqqeshc3nd0u7aal6pa2co86t09.apps.googleusercontent.com \
-  -t barber-dashboard-builder .
+docker compose up -d --build app
 ```
 
-### Fluxo que foi feito
+A entrada `host.docker.internal:host-gateway` do Compose permite alcançar a API.
+Ao executar a imagem sem Compose, informe também
+`--add-host host.docker.internal:host-gateway`.
 
-1. Gerar a imagem do stage `builder`.
-2. Criar um container temporario:
+Para uma API hospedada em outro servidor, defina `PRODUCTION_API_URL` antes do
+build. Nesse caso, configure CORS na API e `connect-src` no Nginx para esse domínio.
+`VITE_GOOGLE_CLIENT_ID` pode ser informado no ambiente antes do build.
+Variáveis Vite são incorporadas durante a compilação; alterá-las exige novo build.
+
+## Build sem publicar
 
 ```bash
-docker create --name barber-dashboard-dist barber-dashboard-builder
+npm ci
+npm run build
+npm test
 ```
 
-3. Fazer backup do `dist` anterior:
+O `dist` usa `.env.production` e precisa do proxy acima ao ser servido.
+`vite preview` sozinho não fornece esse proxy.
+
+## Desenvolvimento local
 
 ```bash
-mv /home/dev/projects/barber-dashboard/dist /home/dev/projects/barber-dashboard/dist.backup-YYYYMMDD-1
+npm run dev
 ```
 
-4. Copiar o `dist` gerado do container para fora.
+O desenvolvimento usa `.env.development`, com a API configurada diretamente.
+`npm run build:local` também usa esse ambiente; configure CORS na API para a
+origem local utilizada.
 
-Se `docker cp` falhar por permissao no `dist/assets`, copiar primeiro para `/tmp`:
+## Verificação
 
 ```bash
-docker cp barber-dashboard-dist:/app/dist /tmp/
-mv /tmp/dist /home/dev/projects/barber-dashboard/dist
+curl -i http://127.0.0.1:4002/api/me -H 'Accept: application/json'
 ```
 
-### Resultado mais recente
-
-- Build gerado com sucesso em `/home/dev/projects/barber-dashboard/dist`
-- Backup anterior salvo como `/home/dev/projects/barber-dashboard/dist.backup-20260324-1`
-
-### Observacao
-
-O build pode mostrar aviso de chunk JS grande no Vite. Isso nao impede a geracao do `dist`, mas vale otimizar depois com code splitting.
+Sem token, o resultado esperado é HTTP 401 em JSON, nunca o HTML do frontend.
+No navegador, o login deve chamar `/api/login` no mesmo domínio do painel.
+Se a resposta for 502, confira a disponibilidade da API na porta 8001.

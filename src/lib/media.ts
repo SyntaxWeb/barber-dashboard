@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || "https://api-atendimento.syntaxatendimento.com.br";
+import { API_URL } from "@/lib/apiConfig";
 const STORAGE_SEGMENT = /\/?storage\//i;
 const PUBLIC_SEGMENT = /\/?public\//i;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
@@ -15,7 +15,7 @@ export function resolveMediaUrl(path?: string | null): string | null {
   if (/^https?:\/\//i.test(replaced)) {
     try {
       const assetUrl = new URL(replaced);
-      const apiUrl = new URL(API_URL);
+      const apiUrl = new URL(API_URL || window.location.origin);
 
       if (LOCAL_HOSTS.has(assetUrl.hostname)) {
         assetUrl.protocol = apiUrl.protocol;

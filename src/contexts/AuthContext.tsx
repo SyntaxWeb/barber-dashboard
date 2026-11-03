@@ -4,7 +4,7 @@ import { resolveMediaUrl } from "@/lib/media";
 import { BrandTheme, DEFAULT_CLIENT_THEME, DEFAULT_DASHBOARD_THEME } from "@/lib/theme";
 import { useTheme } from "./ThemeContext";
 import { secureStorage } from "@/lib/secureStorage";
-import { apiFetch } from "@/services/api";
+import { ApiError, apiFetch, handleResponse } from "@/services/api";
 
 interface CompanyInfo {
   id?: number;
@@ -56,7 +56,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_URL = import.meta.env.VITE_API_URL || "https://api-atendimento.syntaxatendimento.com.br";
+import { API_URL } from "@/lib/apiConfig";
 const normalizeCompany = (company?: CompanyInfo | null): CompanyInfo | null => {
   if (!company) return null;
   const galleryPhotos = Array.isArray(company.gallery_photos)
@@ -142,22 +142,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify({ email, password: _senha }),
       });
 
-      if (!response.ok) return false;
+      if (response.status === 401) return false;
 
-      const data = await response.json();
+      const data = await handleResponse<{ token: string; user: User }>(response, "Não foi possível entrar. Tente novamente em instantes.");
 
-      if (!data.token || !data.user) return false;
+      if (!data.token || !data.user) throw new Error("A API retornou uma resposta de login inválida.");
 
       persistUser(data.user, data.token);
       setPalette("dashboard", DEFAULT_DASHBOARD_THEME);
       setPalette("client", DEFAULT_CLIENT_THEME);
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new Error("Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.");
     }
   }, [persistUser, setPalette]);
 
