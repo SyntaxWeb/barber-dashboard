@@ -1,1 +1,0 @@
-import{r as e}from"./index-BW1TzvG7.js";function a(){const t=e.useRef(0),u=e.useRef(!0),r=e.useCallback(()=>{t.current+=1},[]),n=e.useCallback(()=>{const s=++t.current;return()=>u.current&&t.current===s},[]);return e.useEffect(()=>(u.current=!0,()=>{u.current=!1,r()}),[r]),e.useMemo(()=>({start:n,invalidate:r}),[n,r])}export{a as u};

@@ -5,10 +5,8 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${PRODUCTION_API_URL:-}
+        VITE_API_URL: ${PRODUCTION_API_URL:-https://api-atendimento.syntaxatendimento.com.br}
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     ports:
       - 4002:80
